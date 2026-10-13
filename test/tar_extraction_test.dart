@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
 import 'package:posix/posix.dart' as posix;
 import 'package:tar/tar.dart';
 import 'package:test/test.dart';
@@ -31,12 +32,12 @@ void main() {
           .createTempSync('tar-extraction-test-')
           .resolveSymbolicLinksSync(),
     );
-    snapshots = Directory('${root.path}/snapshots')..createSync();
+    snapshots = Directory(p.join(root.path, 'snapshots'))..createSync();
   });
   tearDown(() => root.deleteSync(recursive: true));
 
   test('extracted files are exclusively created, never overwritten', () async {
-    final source = File('${root.path}/exclusive.tar')
+    final source = File(p.join(root.path, 'exclusive.tar'))
       ..writeAsBytesSync([...member('first').take(1024), ...member('second')]);
     await withArchiveInput(source, (input) async {
       var finished = 0, callbacks = 0;
@@ -49,9 +50,10 @@ void main() {
           }),
           (_) async => callbacks++,
           setMode: (path, _) {
+            expect(File(path).resolveSymbolicLinksSync(), path);
             finished++;
             if (finished == 1) {
-              File('${File(path).parent.path}/second')
+              File(p.join(File(path).parent.path, 'second'))
                   .writeAsStringSync('keep');
             }
           },
@@ -87,7 +89,8 @@ void main() {
         ...member('second', type: TypeFlag.symlink),
       ],
     ]) {
-      final source = File('${root.path}/metadata.tar')..writeAsBytesSync(bytes);
+      final source = File(p.join(root.path, 'metadata.tar'))
+        ..writeAsBytesSync(bytes);
       await withArchiveInput(source, (input) async {
         var finishedFiles = 0, callbacks = 0;
         await expectLater(
@@ -114,7 +117,8 @@ void main() {
     () async {
       final bytes = [...member('first').take(1024), ...member('second')]
         ..[1536] = 100;
-      final source = File('${root.path}/content.tar')..writeAsBytesSync(bytes);
+      final source = File(p.join(root.path, 'content.tar'))
+        ..writeAsBytesSync(bytes);
       await withArchiveInput(source, (input) async {
         late File first;
         var exposed = false;
@@ -143,7 +147,7 @@ void main() {
   );
 
   test('callback failure also removes the complete private tree', () async {
-    final source = File('${root.path}/callback.tar')
+    final source = File(p.join(root.path, 'callback.tar'))
       ..writeAsBytesSync(member('a'));
     late Directory extracted;
     final error = StateError('callback failed');
@@ -155,7 +159,11 @@ void main() {
           ArchiveInventory({'a': (size: 3, mode: 0x1a4, sha256: abc)}),
           (directory) async {
             extracted = directory;
-            expect(File('${directory.path}/a').readAsBytesSync(), [97, 98, 99]);
+            expect(File(p.join(directory.path, 'a')).readAsBytesSync(), [
+              97,
+              98,
+              99,
+            ]);
             throw error;
           },
         ),
@@ -168,7 +176,7 @@ void main() {
   });
 
   test('concurrent private extractions have independent lifetimes', () async {
-    final source = File('${root.path}/concurrent.tar')
+    final source = File(p.join(root.path, 'concurrent.tar'))
       ..writeAsBytesSync(member('a'));
     final inventory = ArchiveInventory({
       'a': (size: 3, mode: 0x1a4, sha256: abc),
@@ -182,7 +190,11 @@ void main() {
             directories.add(directory.path);
             if (directories.length == 2) entered.complete();
             await entered.future;
-            expect(File('${directory.path}/a').readAsBytesSync(), [97, 98, 99]);
+            expect(File(p.join(directory.path, 'a')).readAsBytesSync(), [
+              97,
+              98,
+              99,
+            ]);
           }),
       ]);
       expect(directories, hasLength(2));
@@ -197,7 +209,7 @@ void main() {
   });
 
   test('mode-setting failure removes staging before callback exposure', () async {
-    final source = File('${root.path}/failure.tar')
+    final source = File(p.join(root.path, 'failure.tar'))
       ..writeAsBytesSync(
         tarConverter.convert(
           TarEntry.data(TarHeader(name: 'payload', mode: 0x1ed), [97, 98, 99]),
@@ -216,9 +228,9 @@ void main() {
             expect(written.readAsBytesSync(), [97, 98, 99]);
             if (Platform.isWindows) {
               // Exercise the same cleanup using a native non-directory failure.
-              File('$path/child').openSync();
+              File(p.join(path, 'child')).openSync();
             } else {
-              posix.chmod('$path/child', mode.toRadixString(8));
+              posix.chmod(p.join(path, 'child'), mode.toRadixString(8));
             }
           },
         ),
@@ -235,7 +247,7 @@ void main() {
 
   test('native Unix permissions match all accepted producer modes', () async {
     for (final mode in [0x1a4, 0x1ed, 0x1b6, 0x1ff]) {
-      final source = File('${root.path}/mode.tar')
+      final source = File(p.join(root.path, 'mode.tar'))
         ..writeAsBytesSync(
           tarConverter.convert(
             TarEntry.data(TarHeader(name: 'payload', mode: mode), [97, 98, 99]),
@@ -246,7 +258,7 @@ void main() {
           input,
           ArchiveInventory({'payload': (size: 3, mode: mode, sha256: abc)}),
           (directory) async {
-            final file = File('${directory.path}/payload');
+            final file = File(p.join(directory.path, 'payload'));
             expect(file.readAsBytesSync(), [97, 98, 99]);
             // Windows retains mode provenance; it does not expose Unix chmod.
             if (!Platform.isWindows) expect(file.statSync().mode & 0xfff, mode);
@@ -259,7 +271,7 @@ void main() {
 
   test('verified bytes are callback-private and removed afterward', () async {
     final name = 'nested/${'café' * 26}/payload';
-    final source = File('${root.path}/input.tar')
+    final source = File(p.join(root.path, 'input.tar'))
       ..writeAsBytesSync(
         tarConverter.convert(
           TarEntry.data(TarHeader(name: name, mode: 0x1a4), [97, 98, 99]),
@@ -274,7 +286,11 @@ void main() {
         directory,
       ) async {
         extracted = directory;
-        expect(File('${directory.path}/$name').readAsBytesSync(), [97, 98, 99]);
+        expect(
+          File(p.joinAll([directory.path, ...name.split('/')]))
+              .readAsBytesSync(),
+          [97, 98, 99],
+        );
         expect(directory.parent.path, input.file.parent.path);
         if (!Platform.isWindows)
           expect(directory.statSync().mode & 0xfff, 0x1c0);

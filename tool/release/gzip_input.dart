@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart' as archive;
+import 'package:path/path.dart' as p;
 
 import 'archive_input.dart';
 
@@ -26,7 +27,7 @@ Future<T> withGzipInput<T>(
   return withArchiveInput(
     source,
     (snapshot) async {
-      final expanded = File('${snapshot.file.parent.path}/expanded');
+      final expanded = File(p.join(snapshot.file.parent.path, 'expanded'));
       await expanded.create(exclusive: true);
       final handle = _OutputHandle(await expanded.open(mode: FileMode.write));
       archive.InputFileStream? input;

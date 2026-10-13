@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import '../tool/release/publish_directory.dart';
@@ -21,10 +22,10 @@ void main() {
     'cold collision preserves empty directories, files and dangling aliases',
     () {
       for (final kind in ['empty', 'nonempty', 'file', 'alias']) {
-        final parent = Directory('${root.path}/$kind')..createSync();
-        final stage = Directory('${parent.path}/stage')..createSync();
-        final target = Directory('${parent.path}/target');
-        File('${stage.path}/payload').writeAsStringSync('source');
+        final parent = Directory(p.join(root.path, '$kind'))..createSync();
+        final stage = Directory(p.join(parent.path, 'stage'))..createSync();
+        final target = Directory(p.join(parent.path, 'target'));
+        File(p.join(stage.path, 'payload')).writeAsStringSync('source');
         if (kind == 'file') {
           File(target.path).writeAsStringSync('keep');
         } else if (kind == 'alias') {
@@ -32,7 +33,7 @@ void main() {
         } else {
           target.createSync();
           if (kind == 'nonempty')
-            File('${target.path}/keep').writeAsStringSync('keep');
+            File(p.join(target.path, 'keep')).writeAsStringSync('keep');
         }
         expect(
           () => publishDirectory(stage, target),
@@ -44,7 +45,10 @@ void main() {
             ),
           ),
         );
-        expect(File('${stage.path}/payload').readAsStringSync(), 'source');
+        expect(
+          File(p.join(stage.path, 'payload')).readAsStringSync(),
+          'source',
+        );
         if (kind == 'file') {
           expect(File(target.path).readAsStringSync(), 'keep');
         } else if (kind == 'alias') {
@@ -58,29 +62,34 @@ void main() {
 
   test('unrepresentable names cannot truncate or substitute a destination', () {
     for (final suffix in ['\x00hidden', '\uD800']) {
-      final stage = Directory('${root.path}/stage')..createSync();
+      final stage = Directory(p.join(root.path, 'stage'))..createSync();
       expect(
-        () => publishDirectory(stage, Directory('${root.path}/target$suffix')),
+        () => publishDirectory(
+          stage,
+          Directory(p.join(root.path, 'target$suffix')),
+        ),
         throwsFormatException,
       );
       expect(stage.existsSync(), isTrue);
-      expect(Directory('${root.path}/target').existsSync(), isFalse);
+      expect(Directory(p.join(root.path, 'target')).existsSync(), isFalse);
       stage.deleteSync();
     }
   });
 
   test('refuses non-directory staging and non-sibling publication', () {
-    final file = File('${root.path}/file')..writeAsStringSync('source');
+    final file = File(p.join(root.path, 'file'))..writeAsStringSync('source');
     expect(
-      () =>
-          publishDirectory(Directory(file.path), Directory('${root.path}/new')),
+      () => publishDirectory(
+        Directory(file.path),
+        Directory(p.join(root.path, 'new')),
+      ),
       throwsFormatException,
     );
     expect(file.readAsStringSync(), 'source');
-    final stage = Directory('${root.path}/stage')..createSync();
-    final other = Directory('${root.path}/other')..createSync();
+    final stage = Directory(p.join(root.path, 'stage'))..createSync();
+    final other = Directory(p.join(root.path, 'other'))..createSync();
     expect(
-      () => publishDirectory(stage, Directory('${other.path}/published')),
+      () => publishDirectory(stage, Directory(p.join(other.path, 'published'))),
       throwsFormatException,
     );
     expect(stage.existsSync(), isTrue);
@@ -88,47 +97,75 @@ void main() {
   });
 
   test('publication transfers a complete sibling directory unchanged', () {
-    final stage = Directory('${root.path}/prepared café')..createSync();
-    final destination = Directory('${root.path}/published café');
-    File('${stage.path}/payload').writeAsStringSync('complete');
+    final stage = Directory(p.join(root.path, 'prepared café'))..createSync();
+    final destination = Directory(p.join(root.path, 'published café'));
+    File(p.join(stage.path, 'payload')).writeAsStringSync('complete');
     publishDirectory(stage, destination);
     expect(stage.existsSync(), isFalse);
-    expect(File('${destination.path}/payload').readAsStringSync(), 'complete');
+    expect(
+      File(p.join(destination.path, 'payload')).readAsStringSync(),
+      'complete',
+    );
   });
 
-  test('source and parent aliases cannot redirect publication', () {
-    final stage = Directory('${root.path}/stage')..createSync();
-    final alias = Link('${root.path}/alias')..createSync(stage.path);
-    final parentAlias = Link('${root.path}/parent-alias')
-      ..createSync(root.path);
-    for (final source in [
-      Directory(alias.path),
-      Directory('${parentAlias.path}/stage'),
+  test('publication retains noncanonical route witnesses', () {
+    final stage = Directory(p.join(root.path, 'stage'))..createSync();
+    final child = Directory(p.join(root.path, 'child'))..createSync();
+    final alias = Link(p.join(root.path, 'hop'))..createSync(child.path);
+    final target = Directory(p.join(root.path, 'published'));
+    for (final path in [
+      '${root.path}${p.separator}.${p.separator}stage',
+      '${child.path}${p.separator}..${p.separator}stage',
+      '${alias.path}${p.separator}..${p.separator}stage',
+      if (Platform.isWindows) '${root.path}/stage',
     ]) {
+      expect(Directory(path).resolveSymbolicLinksSync(), stage.path);
       expect(
-        () => publishDirectory(source, Directory('${root.path}/published')),
+        () => publishDirectory(Directory(path), target),
         throwsFormatException,
       );
       expect(stage.existsSync(), isTrue);
-      expect(Directory('${root.path}/published').existsSync(), isFalse);
+      expect(target.existsSync(), isFalse);
+    }
+  });
+
+  test('source and parent aliases cannot redirect publication', () {
+    final stage = Directory(p.join(root.path, 'stage'))..createSync();
+    final alias = Link(p.join(root.path, 'alias'))..createSync(stage.path);
+    final parentAlias = Link(p.join(root.path, 'parent-alias'))
+      ..createSync(root.path);
+    for (final source in [
+      Directory(alias.path),
+      Directory(p.join(parentAlias.path, 'stage')),
+    ]) {
+      expect(
+        () =>
+            publishDirectory(source, Directory(p.join(root.path, 'published'))),
+        throwsFormatException,
+      );
+      expect(stage.existsSync(), isTrue);
+      expect(Directory(p.join(root.path, 'published')).existsSync(), isFalse);
     }
     expect(Link(alias.path).targetSync(), stage.path);
   });
 
   test('long native paths retain Unicode names without truncation', () {
     final parent = Directory(
-      '${root.path}/${List.filled(4, 'long-café-' * 8).join('/')}',
+      p.joinAll([root.path, ...List.filled(4, 'long-café-' * 8)]),
     )..createSync(recursive: true);
-    final stage = Directory('${parent.path}/stage')..createSync();
-    final target = Directory('${parent.path}/published-😀');
-    File('${stage.path}/payload').writeAsStringSync('long path');
+    final stage = Directory(p.join(parent.path, 'stage'))..createSync();
+    final target = Directory(p.join(parent.path, 'published-😀'));
+    File(p.join(stage.path, 'payload')).writeAsStringSync('long path');
     publishDirectory(stage, target);
-    expect(File('${target.path}/payload').readAsStringSync(), 'long path');
+    expect(
+      File(p.join(target.path, 'payload')).readAsStringSync(),
+      'long path',
+    );
     expect(stage.existsSync(), isFalse);
   });
 
   test('two ready processes contend for exactly one complete publication', () async {
-    final script = File('${root.path}/publisher.dart')
+    final script = File(p.join(root.path, 'publisher.dart'))
       ..writeAsStringSync('''
 import 'dart:io';
 import '${File('tool/release/publish_directory.dart').absolute.uri}';
@@ -148,20 +185,22 @@ Future<void> main(List<String> args) async {
   }
 }
 ''');
-    final target = Directory('${root.path}/published');
-    final release = File('${root.path}/release');
+    final target = Directory(p.join(root.path, 'published'));
+    final release = File(p.join(root.path, 'release'));
     final stages = [
       for (var i = 0; i < 2; i++)
-        Directory('${root.path}/stage$i')..createSync(),
+        Directory(p.join(root.path, 'stage$i'))..createSync(),
     ];
-    final ready = [for (var i = 0; i < 2; i++) File('${root.path}/ready$i')];
+    final ready = [
+      for (var i = 0; i < 2; i++) File(p.join(root.path, 'ready$i')),
+    ];
     final running = <Process>{};
     final exits = <Future<int>>[],
         outputs = <Future<String>>[],
         errors = <Future<String>>[];
     try {
       for (var i = 0; i < 2; i++) {
-        File('${stages[i].path}/owner').writeAsStringSync('$i');
+        File(p.join(stages[i].path, 'owner')).writeAsStringSync('$i');
         final process = await Process.start(Platform.resolvedExecutable, [
           '--packages=${File('.dart_tool/package_config.json').absolute.path}',
           script.path,
@@ -190,9 +229,12 @@ Future<void> main(List<String> args) async {
       expect(await outputs[winner], 'published');
       expect(await errors[winner], isEmpty);
       expect(int.parse(await errors[loser]), greaterThan(0));
-      expect(File('${target.path}/owner').readAsStringSync(), '$winner');
+      expect(File(p.join(target.path, 'owner')).readAsStringSync(), '$winner');
       expect(stages[winner].existsSync(), isFalse);
-      expect(File('${stages[loser].path}/owner').readAsStringSync(), '$loser');
+      expect(
+        File(p.join(stages[loser].path, 'owner')).readAsStringSync(),
+        '$loser',
+      );
     } finally {
       for (final process in running.toList()) terminateProcessId(process.pid);
       await Future.wait(exits).timeout(const Duration(seconds: 5));

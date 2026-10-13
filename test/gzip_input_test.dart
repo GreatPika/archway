@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
+import '../tool/release/archive_input.dart';
 import '../tool/release/gzip_input.dart';
 
 void main() {
@@ -12,12 +14,13 @@ void main() {
   setUp(() {
     final temporary = Directory.systemTemp.createTempSync('gzip-input-test-');
     root = Directory(temporary.resolveSymbolicLinksSync());
-    snapshots = Directory('${root.path}/snapshots')..createSync();
+    snapshots = Directory(p.join(root.path, 'snapshots'))..createSync();
   });
   tearDown(() => root.deleteSync(recursive: true));
 
   Future<void> rejected(List<int> bytes) async {
-    final source = File('${root.path}/invalid.gz')..writeAsBytesSync(bytes);
+    final source = File(p.join(root.path, 'invalid.gz'))
+      ..writeAsBytesSync(bytes);
     await expectLater(
       withGzipInput(source, (_) async {
         fail('Invalid gzip reached inspection');
@@ -30,13 +33,18 @@ void main() {
   test(
     'gzip input yields decoded bytes in an owned file and cleans it up',
     () async {
-      final source = File('${root.path}/input.gz')
+      final source = File(p.join(root.path, 'input.gz'))
         ..writeAsBytesSync(gzip.encode([97, 98, 99]));
       late File expanded;
       await withGzipInput(source, (file) async {
         expanded = file;
         expect(await file.readAsBytes(), [97, 98, 99]);
         expect(file.path, isNot(source.path));
+        expect(file.resolveSymbolicLinksSync(), file.path);
+        await withArchiveInput(file, (input) async {
+          expect(input.file.resolveSymbolicLinksSync(), input.file.path);
+          expect(await input.file.readAsBytes(), [97, 98, 99]);
+        }, temporaryParent: snapshots);
       }, temporaryParent: snapshots);
       expect(expanded.existsSync(), isFalse);
       expect(source.existsSync(), isTrue);
@@ -46,7 +54,7 @@ void main() {
   test(
     'expanded data is bounded before inspection and partial output is removed',
     () async {
-      final source = File('${root.path}/bomb.gz')
+      final source = File(p.join(root.path, 'bomb.gz'))
         ..writeAsBytesSync(gzip.encode(Uint8List(2 * 1024 * 1024)));
       await expectLater(
         withGzipInput(
@@ -66,7 +74,7 @@ void main() {
   test(
     'caller may tighten but cannot disable expanded snapshot bounds',
     () async {
-      final source = File('${root.path}/empty.gz')
+      final source = File(p.join(root.path, 'empty.gz'))
         ..writeAsBytesSync(gzip.encode([]));
       for (final limit in [-1, 512 * 1024 * 1024 + 1]) {
         await expectLater(
@@ -131,7 +139,7 @@ void main() {
       final first = gzip.encode([97, 98, 99]);
       final second = gzip.encode([100, 101, 102]);
       final empty = gzip.encode([]);
-      final source = File('${root.path}/concatenated.gz')
+      final source = File(p.join(root.path, 'concatenated.gz'))
         ..writeAsBytesSync([...empty, ...first, ...second, ...empty]);
       await withGzipInput(
         source,
@@ -203,7 +211,7 @@ void main() {
         List.generate(1024 * 1024 + 17, (i) => i % 251),
       );
       final encoded = gzip.encode(contents);
-      final source = File('${root.path}/long.gz')
+      final source = File(p.join(root.path, 'long.gz'))
         ..writeAsBytesSync([
           ...([...encoded.take(10)]..[3] = 8),
           ...utf8.encode('archive café 😀.tar'),
@@ -226,7 +234,8 @@ void main() {
     'verified input limits and pinned identity are enforced before decoding',
     () async {
       final encoded = gzip.encode([97, 98, 99]);
-      final source = File('${root.path}/pinned.gz')..writeAsBytesSync(encoded);
+      final source = File(p.join(root.path, 'pinned.gz'))
+        ..writeAsBytesSync(encoded);
       await expectLater(
         withGzipInput(
           source,
@@ -254,7 +263,7 @@ void main() {
   );
 
   test('callback failure closes output and removes all owned files', () async {
-    final source = File('${root.path}/rejected.gz')
+    final source = File(p.join(root.path, 'rejected.gz'))
       ..writeAsBytesSync(gzip.encode([97]));
     await expectLater(
       withGzipInput(source, (_) async {

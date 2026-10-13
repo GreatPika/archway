@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart' as archive;
 import 'package:crypto/crypto.dart' as crypto;
+import 'package:path/path.dart' as p;
 import 'package:posix/posix.dart' as posix;
 import 'package:tar/tar.dart';
 
@@ -77,7 +78,9 @@ Future<void> _readTar(
       RandomAccessFile? output;
       try {
         if (directory != null) {
-          final file = File('${directory.path}/${header.name}');
+          final file = File(
+            p.joinAll([directory.path, ...header.name.split('/')]),
+          );
           await file.parent.create(recursive: true);
           await file.create(exclusive: true);
           output = await file.open(mode: FileMode.write);
@@ -104,7 +107,10 @@ Future<void> _readTar(
         await output?.close();
       }
       if (directory != null)
-        setMode('${directory.path}/${header.name}', header.mode);
+        setMode(
+          p.joinAll([directory.path, ...header.name.split('/')]),
+          header.mode,
+        );
     }
     if (index != expectedMembers.length)
       throw const FormatException('Missing TAR members');

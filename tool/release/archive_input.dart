@@ -2,6 +2,7 @@
 import 'dart:io';
 
 import 'package:crypto/crypto.dart' as crypto;
+import 'package:path/path.dart' as p;
 import 'package:posix/posix.dart' as posix;
 import 'package:unorm_dart/unorm_dart.dart' as unicode;
 
@@ -21,6 +22,7 @@ final class ArchiveInput {
 }
 
 /// Copies an ordinary, non-aliased input into a unique owned directory.
+/// The absolute input spelling must already be canonical.
 /// No decoder or caller ever needs to reopen the original input afterward.
 Future<T> withArchiveInput<T>(
   File source,
@@ -49,7 +51,9 @@ Future<T> withArchiveInput<T>(
   );
   try {
     if (!Platform.isWindows) posix.chmod(directory.path, '700');
-    final snapshot = File('${directory.path}/input');
+    final snapshot = File(
+      p.join(await directory.resolveSymbolicLinks(), 'input'),
+    );
     await snapshot.create(exclusive: true);
     final output = await snapshot.open(mode: FileMode.write);
     var size = 0;

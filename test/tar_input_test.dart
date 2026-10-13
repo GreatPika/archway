@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
 import 'package:tar/tar.dart';
 import 'package:test/test.dart';
 
@@ -59,7 +60,7 @@ void main() {
           .createTempSync('tar-input-test-')
           .resolveSymbolicLinksSync(),
     );
-    snapshots = Directory('${root.path}/snapshots')..createSync();
+    snapshots = Directory(p.join(root.path, 'snapshots'))..createSync();
   });
   tearDown(() => root.deleteSync(recursive: true));
   Future<void> verify(
@@ -68,7 +69,8 @@ void main() {
     int mode = 0x1a4,
     Map<String, ArchiveFileIdentity>? files,
   }) async {
-    final source = File('${root.path}/input.tar')..writeAsBytesSync(bytes);
+    final source = File(p.join(root.path, 'input.tar'))
+      ..writeAsBytesSync(bytes);
     await withArchiveInput(
       source,
       (input) => verifyTarInput(

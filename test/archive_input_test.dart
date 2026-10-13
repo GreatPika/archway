@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import '../tool/release/archive_input.dart';
@@ -16,16 +17,17 @@ void main() {
       'archive-input-test-',
     );
     root = Directory(temporary.resolveSymbolicLinksSync());
-    snapshots = Directory('${root.path}/snapshots')..createSync();
+    snapshots = Directory(p.join(root.path, 'snapshots'))..createSync();
   });
   tearDown(() => root.deleteSync(recursive: true));
 
   test('snapshot owns exact bytes independently of the input file', () async {
-    final source = File('${root.path}/archive')..writeAsStringSync('abc');
+    final source = File(p.join(root.path, 'archive'))..writeAsStringSync('abc');
     await withArchiveInput(source, (input) async {
       expect(input.size, 3);
       expect(input.sha256, abcSha256);
       expect(input.file.path, isNot(source.path));
+      expect(input.file.resolveSymbolicLinksSync(), input.file.path);
       if (!Platform.isWindows) {
         expect(input.file.parent.statSync().mode & 0xfff, 0x1c0);
       }
@@ -34,10 +36,54 @@ void main() {
     }, temporaryParent: snapshots);
     expect(snapshots.listSync(), isEmpty);
   });
+  test('input guards retain noncanonical route and alias witnesses', () async {
+    final source = File(p.join(root.path, 'archive'))..writeAsStringSync('abc');
+    final child = Directory(p.join(root.path, 'child'))..createSync();
+    final alias = Link(p.join(root.path, 'hop'))..createSync(child.path);
+    for (final path in [
+      '${root.path}${p.separator}.${p.separator}archive',
+      '${child.path}${p.separator}..${p.separator}archive',
+      '${alias.path}${p.separator}..${p.separator}archive',
+      if (Platform.isWindows) '${root.path}/archive',
+    ]) {
+      expect(File(path).resolveSymbolicLinksSync(), source.path);
+      await expectLater(
+        withArchiveInput(File(path), (_) async {
+          fail('Noncanonical input reached inspection');
+        }, temporaryParent: snapshots),
+        throwsFormatException,
+      );
+    }
+    expect(snapshots.listSync(), isEmpty);
+    if (!Platform.isWindows) {
+      final literal = File(p.join(root.path, r'archive\literal'))
+        ..writeAsStringSync('abc');
+      await withArchiveInput(literal, (input) async {
+        expect(input.sha256, abcSha256);
+      }, temporaryParent: snapshots);
+    }
+  });
+  test(
+    'owned snapshot paths can be reused from an aliased temp location',
+    () async {
+      final source = File(p.join(root.path, 'archive'))
+        ..writeAsStringSync('abc');
+      final location = Link(p.join(root.path, 'temp-location'))
+        ..createSync(snapshots.path);
+      await withArchiveInput(source, (input) async {
+        expect(input.file.resolveSymbolicLinksSync(), input.file.path);
+        await withArchiveInput(input.file, (copy) async {
+          expect(copy.sha256, abcSha256);
+        }, temporaryParent: snapshots);
+      }, temporaryParent: Directory(location.path));
+      expect(location.targetSync(), snapshots.path);
+      expect(snapshots.listSync(), isEmpty);
+    },
+  );
   test(
     'file-backed input obeys a tighter caller bound without exposing data',
     () async {
-      final source = File('${root.path}/large');
+      final source = File(p.join(root.path, 'large'));
       final handle = source.openSync(mode: FileMode.write);
       handle.truncateSync(1024 * 1024);
       handle.closeSync();
@@ -59,10 +105,10 @@ void main() {
   );
 
   test('rejects direct and parent aliases before making a snapshot', () async {
-    final source = File('${root.path}/archive')..writeAsStringSync('abc');
-    final alias = Link('${root.path}/alias')..createSync(source.path);
-    final parent = Link('${root.path}/parent')..createSync(root.path);
-    for (final path in [alias.path, '${parent.path}/archive']) {
+    final source = File(p.join(root.path, 'archive'))..writeAsStringSync('abc');
+    final alias = Link(p.join(root.path, 'alias'))..createSync(source.path);
+    final parent = Link(p.join(root.path, 'parent'))..createSync(root.path);
+    for (final path in [alias.path, p.join(parent.path, 'archive')]) {
       await expectLater(
         withArchiveInput(File(path), (_) async {
           fail('Aliased input reached inspection');
@@ -76,7 +122,8 @@ void main() {
   test(
     'pinned input identity rejects changed bytes before inspection',
     () async {
-      final source = File('${root.path}/archive')..writeAsStringSync('abd');
+      final source = File(p.join(root.path, 'archive'))
+        ..writeAsStringSync('abd');
       await expectLater(
         withArchiveInput(
           source,
@@ -262,7 +309,7 @@ void main() {
   test(
     'rejects actual nonregular input without reading or creating snapshots',
     () async {
-      final path = '${root.path}/resource';
+      final path = p.join(root.path, 'resource');
       createNonregularResource(path);
       try {
         await expectLater(
@@ -281,7 +328,8 @@ void main() {
   test(
     'callback rejection removes its private snapshot and preserves source',
     () async {
-      final source = File('${root.path}/archive')..writeAsStringSync('abc');
+      final source = File(p.join(root.path, 'archive'))
+        ..writeAsStringSync('abc');
       await expectLater(
         withArchiveInput(source, (_) async {
           throw const FormatException('Rejected archive');
@@ -294,7 +342,7 @@ void main() {
   );
 
   test('file-backed archive and JSON ceilings cannot be relaxed', () async {
-    final source = File('${root.path}/oversized');
+    final source = File(p.join(root.path, 'oversized'));
     for (final limit in [maxArchiveBytes, maxArchiveJsonBytes]) {
       final handle = source.openSync(mode: FileMode.write);
       handle.truncateSync(limit + 1);
@@ -352,7 +400,7 @@ void main() {
   test(
     'stream growth past the byte bound rejects and removes the snapshot',
     () async {
-      final file = File('${root.path}/growing')..writeAsStringSync('abc');
+      final file = File(p.join(root.path, 'growing'))..writeAsStringSync('abc');
       final source = _FileGrowingAfterStat(file);
       await expectLater(
         withArchiveInput(
