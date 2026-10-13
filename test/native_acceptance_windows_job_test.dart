@@ -171,8 +171,14 @@ Future<void> runScenario(String scenario) async {
       File('${marker}.descendant-release').createSync();
   }
   final result = await outcome;
-  // Check the retained handle before any fallback cleanup can mask a leak.
-  expect(descendant.exited, isTrue);
+  // Forced termination can precede process-handle signalling. Observe the
+  // retained handle before any release marker or fallback kill can mask a leak.
+  expect(
+    scenario == 'timeout' || scenario == 'opt-out'
+        ? descendant.waitForExit()
+        : descendant.exited,
+    isTrue,
+  );
   expect(parent.exited, isTrue);
   if (scenario == 'timeout') {
     expect(result, isA<TimeoutException>());
@@ -233,8 +239,12 @@ final class NativeWitness {
       >('CloseHandle');
   final int pid;
   final Pointer<Void> handle;
-  bool get exited {
-    final state = wait(handle, 0);
+  bool get exited => _waitForExit(0);
+
+  bool waitForExit() => _waitForExit(5000);
+
+  bool _waitForExit(int milliseconds) {
+    final state = wait(handle, milliseconds);
     final error = state == 0xffffffff ? lastError() : null;
     if (state != 0 && state != 258)
       throw StateError('Native witness wait failed: state=$state error=$error');
