@@ -178,9 +178,42 @@ String windowsInventoryCommand() {
   if (root == null || !p.windows.isAbsolute(root)) {
     throw StateError('Absolute SystemRoot is required for junction fixtures');
   }
-  final command = p.windows.join(root, 'System32', 'cmd.exe');
+  final command = p.windows.join(
+    root,
+    'System32',
+    'WindowsPowerShell',
+    'v1.0',
+    'powershell.exe',
+  );
   if (!File(command).existsSync()) {
-    throw StateError('System command interpreter is missing: $command');
+    throw StateError('System PowerShell is missing: $command');
   }
   return command;
+}
+
+// Reuse the native-proven New-Item pattern in physical_paths_test.dart.
+// cmd builtins do not accept the runner's CRT argv quoting. PowerShell's
+// EncodedCommand accepts one base64 argument containing a UTF-16LE script.
+List<String> windowsInventoryJunctionArguments(String junction, String target) {
+  final linkLiteral = junction.replaceAll("'", "''");
+  final targetLiteral = target.replaceAll("'", "''");
+  final script =
+      '''
+\$ErrorActionPreference = 'Stop'
+try {
+  New-Item -ItemType Junction -Path '$linkLiteral' -Target '$targetLiteral' -ErrorAction Stop | Out-Null
+  exit 0
+} catch {
+  [Console]::Error.WriteLine(\$_.Exception.Message)
+  exit 1
+}
+''';
+  return [
+    '-NoProfile',
+    '-NonInteractive',
+    '-EncodedCommand',
+    base64Encode([
+      for (final unit in script.codeUnits) ...[unit & 0xff, unit >> 8],
+    ]),
+  ];
 }

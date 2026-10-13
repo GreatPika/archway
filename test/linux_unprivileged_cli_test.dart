@@ -5,7 +5,9 @@ import 'dart:io';
 import 'package:test/test.dart';
 
 void main() {
-  if (!Platform.isLinux) return;
+  final skip = Platform.isLinux
+      ? false
+      : 'Requires Linux unprivileged exec and identity semantics.';
 
   test('unprivileged CLI child replaces its PID and preserves transport', () async {
     final root = Directory.systemTemp.createTempSync('archway-uid-child-');
@@ -49,7 +51,7 @@ void main() {
     } finally {
       root.deleteSync(recursive: true);
     }
-  });
+  }, skip: skip);
 
   test(
     'unprivileged CLI child uses uid 65534 only for a root caller',
@@ -71,6 +73,7 @@ void main() {
         expect(result.stderr, isEmpty);
       }
     },
+    skip: skip,
   );
 
   test('failed exec remains a visible child failure', () async {
@@ -79,7 +82,7 @@ void main() {
     expect(result.stdout, isEmpty);
     expect(result.stderr, contains('execv /no-executable-here/archway'));
     expect(result.stderr, contains('errno = 2'));
-  });
+  }, skip: skip);
 }
 
 Future<ProcessResult> _runPermissionChild(List<String> arguments) async {

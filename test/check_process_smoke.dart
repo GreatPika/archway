@@ -327,12 +327,7 @@ nodes:
       final junction = p.join(folder.path, 'alias');
       final create = await runNativeProcess([
         windowsInventoryCommand(),
-        '/d',
-        '/c',
-        'mklink',
-        '/J',
-        junction,
-        target.path,
+        ...windowsInventoryJunctionArguments(junction, target.path),
       ], timeout: const Duration(seconds: 15));
       check(create.exitCode == 0, create);
       final metadata = windowsReparseMetadata(junction);

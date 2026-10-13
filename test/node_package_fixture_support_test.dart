@@ -33,39 +33,83 @@ void main() {
     bytes,
   );
 
-  test('relative directory links and real hardlinks survive', () async {
-    final input = await archive([
-      member('store', TypeFlag.dir),
-      member('store/package', TypeFlag.dir),
-      member('node_modules', TypeFlag.dir),
-      member('store/package/index.d.ts', TypeFlag.reg, bytes: [120]),
-      member(
-        'store/package/copy.d.ts',
-        TypeFlag.link,
-        target: 'store/package/index.d.ts',
-      ),
-      member(
-        'node_modules/package',
-        TypeFlag.symlink,
-        target: '../store/package',
-      ),
-    ]);
-    final output = Directory(p.join(temporary.path, 'output'));
-    await extractNodeFixture(input, output);
-    final link = Link(p.join(output.path, 'node_modules/package'));
-    expect(
-      link.targetSync(),
-      ['..', 'store', 'package'].join(Platform.pathSeparator),
+  test(
+    'Windows native fixture paths keep drive, UNC and extended spelling',
+    () {
+      for (final paths in [
+        [r'C:\package café\index.d.ts', r'\\?\C:\package café\index.d.ts'],
+        [
+          r'\\server\share\package\index.d.ts',
+          r'\\?\UNC\server\share\package\index.d.ts',
+        ],
+        [r'\\?\C:\deep\index.d.ts', r'\\?\C:\deep\index.d.ts'],
+        [
+          r'\\?\UNC\server\share\index.d.ts',
+          r'\\?\UNC\server\share\index.d.ts',
+        ],
+      ]) {
+        expect(nodeFixtureWindowsNativePath(paths[0]), paths[1]);
+      }
+    },
+  );
+
+  for (final deep in [false, true]) {
+    test(
+      deep
+          ? 'deep relative destination preserves directory links and real hardlinks'
+          : 'relative directory links and real hardlinks survive',
+      () async {
+        final input = await archive([
+          member('store', TypeFlag.dir),
+          member('store/package', TypeFlag.dir),
+          member('node_modules', TypeFlag.dir),
+          member('store/package/index.d.ts', TypeFlag.reg, bytes: [120]),
+          member(
+            'store/package/copy.d.ts',
+            TypeFlag.link,
+            target: 'store/package/index.d.ts',
+          ),
+          member(
+            'node_modules/package',
+            TypeFlag.symlink,
+            target: '../store/package',
+          ),
+        ]);
+        final destination = p.joinAll([
+          temporary.path,
+          if (deep) ...List.filled(3, 'package café'.padRight(100, 'x')),
+          'output',
+        ]);
+        // Exercise relative caller paths too: only the FFI arguments become
+        // absolute/extended. Archive names and stored symlink targets must not.
+        final output = Directory(deep ? p.relative(destination) : destination);
+        if (deep) {
+          for (final name in [
+            'store/package/index.d.ts',
+            'store/package/copy.d.ts',
+            'node_modules/package',
+          ]) {
+            expect(p.join(destination, name).length, greaterThan(260));
+          }
+        }
+        await extractNodeFixture(input, output);
+        final link = Link(p.join(output.path, 'node_modules/package'));
+        expect(
+          link.targetSync(),
+          ['..', 'store', 'package'].join(Platform.pathSeparator),
+        );
+        expect(FileSystemEntity.isLinkSync(link.path), isTrue);
+        expect(File(p.join(link.path, 'index.d.ts')).readAsBytesSync(), [120]);
+        expect(
+          FileSystemEntity.identicalSync(
+            p.join(output.path, 'store/package/index.d.ts'),
+            p.join(output.path, 'store/package/copy.d.ts'),
+          ),
+          isTrue,
+        );
+      },
     );
-    expect(File(p.join(link.path, 'index.d.ts')).readAsBytesSync(), [120]);
-    expect(
-      FileSystemEntity.identicalSync(
-        p.join(output.path, 'store/package/index.d.ts'),
-        p.join(output.path, 'store/package/copy.d.ts'),
-      ),
-      isTrue,
-    );
-  });
+  }
 
   for (final target in ['../outside', '/outside', r'C:\outside']) {
     test('escaping symbolic link $target rejected before extraction', () async {

@@ -140,6 +140,15 @@ Future<void> extractNodeFixture(File archive, Directory destination) async {
   }
 }
 
+// Match the Flutter fixture helper at the Win32 boundary. This accepts an
+// absolute Windows path; logical fixture paths and relative link targets stay
+// unchanged.
+String nodeFixtureWindowsNativePath(String path) => path.startsWith(r'\\?\')
+    ? path
+    : path.startsWith(r'\\')
+    ? '\\\\?\\UNC\\${path.substring(2)}'
+    : '\\\\?\\$path';
+
 void _windowsLink(String path, String target, {required bool hard}) {
   final kernel = DynamicLibrary.open('kernel32.dll');
   final error = kernel.lookupFunction<Uint32 Function(), int Function()>(
@@ -156,8 +165,18 @@ void _windowsLink(String path, String target, {required bool hard}) {
         int Function(Pointer<Utf16>, Pointer<Utf16>, int)
       >('CreateSymbolicLinkW');
   using((arena) {
-    final name = path.toNativeUtf16(allocator: arena),
-        value = target.toNativeUtf16(allocator: arena);
+    final name = nodeFixtureWindowsNativePath(
+      p.normalize(File(path).absolute.path),
+    ).toNativeUtf16(allocator: arena);
+    // A symlink stores its archive-relative target verbatim. Only hardlink
+    // targets name existing absolute filesystem objects for this native call.
+    final value =
+        (hard
+                ? nodeFixtureWindowsNativePath(
+                    p.normalize(File(target).absolute.path),
+                  )
+                : target)
+            .toNativeUtf16(allocator: arena);
     var result = hard
         ? hardLink(name, value, nullptr)
         : symlink(name, value, 3);

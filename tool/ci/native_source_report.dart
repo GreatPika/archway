@@ -72,6 +72,10 @@ bool expectedSkip(String target, String path, String name, String? reason) {
   // matches its owning test's Platform guard; dependencies never qualify.
   const windowsOnly = {
     (
+      'test/check_inventory_fixture_test.dart',
+      'native junction launch preserves spaces, Unicode and apostrophes',
+    ): 'Requires native Windows junction creation.',
+    (
       'test/flutter_sdk_copy_test.dart',
       'Windows deep source and destination remain real isolated hardlinks',
     ): 'Requires native Windows hardlinks.',
@@ -84,6 +88,24 @@ bool expectedSkip(String target, String path, String name, String? reason) {
       'Windows pipe sinks preserve default buffering and allow no-buffer capture',
     ): 'Native Windows pipe control.',
   };
+  const linuxOnly = {
+    (
+      'test/linux_unprivileged_cli_test.dart',
+      'unprivileged CLI child replaces its PID and preserves transport',
+    ),
+    (
+      'test/linux_unprivileged_cli_test.dart',
+      'unprivileged CLI child uses uid 65534 only for a root caller',
+    ),
+    (
+      'test/linux_unprivileged_cli_test.dart',
+      'failed exec remains a visible child failure',
+    ),
+  };
+  if ((target == 'macos-arm64' || target == 'windows-x64') &&
+      linuxOnly.contains(entry) &&
+      reason == 'Requires Linux unprivileged exec and identity semantics.')
+    return true;
   const posixOnly = {
     (
       'test/windows_assembly_assertions_test.dart',

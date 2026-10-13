@@ -56,7 +56,10 @@ void main() {
         'assets/typescript/licenses/notice.txt',
         'assets/typescript/vendor/pkg/nested.js',
       });
-      expect(result.binary.path, at(bundle, 'bin/linux-x64/archway').path);
+      expect(
+        result.binary.path,
+        p.join(bundle.path, 'bin', 'linux-x64', 'archway'),
+      );
     },
   );
   test('owned glob selection includes extension-only basenames', () {

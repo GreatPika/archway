@@ -13,7 +13,11 @@ DynamicLibrary? _loadApi() {
   final api = DynamicLibrary.open('kernel32.dll');
   _error = api.lookupFunction<Uint32 Function(), int Function()>(
     'GetLastError',
+    isLeaf: true,
   );
+  // Initialize the error reader's cold FFI call path before a fallible call.
+  // Leaf calls avoid non-leaf VM transitions; separate calls are not atomic.
+  _error();
   return api;
 }
 
@@ -46,7 +50,7 @@ final _init = _api
     ?.lookupFunction<
       Int32 Function(Pointer<Void>, Uint32, Uint32, Pointer<UintPtr>),
       int Function(Pointer<Void>, int, int, Pointer<UintPtr>)
-    >('InitializeProcThreadAttributeList');
+    >('InitializeProcThreadAttributeList', isLeaf: true);
 final _update = _api
     ?.lookupFunction<
       Int32 Function(

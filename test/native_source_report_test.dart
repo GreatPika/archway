@@ -157,17 +157,21 @@ void main() {
         throwsFormatException,
       );
     }
-    final records = events(path);
-    records[1]['test'].addAll({
-      'name': 'loading $path',
-      'groupIDs': [],
-      'url': null,
-    });
-    records[2]['hidden'] = true;
-    expect(
-      () => summarizeTests(records, {path}, 'linux-x64'),
-      throwsFormatException,
-    );
+    for (final target in sourceTargets) {
+      for (final emptyPath in [path, 'test/linux_unprivileged_cli_test.dart']) {
+        final records = events(emptyPath);
+        records[1]['test'].addAll({
+          'name': 'loading $emptyPath',
+          'groupIDs': [],
+          'url': null,
+        });
+        records[2]['hidden'] = true;
+        expect(
+          () => summarizeTests(records, {emptyPath}, target),
+          throwsFormatException,
+        );
+      }
+    }
     for (final skipped in [true, false]) {
       final hidden = events(path, skipped: skipped);
       hidden[2]['hidden'] = true;
@@ -186,6 +190,12 @@ void main() {
           'Windows assembly guards reject execution on a non-Windows host',
           'Requires a non-Windows host.',
           false,
+        ),
+        (
+          'test/check_inventory_fixture_test.dart',
+          'native junction launch preserves spaces, Unicode and apostrophes',
+          'Requires native Windows junction creation.',
+          true,
         ),
         (
           'test/flutter_sdk_copy_test.dart',
@@ -273,6 +283,40 @@ void main() {
       }
     },
   );
+  test('Linux unprivileged guards bind exact identity and host', () {
+    const path = 'test/linux_unprivileged_cli_test.dart';
+    const reason = 'Requires Linux unprivileged exec and identity semantics.';
+    for (final name in [
+      'unprivileged CLI child replaces its PID and preserves transport',
+      'unprivileged CLI child uses uid 65534 only for a root caller',
+      'failed exec remains a visible child failure',
+    ]) {
+      for (final target in sourceTargets) {
+        final call = () => summarizeTests(
+          events(path, name: name, skipped: true, reason: reason),
+          {path},
+          target,
+        );
+        if (target == 'linux-x64') {
+          expect(call, throwsFormatException);
+        } else {
+          expect((call()['skipped'] as List).single['reason'], reason);
+        }
+        for (final invalid in [null, '', 'fixture missing', '$reason ']) {
+          expect(
+            () => summarizeTests(
+              events(path, name: name, skipped: true, reason: invalid),
+              {path},
+              target,
+            ),
+            throwsFormatException,
+          );
+        }
+        expect(expectedSkip(target, '$path.other', name, reason), isFalse);
+        expect(expectedSkip(target, path, '$name extra', reason), isFalse);
+      }
+    }
+  });
   test('capability skips retain their exact reason without admitting missing dependencies', () {
     const path = 'test/physical_paths_test.dart';
     final records = events(
