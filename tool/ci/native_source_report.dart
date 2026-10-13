@@ -3,6 +3,33 @@ const sourceTargets = {'linux-x64', 'macos-arm64', 'windows-x64'};
 
 bool expectedSkip(String target, String path, String name, String? reason) {
   final entry = (path, name);
+  // These POSIX staging fixtures remain visible on Windows without running
+  // their chmod/umask setup. No missing dependency or empty suite qualifies.
+  if (path == 'test/macos_installer_builder_test.dart') {
+    if (target == 'windows-x64' &&
+        reason == 'POSIX macOS installer staging fixture' &&
+        const {
+          'stages exact payload and unchanged lifecycle without source commit policy',
+          'rejects each caller policy violation without creating output',
+          'rejects restricted and reserved paths, including uninstall subtree',
+          'rejects bytes, modes, extra files and symlink payloads',
+          'rejects fresh output inside input directly or through aliased parent',
+          'preserves existing output and dangling links',
+          'removes private copied payload after lifecycle input failure',
+          'owned inventory includes every copied file and uninstall with actual modes',
+          'explicit command fixture captures unsigned pkgbuild arguments and evidence',
+          'native build refuses actual non-macOS host before any mutation',
+          'restricted child umask keeps package directories traversable and stage private',
+          'shared producer manifest mode precondition rejects 0755 before staging',
+        }.contains(name))
+      return true;
+    if (target == 'macos-arm64' &&
+        name ==
+            'native build refuses actual non-macOS host before any mutation' &&
+        reason == 'Non-macOS host control')
+      return true;
+  }
+
   const windows = {
     (
       'test/windows_native_probe_test.dart',
@@ -72,6 +99,16 @@ bool expectedSkip(String target, String path, String name, String? reason) {
   // matches its owning test's Platform guard; dependencies never qualify.
   const windowsOnly = {
     (
+      'test/installation_directory_test.dart',
+      'rejects a Windows junction root',
+    ): 'Windows reparse fixture',
+    (
+      'test/installation_directory_test.dart',
+      'rejects a Windows junction parent',
+    ): 'Windows reparse fixture',
+    ('test/installation_directory_test.dart', 'rejects a Windows file symlink'):
+        'Windows reparse fixture',
+    (
       'test/check_inventory_fixture_test.dart',
       'native junction launch preserves spaces, Unicode and apostrophes',
     ): 'Requires native Windows junction creation.',
@@ -106,7 +143,43 @@ bool expectedSkip(String target, String path, String name, String? reason) {
       'stderr open failure closes the already opened stdout handle',
     ): 'Linux descriptor ownership observation',
   };
+  if (target != 'linux-x64' &&
+      path == 'test/linux_installer_builder_test.dart' &&
+      reason == 'Requires Linux dpkg archive packaging.' &&
+      {
+        'packages exact payload, modes, metadata and launcher',
+        for (final mutation in [
+          'target',
+          'commit',
+          'version',
+          'schema',
+          'helper',
+          'bytes',
+          'mode',
+          'extra',
+          'link',
+          'inventory path',
+          'oversize',
+        ])
+          'rejects $mutation before publication',
+        'refuses existing output including dangling symlinks',
+        'resolves output parent aliases before making missing directories',
+        'rejects aliased bundle',
+        for (final fault in [
+          'command failure',
+          'payload',
+          'launcher',
+          'winner',
+        ])
+          'cleans staging and refuses $fault',
+      }.contains(name)) {
+    return true;
+  }
   const posixOnly = {
+    (
+      'test/installation_directory_test.dart',
+      'compares physical modes only when requested',
+    ): 'POSIX mode fixture',
     (
       'test/prepare_native_acceptance_test.dart',
       'Git discovery skips a nonexecutable earlier PATH entry',

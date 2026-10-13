@@ -33,6 +33,109 @@ List<Map<String, dynamic>> events(
   {'type': 'done', 'success': true},
 ];
 void main() {
+  test('Linux installer guards bind all exact cases, hosts and reasons', () {
+    const path = 'test/linux_installer_builder_test.dart';
+    const reason = 'Requires Linux dpkg archive packaging.';
+    final names = [
+      'packages exact payload, modes, metadata and launcher',
+      for (final mutation in [
+        'target',
+        'commit',
+        'version',
+        'schema',
+        'helper',
+        'bytes',
+        'mode',
+        'extra',
+        'link',
+        'inventory path',
+        'oversize',
+      ])
+        'rejects $mutation before publication',
+      'refuses existing output including dangling symlinks',
+      'resolves output parent aliases before making missing directories',
+      'rejects aliased bundle',
+      for (final fault in ['command failure', 'payload', 'launcher', 'winner'])
+        'cleans staging and refuses $fault',
+    ];
+    expect(names, hasLength(19));
+    for (final target in sourceTargets) {
+      for (final name in names) {
+        final report = () => summarizeTests(
+          events(path, name: name, skipped: true, reason: reason),
+          {path},
+          target,
+        );
+        if (target == 'linux-x64') {
+          expect(report, throwsFormatException);
+        } else {
+          expect((report()['skipped'] as List).single['reason'], reason);
+        }
+        for (final invalid in [null, '', 'dpkg-deb unavailable', '$reason ']) {
+          expect(
+            () => summarizeTests(
+              events(path, name: name, skipped: true, reason: invalid),
+              {path},
+              target,
+            ),
+            throwsFormatException,
+          );
+        }
+        expect(expectedSkip(target, '$path.other', name, reason), isFalse);
+        expect(expectedSkip(target, path, '$name extra', reason), isFalse);
+      }
+      // Even an inapplicable platform must register actual visible cases.
+      final empty = events(path);
+      empty[1]['test'].addAll({
+        'name': 'loading $path',
+        'groupIDs': [],
+        'url': null,
+      });
+      empty[2]['hidden'] = true;
+      expect(
+        () => summarizeTests(empty, {path}, target),
+        throwsFormatException,
+      );
+    }
+  });
+
+  test(
+    'installation directory skips bind the exact platform and fixture reason',
+    () {
+      const path = 'test/installation_directory_test.dart';
+      const cases = {
+        'compares physical modes only when requested': 'POSIX mode fixture',
+        'rejects a Windows junction root': 'Windows reparse fixture',
+        'rejects a Windows junction parent': 'Windows reparse fixture',
+        'rejects a Windows file symlink': 'Windows reparse fixture',
+      };
+      for (final entry in cases.entries) {
+        for (final target in sourceTargets) {
+          final allowed = entry.value == 'POSIX mode fixture'
+              ? target == 'windows-x64'
+              : target != 'windows-x64';
+          expect(expectedSkip(target, path, entry.key, entry.value), allowed);
+          expect(
+            expectedSkip(target, path, entry.key, 'fixture unavailable'),
+            isFalse,
+          );
+          expect(
+            expectedSkip(target, path, '${entry.key} changed', entry.value),
+            isFalse,
+          );
+          expect(
+            expectedSkip(
+              target,
+              'test/other_test.dart',
+              entry.key,
+              entry.value,
+            ),
+            isFalse,
+          );
+        }
+      }
+    },
+  );
   test('complete visible reporter lifecycle binds exact suite inventory', () {
     const path = 'test/example_test.dart';
     expect(summarizeTests(events(path), {path}, 'linux-x64'), {

@@ -1,9 +1,11 @@
 // Controlled export of a trusted installation after transported acceptance.
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:ffi/ffi.dart';
 import 'package:path/path.dart' as p;
 import 'package:posix/posix.dart' as posix;
 import 'package:tar/tar.dart';
@@ -11,6 +13,29 @@ import 'package:tar/tar.dart';
 import 'archive_input.dart';
 import 'publish_directory.dart';
 import 'tar_input.dart';
+
+/// Verifies an extracted installation without changing or publishing it.
+/// [compareModes] controls equality with expected modes; ordinary-source mode
+/// validation still applies when equality is disabled.
+Future<void> verifyInstallationDirectory(
+  Directory root,
+  ArchiveInventory expected, {
+  required bool compareModes,
+}) async {
+  final (actual, _) = await _inventory(
+    root,
+    expected.files.keys.toSet(),
+    maxArchiveBytes,
+  );
+  for (final entry in expected.files.entries) {
+    final observed = actual.files[entry.key]!;
+    if (observed.size != entry.value.size ||
+        observed.sha256 != entry.value.sha256 ||
+        (compareModes && observed.mode != entry.value.mode)) {
+      throw FormatException('Installation identity differs: ${entry.key}');
+    }
+  }
+}
 
 Future<void> exportInstallation(
   Directory bundle,
@@ -133,6 +158,7 @@ Future<(ArchiveInventory, Map<String, File>)> _inventory(
       sources = <String, File>{};
   var total = 0;
   Future<void> visit(FileSystemEntity entry) async {
+    _rejectWindowsReparse(entry.path);
     final name = p
         .relative(entry.path, from: bundle.path)
         .split(p.separator)
@@ -179,7 +205,38 @@ Future<(ArchiveInventory, Map<String, File>)> _inventory(
   );
 }
 
+final _windowsAttributes = Platform.isWindows
+    ? DynamicLibrary.open('kernel32.dll').lookupFunction<
+        Uint32 Function(Pointer<Utf16>),
+        int Function(Pointer<Utf16>)
+      >('GetFileAttributesW')
+    : null;
+
+// Dart's no-follow type alone can report a junction as a directory. Reject all
+// reparse tags before traversal/read; this is observation, not an atomic snapshot.
+void _rejectWindowsReparse(String path) {
+  if (!Platform.isWindows) return;
+  final absolute = File(path).absolute.path;
+  final extended = absolute.startsWith(r'\\?\')
+      ? absolute
+      : absolute.startsWith(r'\\')
+      ? '\\\\?\\UNC\\${absolute.substring(2)}'
+      : '\\\\?\\$absolute';
+  using((arena) {
+    final attributes = _windowsAttributes!(
+      extended.toNativeUtf16(allocator: arena),
+    );
+    if (attributes == 0xffffffff) {
+      throw FileSystemException('Cannot inspect source attributes', path);
+    }
+    if (attributes & 0x400 != 0) {
+      throw const FormatException('Reparse source entry');
+    }
+  });
+}
+
 Stream<List<int>> _sourceBytes(File file, int expectedSize) async* {
+  _rejectWindowsReparse(file.path);
   if (await FileSystemEntity.type(file.path, followLinks: false) !=
           FileSystemEntityType.file ||
       await file.resolveSymbolicLinks() != file.absolute.path)

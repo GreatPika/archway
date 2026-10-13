@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart' as archive;
 import 'package:crypto/crypto.dart' as crypto;
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import '../tool/release/archive_input.dart';
@@ -68,17 +69,44 @@ ArchiveInventory inventory(List<(String, List<int>)> files) =>
         ),
     });
 
+String fixtureSourcePath(String directory, p.Context paths) =>
+    paths.join(directory, 'source.zip');
+
 void main() {
   late Directory root;
-  setUp(() => root = Directory.systemTemp.createTempSync('zip-input-test-'));
+  setUp(() {
+    root = Directory(
+      Directory.systemTemp
+          .createTempSync('zip-input-test-')
+          .resolveSymbolicLinksSync(),
+    );
+  });
   tearDown(() => root.deleteSync(recursive: true));
   Future<T> inspect<T>(
     List<int> bytes,
     Future<T> Function(ArchiveInput) run,
   ) async {
-    final file = File('${root.path}/source.zip')..writeAsBytesSync(bytes);
+    final file = File(fixtureSourcePath(root.path, p.context))
+      ..writeAsBytesSync(bytes);
+    // Negative ZIP controls must reach ZIP validation, not fail at the input
+    // path guard because this fixture constructed a noncanonical spelling.
+    expect(file.path, file.resolveSymbolicLinksSync());
     return withArchiveInput(file, run, temporaryParent: root);
   }
+
+  test('fixture source uses native separators on Windows and POSIX', () {
+    expect(
+      fixtureSourcePath(
+        r'C:\temp\zip-input-test',
+        p.Context(style: p.Style.windows),
+      ),
+      r'C:\temp\zip-input-test\source.zip',
+    );
+    expect(
+      fixtureSourcePath('/tmp/zip-input-test', p.Context(style: p.Style.posix)),
+      '/tmp/zip-input-test/source.zip',
+    );
+  });
 
   test(
     'reads root manifest and verifies every payload without extraction',
