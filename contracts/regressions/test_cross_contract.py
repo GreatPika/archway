@@ -1,3 +1,4 @@
+"""Finite cross-contract regressions; no Archway or compiler certification."""
 import json, pathlib, importlib.util, copy
 from jsonschema import Draft202012Validator
 B=pathlib.Path(__file__).resolve().parents[1]
@@ -37,7 +38,7 @@ for p in ['src/[x].ts','src/{x}.ts']:
 for raw,want in [('.', './'),('a/..','./'),('src/A.ts','src/A.ts'),('src/a.ts','src/a.ts')]:
  a=l.normalize(raw);results.append({'case':'lexical-positive-'+raw,'pass':a==want,'actual':a})
 
-# Extra cross-contract tests added by independent reviewer.
+# Cross-contract assignment and observation checks.
 a=loadmod('assignment','assignment/verify.py')
 assignment_cases=0
 for supported in [False,True]:
@@ -116,7 +117,26 @@ x['payload']['input_identity']['inputs'].append({
 x['payload']['input_identity']['changed_inputs'] = [copy.deepcopy(root_location)]
 case('public-changed-root-requires-matching-inventory-location', x)
 
-(B/'independent/probe-results.json').write_text(json.dumps({'mutation_cases':results,'assignment_combinations_passed':assignment_cases},indent=2)+'\n')
 print('FINAL:',len(results),'mutation/positive cases;',sum(x['pass'] for x in results),'PASS;',sum(not x['pass'] for x in results),'FAIL;',assignment_cases,'assignment combinations PASS')
 
-assert all(x['pass'] for x in results), 'Independent contract regressions remain; see probe-results.json'
+assert all(x['pass'] for x in results), json.dumps([x for x in results if not x['pass']])
+
+# The bundle runner must reject contract bytes that disagree with its inventory.
+runner = loadmod("contract_runner", "run_tests.py")
+import hashlib
+import tempfile
+with tempfile.TemporaryDirectory() as temporary:
+    root = pathlib.Path(temporary)
+    source = root / "contract.json"
+    source.write_text("{}\n")
+    inventory = {"contract.json": hashlib.sha256(source.read_bytes()).hexdigest()}
+    (root / "manifest.json").write_text(json.dumps({"files": inventory}))
+    assert runner.verify_manifest(root) == [], "Matching inventory must pass"
+    source.write_text("[]\n")
+    assert runner.verify_manifest(root) == ["hash mismatch: contract.json"]
+
+    source.unlink()
+    assert runner.verify_manifest(root) == ["missing file: contract.json"]
+    source.write_text("{}\n")
+    (root / "unlisted.json").write_text("{}\n")
+    assert runner.verify_manifest(root) == ["unlisted file: unlisted.json"]

@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix='archway-native-fault-') as temp:
         value = json.loads(result.stdout)
         payload = value['payload']
         assert payload['outcome'] == ('created' if success else 'partial'), value
-        created = ['architecture.yaml', 'ARCHITECTURE_AGENT.md'] if success else ['architecture.yaml']
+        created = ['architecture.yaml', 'ARCHITECTURE.md'] if success else ['architecture.yaml']
         assert payload['created_paths'] == created, value
         assert payload['residual_paths'] == ([] if success else created), value
         assert sorted(p.name for p in root.iterdir()) == sorted(created)

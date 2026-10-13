@@ -36,17 +36,17 @@ def assert_aot_init(binary, base, *, command=None, environment=None, label='AOT'
     assert value['diagnostics'] == []
     assert value['payload'] == {
         'template': 'mixed', 'dry_run': False, 'outcome': 'created',
-        'planned_paths': ['architecture.yaml', 'ARCHITECTURE_AGENT.md'],
+        'planned_paths': ['architecture.yaml', 'ARCHITECTURE.md'],
         'planned_files': [],
-        'created_paths': ['architecture.yaml', 'ARCHITECTURE_AGENT.md'],
+        'created_paths': ['architecture.yaml', 'ARCHITECTURE.md'],
         'residual_paths': [], 'conflicting_paths': [],
     }
     assert sorted(path.name for path in root.iterdir()) == [
-        'ARCHITECTURE_AGENT.md', 'architecture.yaml']
+        'ARCHITECTURE.md', 'architecture.yaml']
     assert (root / 'architecture.yaml').read_bytes() == (
         b'# Archway: mixed template\nversion: 1\nprojects: []\nscope: []\n'
         b'exclude: []\nnodes: []\n')
-    guide = (root / 'ARCHITECTURE_AGENT.md').read_text(encoding='utf-8')
+    guide = (root / 'ARCHITECTURE.md').read_text(encoding='utf-8')
     assert guide.startswith('# Architecture agent workflow\n')
     assert 'Init never overwrites or merges files.' in guide
     assert 'Init does not edit AGENTS.md, CI, or editor settings.' in guide

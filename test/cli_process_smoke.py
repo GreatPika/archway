@@ -48,7 +48,7 @@ with tempfile.TemporaryDirectory(prefix='archway-process-') as temporary:
         assert list(root.iterdir()) == []
         created = invoke(cwd, ['init', '--template=' + template, '--root=' + str(root)], 0)
         assert created['payload']['outcome'] == 'created'
-        assert sorted(p.name for p in root.iterdir()) == ['ARCHITECTURE_AGENT.md', 'architecture.yaml']
+        assert sorted(p.name for p in root.iterdir()) == ['ARCHITECTURE.md', 'architecture.yaml']
         for file in preview['payload']['planned_files']:
             assert (root / file['path']).read_bytes() == file['content'].encode('utf-8')
         validated = invoke(cwd, ['validate', '--root', str(root)], 0)

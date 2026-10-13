@@ -8,7 +8,7 @@ The committed `prepared.tar.gz` contains the base fixtures, preparation scripts,
 `verify-prepared.mjs`, the YAML parser and `evidence/`. Its SHA256 is
 `9792e5f10186984f175c8720480ed361dfdab8e611bee9f1f7195e1b183ad2bd`.
 The archived preparation notes call this same snapshot `prepared-fixtures-v2.tar.gz`.
-[ADDON.md](ADDON.md) describes the separate `addon.tar.gz` cases and verification.
+[addon-fixtures.md](addon-fixtures.md) describes the separate `addon.tar.gz` cases and verification.
 The npm override snapshot is documented in the
 [inspection guide](../../../docs/implementation/typescript-packages.md#fixtures-and-reproduction).
 

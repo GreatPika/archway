@@ -299,12 +299,12 @@ class CacheExecTests(unittest.TestCase):
                 self.assertEqual(args[3:], ['init', '--template', 'mixed'])
                 root = Path(args[2])
                 (root / 'architecture.yaml').write_bytes(b'# Archway: mixed template\nversion: 1\nprojects: []\nscope: []\nexclude: []\nnodes: []\n')
-                (root / 'ARCHITECTURE_AGENT.md').write_text('# Architecture agent workflow\n'
+                (root / 'ARCHITECTURE.md').write_text('# Architecture agent workflow\n'
                     'Init never overwrites or merges files.\nInit does not edit AGENTS.md, CI, or editor settings.\n')
                 return completed(arguments, 0, {'schema_version': 1, 'command': 'init', 'status': 'ok',
                     'exit_code': 0, 'diagnostics': [], 'payload': {'template': 'mixed', 'dry_run': False,
-                    'outcome': 'created', 'planned_paths': ['architecture.yaml', 'ARCHITECTURE_AGENT.md'],
-                    'planned_files': [], 'created_paths': ['architecture.yaml', 'ARCHITECTURE_AGENT.md'],
+                    'outcome': 'created', 'planned_paths': ['architecture.yaml', 'ARCHITECTURE.md'],
+                    'planned_files': [], 'created_paths': ['architecture.yaml', 'ARCHITECTURE.md'],
                     'residual_paths': [], 'conflicting_paths': []}})
             def interrupted_spawn(arguments, **kwargs):
                 # Explicit cached-shim supplement, not an npm-exec route claim.

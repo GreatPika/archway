@@ -44,11 +44,26 @@ The identity aliases array records each followed mapping as observed_file_uri/ca
 
 Recheck every recorded input and every traversed corpus inventory before returning. Changed/appeared/disappeared entries are changed_inputs, and INPUT_CHANGED makes analysis incomplete. If rechecking cannot finish, rechecked false plus a tool error makes incomplete. This is observed consistency, never an atomic snapshot; atomic_snapshot is always false. Tracking only positive reads is insufficient because newly created missing targets and corpus files change the outcome. Hashing uses exact bytes and filesystem names, not reserialized YAML or edited policy normalization.
 
-Normalized output paths use /, no empty/. /.. segments, with ./ as the sole root-prefix exception, in accordance with the path matrix. File source/input positions cannot use a directory prefix. Canonical URI encoding and case/Unicode rules follow the matrix. Node catalogues/neighbors and projects sort by ID, path sets by normalized path, candidate pairs by project then context, facts by source then range then kind/specifier/target, diagnostics by path/range/code/rule_pointer/project/message (null before strings). Ties deduplicate exactly identical values, not distinct edges. Init paths keep fixed architecture.yaml then ARCHITECTURE_AGENT.md order. Sets in the plan normalize duplicate entries; deterministic ordering does not authorize truncation.
+Normalized output paths use /, no empty/. /.. segments, with ./ as the sole root-prefix exception, in accordance with the path matrix. File source/input positions cannot use a directory prefix. Canonical URI encoding and case/Unicode rules follow the matrix. Node catalogues/neighbors and projects sort by ID, path sets by normalized path, candidate pairs by project then context, facts by source then range then kind/specifier/target, diagnostics by path/range/code/rule_pointer/project/message (null before strings). Ties deduplicate exactly identical values, not distinct edges. Init paths keep fixed architecture.yaml then ARCHITECTURE.md order. Sets in the plan normalize duplicate entries; deterministic ordering does not authorize truncation.
 
 ## Safe init, including partial outcomes
 
---template dart|typescript|mixed is required; --dry-run is a boolean, --policy is forbidden. Other writes/overwrite options are unsupported. planned_paths always lists exactly architecture.yaml then ARCHITECTURE_AGENT.md. dry-run includes both complete planned_files contents in that order; normal invocation uses an empty planned_files array. The template changes comments, not semantic policy fields.
+--template dart|typescript|mixed is required; --dry-run is a boolean, --policy is forbidden. Other writes/overwrite options are unsupported. planned_paths always lists exactly architecture.yaml then ARCHITECTURE.md. dry-run includes both complete planned_files contents in that order; normal invocation uses an empty planned_files array. The template changes comments, not semantic policy fields.
+
+The 0.2.0 preview amends the schema_version 1 init filename enum from
+ARCHITECTURE_AGENT.md to ARCHITECTURE.md. The envelope fields and shape remain
+unchanged; this is an observable contract change, not backward compatibility
+with the 0.1.0 filename enum. Published 0.1.0 artifacts remain unchanged.
+
+Before writing, list the selected root without following child links and check
+both fixed output names using ASCII-case-insensitive comparison on every OS.
+Any matching entry (file, directory or link, including a dangling link) is a
+conflict. This conservative init-only rule also refuses architecture.md on Linux;
+it does not change case-sensitive policy paths or corpus identity. Return the
+canonical planned target in conflicting_paths and diagnostic path; identify the
+actual existing entry spelling in the diagnostic message. Dry-run performs these
+checks without loading the native bridge. Existing ARCHITECTURE_AGENT.md is not
+an output alias: leave it untouched, without migration, deletion or merging.
 
 outcome planned: dry-run true, no created/residual/conflicting paths. outcome created: dry-run false, created_paths contains both files, residual_paths empty. created_paths means files whose exclusive creation succeeded during this invocation, even if they were subsequently removed. residual_paths means only this invocation's files remaining after a failed rollback; successful output files are not "residual".
 

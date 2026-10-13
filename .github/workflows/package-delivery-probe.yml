@@ -32,7 +32,7 @@ permissions:
 
 jobs:
   macos:
-    uses: ./.github/workflows/macos-first-red.yml
+    uses: ./.github/workflows/macos-native-probe.yml
     with:
       export-installation: true
   windows:

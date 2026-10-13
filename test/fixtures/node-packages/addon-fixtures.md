@@ -10,7 +10,7 @@ Prepared with Node 24.21.0 and official pnpm 9.15.9, `--ignore-scripts --ignore-
 All full package files, declarations and original licenses are retained. All lockfiles and .modules.yaml files are package-manager output. `prepare-addon.py` is maintainer-only and performs network/install work; never invoke it from checks. For regeneration, put the add-on working directory under the base preparation
 directory. It expects the verified pnpm tool and original `pnpm-peer` fixture in
 that parent directory. Adapt its archived `NODE` path to your local Node 24.21.0
-installation; see [base preparation](PREPARATION.md#maintainer-only-preparation). `verify-addon.mjs` is offline and uses the included verified ISC-licensed yaml 2.8.1 package. It does not install, spawn subprocesses, fetch, or execute fixture code.
+installation; see [base preparation](fixture-preparation.md#maintainer-only-preparation). `verify-addon.mjs` is offline and uses the included verified ISC-licensed yaml 2.8.1 package. It does not install, spawn subprocesses, fetch, or execute fixture code.
 
 The archive writes every regular file as its own data member, even when installed files share filesystem inodes. It preserves symlinks but contains no tar hardlink records, so package subtrees can be selected for extraction without cross-member hardlink failures. Keep whole node_modules subtrees to preserve the symlink layout.
 

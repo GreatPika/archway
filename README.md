@@ -40,6 +40,11 @@ Archway 0.1.0 is an unsigned preview. Check the
 artifacts and `SHA256SUMS`. npm and pub registry packages are not published.
 You can also run Archway from source.
 
+The 0.2.0 work in this checkout changes package delivery to thin npm/pub
+launchers with a pinned first-use native download and offline warm use. That
+route is not yet published or certified; see the [delivery contract](contracts/compatibility/delivery.md).
+Its init command creates ARCHITECTURE.md; published 0.1.0 artifacts are unchanged.
+
 ### Run from source
 
 Install Dart 3.13.3 and Node 24.21.0/npm 11.19.0, then run these commands from
@@ -86,8 +91,8 @@ Prepared Flutter projects use their compatible embedded SDK; see the
 ### Prepared packages
 
 Developers can [stage packages locally](docs/implementation/installation-layout.md#stage-packages).
-The [package guide](tool/npm/README.md) covers installation from a verified npm
-tarball and activation of a prepared Dart package.
+The [package guide](tool/npm/README.md) describes the 0.2.0 thin-wrapper routes
+and their remaining installation gates.
 
 Portable bundles and unsigned native installers target Linux x64, macOS arm64
 and Windows x64. Use the [bundle guide](tool/release/QUICKSTART.txt) only with
@@ -100,7 +105,7 @@ Installers are unsigned, and the macOS installer is not notarized.
 
 ## Set up each project
 
-The installation is shared; `architecture.yaml` and `ARCHITECTURE_AGENT.md` belong
+The installation is shared; `architecture.yaml` and `ARCHITECTURE.md` belong
 in each project. Run from that project's directory, or select it with `--root`.
 From source, run from the Archway checkout and replace `archway` below with
 `dart --suppress-analytics run bin/archway.dart`.
@@ -111,7 +116,8 @@ archway --root /path/to/project init --template mixed
 ```
 
 Preview first, then create the starter policy and agent guide. Init refuses to
-overwrite either file. Edit the policy to match the project's modules and use the
+overwrite either file, including ASCII-case variants on every OS. It leaves a
+legacy ARCHITECTURE_AGENT.md untouched without migration. Edit the policy to match the project's modules and use the
 agent guide when working on that project. Without `--root`, the current directory
 selects the project; the installer location never selects it.
 
@@ -147,12 +153,14 @@ can prevent complete analysis. Filesystem rechecks do not provide an atomic snap
 - With `npm exec`, signalling only the outer npm process may leave the CLI running.
   See [platform-specific process behavior](tool/ci/README.md#installed-npm-routes-and-termination-limits).
 - Windows testing used Windows Server 2025 x64; Windows 11 has not been verified.
-- Pub global installations require explicit `dart pub global run archway:setup`
-  after every activation/update to repair POSIX quoting or Windows fallback exit
-  propagation in Dart 3.13.3's generated launcher.
+- The pub route uses `dart pub global activate --no-executables archway VERSION`
+  then `dart pub global run archway:archway <args>`, without an alias or setup step.
+  Offline use needs the prepared snapshot under the same SDK and verified native
+  cache. Linux SDK-route feasibility does not certify actual Archway packages on
+  all platforms or hosted public installation.
 
 See the [installation guide](docs/implementation/installation-layout.md) for
-platform evidence and the [pub setup step](docs/implementation/installation-layout.md#explicit-pub-launcher-setup).
+platform evidence and remaining package-route gates.
 
 ## Development
 

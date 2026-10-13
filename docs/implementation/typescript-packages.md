@@ -79,8 +79,8 @@ not installed-byte authenticity or complete compiler-feature coverage.
 ## Fixtures and reproduction
 
 Preparation used npm 11.19.0 and pnpm 9.15.9 with scripts disabled and pnpmfile
-hooks disabled. [Base preparation](../../test/fixtures/node-packages/PREPARATION.md)
-and [additive fixtures](../../test/fixtures/node-packages/ADDON.md) retain regeneration,
+hooks disabled. [Base preparation](../../test/fixtures/node-packages/fixture-preparation.md)
+and [additive fixtures](../../test/fixtures/node-packages/addon-fixtures.md) retain regeneration,
 official URLs, integrity records, licenses and file/link manifests. Their scripts
 are maintainer-only and never run by check. Committed archive identities:
 

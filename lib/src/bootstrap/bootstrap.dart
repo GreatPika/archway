@@ -20,20 +20,26 @@ class Bootstrap {
       throw FileSystemException('Root is not a directory', root);
     // Listing reports inaccessible roots instead of silently treating a failed
     // stat as absence. Names alone suffice, including directories/dangling links.
-    final present = <String>{};
+    final present = <String, List<String>>{};
     await for (final entry in Directory(root).list(followLinks: false)) {
-      present.add(entry.path.split(Platform.pathSeparator).last);
+      final name = entry.path.split(Platform.pathSeparator).last;
+      // Only init's two fixed ASCII names use this conservative collision rule.
+      final folded = name.replaceAllMapped(
+        RegExp('[A-Z]'),
+        (match) => match[0]!.toLowerCase(),
+      );
+      (present[folded] ??= []).add(name);
     }
     final conflicts = [
-      for (final path in const ['architecture.yaml', 'ARCHITECTURE_AGENT.md'])
-        if (present.contains(path)) path,
+      for (final path in const ['architecture.yaml', 'ARCHITECTURE.md'])
+        if (present.containsKey(path.toLowerCase())) path,
     ];
     final files = [
       PlannedFile(
         'architecture.yaml',
         '# Archway: $template template\nversion: 1\nprojects: []\nscope: []\nexclude: []\nnodes: []\n',
       ),
-      PlannedFile('ARCHITECTURE_AGENT.md', _guide),
+      PlannedFile('ARCHITECTURE.md', _guide),
     ];
     if (conflicts.isNotEmpty || dryRun) {
       return InitResult(
@@ -46,7 +52,7 @@ class Bootstrap {
           for (final path in conflicts)
             InitDiagnostic(
               'INIT_TARGET_EXISTS',
-              'A startup target already exists. Init never overwrites or merges it.',
+              'A startup target already exists: ${(present[path.toLowerCase()]!..sort()).join(', ')}. Init never overwrites or merges it.',
               path,
             ),
         ],
@@ -152,7 +158,7 @@ class InitResult {
   });
   List<String> get plannedPaths => const [
     'architecture.yaml',
-    'ARCHITECTURE_AGENT.md',
+    'ARCHITECTURE.md',
   ];
 }
 

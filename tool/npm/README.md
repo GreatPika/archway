@@ -1,116 +1,86 @@
 # Archway packages
 
 Archway checks prepared TypeScript and Dart projects against architecture.yaml.
-These instructions use a verified Archway 0.1.0 tarball or a locally prepared
-package. Check the [GitHub releases page](https://github.com/GreatPika/archway/releases)
-for unsigned preview artifacts. npm and pub registry packages are not published.
-See the
-[staging guide](https://github.com/GreatPika/archway/blob/main/docs/implementation/installation-layout.md#stage-packages).
-Install the explicit tarball path; do not substitute a similarly named registry package.
-Archway is licensed under the MIT License included in `LICENSE`. Dependency
-licenses and notices remain with their bundled assets.
+This guide describes the 0.2.0 thin-wrapper design. It is not a claim that these
+packages are published or their installation routes certified. Check the
+[GitHub releases page](https://github.com/GreatPika/archway/releases) for actual
+artifacts; published 0.1.0 downloads remain unchanged. Do not substitute similarly
+named registry packages. See the
+[staging guide](https://github.com/GreatPika/archway/blob/main/docs/implementation/installation-layout.md).
 
-## npm users
+## Installation routes
 
-The assembled npm tarball contains native executables, bridges and shared
-compiler assets. Node is required to launch it; TypeScript checks require Node
-24.21.0 and use bundled TypeScript 5.9.3. Dart checks additionally require external
-Dart 3.13.3. npm users need no C compiler or Dart SDK for TypeScript-only checks.
+The intended npm routes are local development dependency, global installation and
+cache/exec using the exact verified package version or tarball. Installation has
+no lifecycle scripts. Node launches the small wrapper, which fetches only the
+current platform's pinned native archive on first invocation. It needs no C
+compiler or Dart SDK for TypeScript-only checks.
 
-Install your verified tarball as a local development dependency from your project:
-
-```sh
-npm install --save-dev --ignore-scripts "/absolute/path/to/archway-architecture-cli-0.1.0.tgz"
-npm exec --offline -- archway --help
-npm exec --offline -- archway --root /path/to/project validate
-```
-
-Replace the tarball path with the actual downloaded file, quoting paths with
-spaces. Add `--offline` to installation only when any other dependencies npm needs
-are already available in your cache.
-Archway has no lifecycle scripts; its launcher does not download or build payloads.
-Prepared packages may contain only a subset of supported targets. Check
-`manifest.json` for the targets included in your package.
-
-For a command shared across projects, install the same tarball globally:
+The sole pub route, after the exact package is published and verified, is:
 
 ```sh
-npm install --global --ignore-scripts "/absolute/path/to/archway-architecture-cli-0.1.0.tgz"
-archway --help
+dart pub global activate --no-executables archway VERSION
+dart pub global run archway:archway --version
 ```
 
-Use a writable npm global prefix whose command directory is on PATH, then open a
-fresh terminal. To update, install the newer downloaded tarball the same way;
-remove with `npm uninstall --global archway-architecture-cli`. For a local install,
-run `npm uninstall --save-dev archway-architecture-cli` in its project.
+Replace VERSION with the selected release. The small Dart snapshot launcher
+fetches the same native core; it does not ship the analyzer/core source tree.
+Pub uses the longer explicit SDK command for every invocation; native/npm retain
+plain archway. No alias is generated, and no setup/repair or launcher rewrite is
+needed. Updating means explicitly activating the desired version the same way.
+A genuine private hosted Linux fixture passed this SDK route; actual Archway
+thin-wrapper platform runs and hosted public installation remain unverified.
 
-For an explicit cache/exec route, run outside a project with a local Archway
-installation so npm cannot select that local command:
+Both wrappers use separate user caches independent of your project. First use
+requires network access to the pinned native archive; `archway --version` can
+prewarm it (for pub: `dart pub global run archway:archway --version`). Offline pub
+use requires its prepared activated snapshot under the same pinned SDK and the
+verified native cache. SDK switches or missing/stale snapshots can trigger SDK
+recompilation; their network/offline behavior requires separate measured checks. There is no setup command, automatic
+updater, project dependency installation or SDK download. Unsupported platforms
+and corrupt cached payloads fail explicitly; the launcher does not automatically
+delete or repair them.
+
+## Usage
+
+After installing a verified package, preview starter files:
 
 ```sh
-npm exec --yes --ignore-scripts --package="/absolute/path/to/archway-architecture-cli-0.1.0.tgz" -- archway --help
+archway --root /path/to/project init --template mixed --dry-run
 ```
 
-Use `--offline` for subsequent runs once the required bytes are cached. These
-commands select an explicit tarball file, not a registry name. See the
-[CI guide](https://github.com/GreatPika/archway/blob/main/tool/ci/README.md) for platform-specific
-process and cancellation limitations.
+For a local npm installation, prefix the command with `npm exec --offline --`.
+For pub, replace archway with `dart pub global run archway:archway` in each command.
+Without --root, Archway uses the current directory. Remove --dry-run to create
+architecture.yaml and ARCHITECTURE.md, then edit the policy for your project.
+Existing files are never overwritten or merged. Init also refuses ASCII-case
+variants of either output name on every OS. An old ARCHITECTURE_AGENT.md is left
+untouched; no migration or deletion happens automatically.
 
-## Dart users
+Use validate, owner, node, allows, check or export --format mermaid as needed.
+Check reads already-prepared projects and never installs dependencies or runs
+project builds, scripts or plugins. Operational results are JSON; export emits
+Mermaid with separate JSON diagnostics. Check exits 0 for complete clean analysis,
+1 for complete violations, and 2 for invalid policy or incomplete analysis.
+Use command-specific --help for options.
 
-There is no published pub package. The current developer route uses a prepared,
-verified source stage, not an ordinary checkout or a hosted package. Follow the
-[staging guide](https://github.com/GreatPika/archway/blob/main/docs/implementation/installation-layout.md#stage-packages)
-and [local Git snapshot fixture](https://github.com/GreatPika/archway/blob/main/tool/ci/README.md)
-to assemble and verify it. It contains prebuilt bridges matching the target and
-shared compiler assets.
+## Runtimes, layout and integrity
 
-For that verified stage committed to a local Git repository, activate its exact
-commit with Dart 3.13.3, then run setup using the same SDK and PUB_CACHE:
+Native policy/query/init/export need neither Node nor an external Dart SDK.
+npm needs Node to launch. Pub needs pinned Dart 3.13.3 for activation and every
+explicit global-run invocation. TypeScript check requires Node
+24.21.0 and bundled TypeScript 5.9.3. Dart check requires external Dart 3.13.3 and
+prepared mappings. Neither runtime is downloaded by Archway.
 
-```sh
-dart pub global activate --source git --git-ref FULL_STAGE_COMMIT file:///absolute/path/to/verified-stage-repository
-dart pub global run archway:setup
-archway --version
-```
+Native payloads retain bin/<target>/archway (archway.exe on Windows), native/
+bridges, assets/, schemas/ and manifest.json. Keep portable installations whole.
+Acquisition verifies archive bytes and the complete manifest inventory before
+atomic cache publication. Warm launch hashes the pinned manifest and executable;
+other assets retain the core's path/runtime checks, not full warm digest checks.
+These checks detect corruption, not malicious same-user replacement or publisher
+authenticity. Prelaunch errors use stderr/exit 126; core arguments, streams and
+exits pass through unchanged. Signal behavior is OS-specific.
 
-Replace the commit and file URI with the actual prepared stage values (Windows
-file URIs use `file:///C:/...`). Activation may fetch dependency metadata. Put the
-pub cache's `bin` directory on PATH and open a fresh terminal before using
-`archway`. Pub needs Dart to launch; TypeScript checks also need Node 24.21.0.
-Repeat activation and setup to update; use `dart pub global deactivate archway`
-to remove the global activation.
-
-Setup repairs only the known Dart 3.13.3 generated launcher: POSIX quoting or
-Windows fallback exit propagation. Repeated setup and recognized path-activation
-launchers are no-ops. Repeat setup after every activation/update, which can
-regenerate the SDK launcher. See the
-[setup explanation](https://github.com/GreatPika/archway/blob/main/docs/implementation/installation-layout.md)
-for the launcher defects and refusal conditions.
-
-## Usage and layout
-
-From the npm project where you installed the tarball, preview starter files with
-`npm exec --offline -- archway init --template mixed --dry-run`. For a globally
-activated Dart package, use
-`archway --root /path/to/project init --template mixed --dry-run`.
-Choose a project without architecture.yaml or ARCHITECTURE_AGENT.md. Remove
-`--dry-run` to create them, then edit architecture.yaml for your project.
-For `validate`, `owner`, `node`, `allows`, `check` or `export --format mermaid`,
-keep the same invocation prefix and replace the init arguments.
-`--root` selects the inspected project.
-Check never installs dependencies or runs project builds, scripts or plugins.
-
-Native npm payloads are in `bin/<target>/archway` (`archway.exe` on Windows),
-bridges in `native/<target>/`, and shared assets in `assets/`. Preserve the whole
-package when relocating. manifest.json records versions and file hashes;
-schemas/ contains result schemas. The launcher verifies the selected payload
-hash against its manifest to detect corruption, not malicious paired replacement
-or concurrent mutation. Prelaunch errors use stderr/exit 126; core output and
-exit codes pass through unchanged. Signal behavior is OS-specific.
-
-`check` exits 0 when analysis completes without violations, 1 when it completes
-with violations, and 2 when the policy is invalid or analysis is incomplete.
-Operational results are JSON; export emits Mermaid with separate JSON diagnostics. Use command-specific --help for options.
-If Archway is installed inside the project being checked, configure `scope` and
-`exclude` to select the files you want to inspect.
+If the installation is inside the inspected project, configure scope and exclude
+explicitly. Archway is MIT licensed; licenses/notices remain with their owning
+wrapper and native dependency assets.

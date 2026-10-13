@@ -71,8 +71,21 @@ with tempfile.TemporaryDirectory(prefix='archway-native-assets-') as temp:
     assert not (root / 'missing.mmd').exists()
     assert json.loads(missing.stderr)['diagnostics'][-1]['code'] == 'EXPORT_WRITE_FAILED'
     (root / 'architecture.yaml').unlink()
-    (root / 'ARCHITECTURE_AGENT.md').unlink()
-    invoke(['init', '--template', 'mixed', '--dry-run'], 0)
+    (root / 'ARCHITECTURE.md').unlink()
+    preview = invoke(['init', '--template', 'mixed', '--dry-run'], 0)
+    assert json.loads(preview.stdout)['payload']['planned_paths'] == [
+        'architecture.yaml', 'ARCHITECTURE.md']
+    alias = root / 'architecture.md'
+    alias.write_text('keep user guide')
+    for suffix in (['--dry-run'], []):
+        conflict = invoke(['init', '--template', 'mixed', *suffix], 2)
+        payload = json.loads(conflict.stdout)['payload']
+        assert payload['outcome'] == 'conflict'
+        assert payload['conflicting_paths'] == ['ARCHITECTURE.md']
+        assert payload['created_paths'] == []
+        assert alias.read_text() == 'keep user guide'
+        assert not (root / 'architecture.yaml').exists()
+    alias.unlink()
     missing_init = invoke(['init', '--template', 'mixed'], 2)
     assert json.loads(missing_init.stdout)['diagnostics'][0]['code'] == 'INIT_UNAVAILABLE'
     assert not (root / 'architecture.yaml').exists()

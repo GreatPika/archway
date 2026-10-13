@@ -56,9 +56,9 @@ void main() {
         'template': 'mixed',
         'dry_run': false,
         'outcome': 'created',
-        'planned_paths': ['architecture.yaml', 'ARCHITECTURE_AGENT.md'],
+        'planned_paths': ['architecture.yaml', 'ARCHITECTURE.md'],
         'planned_files': [],
-        'created_paths': ['architecture.yaml', 'ARCHITECTURE_AGENT.md'],
+        'created_paths': ['architecture.yaml', 'ARCHITECTURE.md'],
         'residual_paths': [],
         'conflicting_paths': [],
       });
@@ -419,7 +419,7 @@ void main() {
       final root = await Directory.systemTemp.createTemp('archway-cli-sort-');
       addTearDown(() => root.delete(recursive: true));
       await File('${root.path}/architecture.yaml').writeAsString('policy');
-      await File('${root.path}/ARCHITECTURE_AGENT.md').writeAsString('guide');
+      await File('${root.path}/ARCHITECTURE.md').writeAsString('guide');
       final out = StringBuffer();
       expect(
         await CLI().run([
@@ -433,12 +433,12 @@ void main() {
       );
       final value = jsonDecode(out.toString());
       expect((value['diagnostics'] as List).map((d) => d['path']), [
-        'ARCHITECTURE_AGENT.md',
+        'ARCHITECTURE.md',
         'architecture.yaml',
       ]);
       expect(value['payload']['conflicting_paths'], [
         'architecture.yaml',
-        'ARCHITECTURE_AGENT.md',
+        'ARCHITECTURE.md',
       ]);
     },
   );
@@ -459,7 +459,7 @@ void main() {
   test(
     'CLI retains full first and second write-failure outcomes and exit streams',
     () async {
-      for (final target in ['architecture.yaml', 'ARCHITECTURE_AGENT.md']) {
+      for (final target in ['architecture.yaml', 'ARCHITECTURE.md']) {
         final root = await Directory.systemTemp.createTemp(
           'archway-cli-write-fail-',
         );
@@ -484,7 +484,7 @@ void main() {
         final value = jsonDecode(out.toString());
         final expected = target == 'architecture.yaml'
             ? ['architecture.yaml']
-            : ['architecture.yaml', 'ARCHITECTURE_AGENT.md'];
+            : ['architecture.yaml', 'ARCHITECTURE.md'];
         expect(exit, 2);
         expect(value['exit_code'], exit);
         expect(value['status'], 'error');

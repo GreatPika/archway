@@ -23,7 +23,7 @@ class DeliveryWorkflowTests(unittest.TestCase):
         self.assertIn('workflow_dispatch', workflow['on'])
         self.assertNotIn('Bootstrap on integration', raw)
         jobs = workflow['jobs']
-        for target, file in [('macos', 'macos-first-red.yml'), ('windows', 'windows-native-probe.yml')]:
+        for target, file in [('macos', 'macos-native-probe.yml'), ('windows', 'windows-native-probe.yml')]:
             self.assertEqual(jobs[target], {'uses': './.github/workflows/' + file,
                                            'with': {'export-installation': 'true'}})
         self.assertEqual(set(jobs['audit']['needs']), {'linux', 'macos', 'windows'})

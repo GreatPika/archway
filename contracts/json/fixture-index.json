@@ -185,7 +185,7 @@
     "valid": true
   },
   {
-    "file": "fixtures/None-usage.json",
+    "file": "fixtures/unknown-command-usage.json",
     "schema": "public-result",
     "valid": true
   },

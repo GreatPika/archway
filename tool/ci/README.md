@@ -13,7 +13,7 @@ paths and independently verified identities.
   and supports manual dispatch. It calls both native workflows with export enabled,
   adds Ubuntu 24.04 x64 / glibc 2.39, audits same-source transports, packs npm once,
   and runs installed consumers on all three hosts.
-- [macOS source and AOT](../../.github/workflows/macos-first-red.yml) supports
+- [macOS source and AOT](../../.github/workflows/macos-native-probe.yml) supports
   reusable calls and manual dispatch on macOS 15 arm64. It records APFS temp-root
   and case behavior, canonical paths and Apple SDK/clang readiness. Successful init
   is required.
@@ -105,6 +105,23 @@ Consumers require the exact source SHA and current run ID/attempt; rerun all job
 rather than mix attempts. Successful producer dependencies and `github.sha`
 checkout establish the source relationship. Adjacent downloaded JSON alone does
 not establish authenticity.
+
+## Standalone private Linux npm smoke
+
+[The private packaging smoke](../../test/package_delivery_process_smoke.py) takes
+an existing Linux-x64-only installation prepared by the
+[maintainer assembler](../../docs/implementation/installation-layout.md#prepare-and-assemble),
+including its real native executable, bridge and owned TypeScript assets. On
+Linux x64/glibc, with Python `jsonschema` and Node 24.21.0/npm 11.19.0 on PATH,
+pass that installation and a separately prepared Node 24.19.0 executable:
+
+```sh
+python3 test/package_delivery_process_smoke.py PREPARED_LINUX_INSTALLATION PREPARED_NODE_24_19
+```
+
+It stages and installs a private package into temporary local/global/cache routes
+and checks rejection of the incomplete all-target input. This is a standalone
+Linux bundled-package regression, not acceptance of the 0.2.0 thin wrappers.
 
 ## Installed npm routes and termination limits
 

@@ -164,7 +164,7 @@ nodes: [{id: app, responsibility: App, owns: [src/], allows: [], public: []}]
                2, error='EXPORT_WRITE_FAILED')
         assert not (root / 'blocked.mmd').exists()
         (root / 'architecture.yaml').unlink()
-        (root / 'ARCHITECTURE_AGENT.md').unlink()
+        (root / 'ARCHITECTURE.md').unlink()
         invoke('missing-bridge-init', ['init', '--template', 'mixed'], 2, error='INIT_UNAVAILABLE')
     finally:
         saved.rename(bridge)

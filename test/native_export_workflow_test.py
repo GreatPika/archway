@@ -59,14 +59,14 @@ class WorkflowTests(unittest.TestCase):
             self.assertIn("$arguments = @{ Phase = 'assembly-init' }", assembly['run'])
 
     def test_macos_export_is_opt_in_and_success_only(self):
-        self.check_workflow('macos-first-red.yml', 'macos-arm64')
+        self.check_workflow('macos-native-probe.yml', 'macos-arm64')
 
     def test_windows_export_is_opt_in_and_success_only(self):
         self.check_workflow('windows-native-probe.yml', 'windows-x64')
 
 
     def test_macos_command_forwards_optional_path_and_preserves_failure(self):
-        workflow = yaml.load((ROOT / '.github/workflows/macos-first-red.yml').read_text(), Loader=yaml.BaseLoader)
+        workflow = yaml.load((ROOT / '.github/workflows/macos-native-probe.yml').read_text(), Loader=yaml.BaseLoader)
         command = next(s['run'] for s in workflow['jobs']['macos-init']['steps']
                        if 'native_assembly_init_probe.py' in s.get('run', ''))
         with tempfile.TemporaryDirectory(prefix='export path ') as directory:

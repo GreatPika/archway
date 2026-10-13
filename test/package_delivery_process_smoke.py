@@ -131,7 +131,7 @@ with tempfile.TemporaryDirectory(prefix='archway-package-') as temporary:
         assert result.returncode == 0, (route, result.stdout, result.stderr)
         report = json.loads(result.stdout)
         assert report['exit_code'] == 0
-        for name in ['architecture.yaml', 'ARCHITECTURE_AGENT.md']:
+        for name in ['architecture.yaml', 'ARCHITECTURE.md']:
             (project / name).unlink()
         installed_cases[route] = exercise(launcher, project, foreign, Path(shutil.which('node')).resolve(),
                                           Path(sys.argv[2]).resolve(), environment, repository)

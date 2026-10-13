@@ -32,13 +32,13 @@
     "outcome": "conflict",
     "planned_paths": [
       "architecture.yaml",
-      "ARCHITECTURE_AGENT.md"
+      "ARCHITECTURE.md"
     ],
     "planned_files": [],
     "created_paths": [],
     "residual_paths": [],
     "conflicting_paths": [
-      "ARCHITECTURE_AGENT.md"
+      "ARCHITECTURE.md"
     ]
   }
 }

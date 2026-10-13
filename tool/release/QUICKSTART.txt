@@ -1,9 +1,10 @@
-Archway 0.1.0 package guide
+Archway 0.2.0 package guide
 ===========================
 Archway checks prepared TypeScript and Dart projects against architecture.yaml.
 
-Use these instructions only with matching Archway 0.1.0 artifacts and SHA256SUMS.
-Check https://github.com/GreatPika/archway/releases for unsigned preview downloads.
+Archway 0.2.0 is unreleased; these examples describe intended, unverified routes.
+Use them only after matching artifacts and SHA256SUMS are published and verified.
+Check https://github.com/GreatPika/archway/releases for actual availability.
 npm and pub registry packages are not published. To run from source, see:
 https://github.com/GreatPika/archway#run-from-source
 
@@ -11,9 +12,9 @@ Native installers
 -----------------
 Choose the matching installer and verify its SHA-256 against SHA256SUMS, then
 open it through the normal desktop installation flow:
-- Ubuntu 24.04 Desktop x64: archway-0.1.0-linux-x64-unsigned.deb
-- macOS 15 Apple Silicon: archway-0.1.0-macos-arm64-unsigned.pkg
-- Windows x64: archway-0.1.0-windows-x64-unsigned.exe
+- Ubuntu 24.04 Desktop x64: archway-0.2.0-linux-x64-unsigned.deb
+- macOS 15 Apple Silicon: archway-0.2.0-macos-arm64-unsigned.pkg
+- Windows x64: archway-0.2.0-windows-x64-unsigned.exe
 Linux/macOS installation requires administrator approval. Windows installs for
 your user under %LocalAppData%\Programs\Archway and registers its command in PATH.
 These installers are unsigned; macOS is also unnotarized. The OS may warn or
@@ -30,46 +31,44 @@ Portable bundles
 Choose Linux x64, macOS arm64 (Apple Silicon), or Windows x64. Download its
 bundle and SHA256SUMS. Compute the archive file's SHA-256 and compare it
 with the same filename in SHA256SUMS before extracting:
-Linux:   sha256sum archway-0.1.0-linux-x64.tar.gz
-macOS:   shasum -a 256 archway-0.1.0-macos-arm64.tar.gz
-Windows: Get-FileHash .\archway-0.1.0-windows-x64.zip -Algorithm SHA256
+Linux:   sha256sum archway-0.2.0-linux-x64.tar.gz
+macOS:   shasum -a 256 archway-0.2.0-macos-arm64.tar.gz
+Windows: Get-FileHash .\archway-0.2.0-windows-x64.zip -Algorithm SHA256
 Checksums detect corruption; they are not a publisher signature.
 
 Linux, from the download directory:
-mkdir archway-0.1.0
-tar -xzf archway-0.1.0-linux-x64.tar.gz -C archway-0.1.0
-./archway-0.1.0/bin/linux-x64/archway --help
+mkdir archway-0.2.0
+tar -xzf archway-0.2.0-linux-x64.tar.gz -C archway-0.2.0
+./archway-0.2.0/bin/linux-x64/archway --help
 
 macOS, from the download directory:
-mkdir archway-0.1.0
-tar -xzf archway-0.1.0-macos-arm64.tar.gz -C archway-0.1.0
-./archway-0.1.0/bin/macos-arm64/archway --help
+mkdir archway-0.2.0
+tar -xzf archway-0.2.0-macos-arm64.tar.gz -C archway-0.2.0
+./archway-0.2.0/bin/macos-arm64/archway --help
 
 Windows PowerShell, from the download directory:
-Expand-Archive .\archway-0.1.0-windows-x64.zip -DestinationPath .\archway-0.1.0
-& .\archway-0.1.0\bin\windows-x64\archway.exe --help
+Expand-Archive .\archway-0.2.0-windows-x64.zip -DestinationPath .\archway-0.2.0
+& .\archway-0.2.0\bin\windows-x64\archway.exe --help
 
 Use a fresh destination. Keep the entire extracted directory together, including
 bin/, native/, assets/, schemas/, manifest.json, README.txt and LICENSE.
 These bundles are unsigned. Follow your operating system's normal security
 review if it blocks launch; no security bypass is required by this guide.
 
-npm alternative (all three target payloads in one tarball):
-Verify archway-architecture-cli-0.1.0.tgz against SHA256SUMS, then from your project:
-npm install --save-dev --ignore-scripts "/absolute/path/to/archway-architecture-cli-0.1.0.tgz"
-npm exec --offline -- archway --help
-Replace the tarball path with the actual download path (use an absolute Windows
-path on Windows). Installation may fetch other project dependencies; add --offline
-only when those dependencies are cached. There are no Archway install scripts.
-
-Other package routes
---------------------
-For global/cache npm tarball commands, see tool/npm/README.md in the source.
-Pub currently requires a developer-prepared verified stage; no hosted package
-is available. After each staged global activation/update, explicitly run:
-dart pub global run archway:setup
-Use the same SDK and PUB_CACHE as activation, with its bin directory on PATH.
-The source package guide documents preparation and the local Git activation route.
+Thin wrapper packages
+---------------------
+The 0.2.0 design uses thin npm/pub launchers that fetch only the selected target's
+pinned native archive on first invocation and run offline thereafter. It replaces
+the all-target npm tarball and source-pub setup route. Installation has no scripts.
+The sole intended pub route is:
+dart pub global activate --no-executables archway VERSION
+dart pub global run archway:archway <args>
+Pub needs pinned Dart 3.13.3 for activation and invocation, without generated aliases
+or setup/repair. Offline use needs its prepared snapshot under the same SDK and
+verified native cache; SDK-switch/missing/stale-snapshot behavior is a measured gate.
+A Linux private hosted fixture passed; actual Archway platform routes are unverified. See tool/npm/README.md for remaining gates.
+No 0.2.0 wrapper package is currently published or certified. Published 0.1.0
+artifacts and their filenames remain unchanged.
 
 First use
 ---------
@@ -78,12 +77,15 @@ After installation, preview starter files in your project:
 archway --root /path/to/project init --template mixed --dry-run
 
 For a portable bundle, replace archway with its executable path. For a local
-npm installation, use npm exec --offline -- archway. Use your actual project
+npm installation, use npm exec --offline -- archway. For pub, replace archway
+with dart pub global run archway:archway. Use your actual project
 path; without --root, Archway uses the current directory.
 
-Choose a project without architecture.yaml or ARCHITECTURE_AGENT.md. Remove
+Choose a project without architecture.yaml or ARCHITECTURE.md. Remove
 --dry-run to create both files, then edit architecture.yaml for your project
-and use ARCHITECTURE_AGENT.md when working on it.
+and use ARCHITECTURE.md when working on it. This is the 0.2.0 startup name. Existing files are never
+overwritten or migrated. Init in 0.2.0 also refuses ASCII-case variants of both
+startup names on every OS.
 
 archway --root /path/to/project validate
 archway --root /path/to/project owner src/example.ts

@@ -299,18 +299,18 @@
     },
     {
       "id": "D01",
-      "input": "actual packed npm local devDependency inside inspected root; scripts disabled; pinned external Node; no Dart/C compiler; offline launch from another cwd",
-      "expected": "fixed native payload and shared assets run; installation is not rejected solely for root containment; core argv/streams/exits preserved"
+      "input": "actual packed thin npm launcher installed as a local devDependency inside inspected root; scripts disabled; pinned external Node; no Dart/C compiler; native payload acquired and verified before offline warm launch from another cwd",
+      "expected": "launcher dispatches its verified cached native payload and payload-owned shared assets; installation is not rejected solely for root containment; core argv/streams/exits preserved; inspection does not acquire payloads or access the network"
     },
     {
       "id": "D02",
-      "input": "same packed npm artifact installed globally and invoked from an isolated cache without a local package candidate",
-      "expected": "both real routes execute their own packaged bytes offline; record artifact identity and route separately; unsupported OS/CPU gives explicit pre-launch failure"
+      "input": "same packed thin npm artifact installed globally and invoked through cache/exec without a local package candidate; each route has its verified native cache prepared before offline warm launch",
+      "expected": "both real routes execute the descriptor-pinned native payload offline from their verified cache; record wrapper and native artifact identities and route separately; cold acquisition is a separate download case; unsupported OS/CPU gives explicit pre-launch failure"
     },
     {
       "id": "D03",
-      "input": "source development, npm payload and pub source invocation with a decoy project TypeScript and cwd assets",
-      "expected": "all resolve only own generated assets/typescript/vendor/typescript and fixed helper; no node_modules runtime fallback or project code execution"
+      "input": "core source development and thin npm/pub launchers dispatching acquired native payloads with a decoy project TypeScript and cwd assets",
+      "expected": "source development resolves assets from its own core package URI; native payloads resolve their own generated assets/typescript/vendor/typescript and fixed helper from the canonical native installation; wrappers do not own compiler assets; no cwd/node_modules runtime fallback or project code execution"
     },
     {
       "id": "D04",
@@ -319,8 +319,8 @@
     },
     {
       "id": "D05",
-      "input": "pub publishable file set staged exactly into isolated cache; prepared dependencies; global activation and archway from another cwd",
-      "expected": "own package URI resolves prebuilt bridge and shared assets; policy commands need no Node; TS with missing Node is incomplete; do not label this hosted-registry verification"
+      "input": "thin pub publishable file set staged exactly into isolated cache; dart pub global activate --no-executables of the staged launcher; explicit dart pub global run archway:archway from another cwd with the same pinned SDK prepared snapshot and verified native cache",
+      "expected": "SDK dispatches the prepared wrapper snapshot without a generated alias; wrapper dispatches the native payload whose canonical installation owns bridge and shared assets; warm execution has no HTTP; pub invocation still requires Dart, while native policy commands need no external runtime and TS with missing Node is incomplete; missing/stale snapshots and SDK switches require separate measured controls; do not label this hosted-registry verification"
     },
     {
       "id": "D06",

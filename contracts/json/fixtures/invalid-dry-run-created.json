@@ -21,7 +21,7 @@
     "outcome": "planned",
     "planned_paths": [
       "architecture.yaml",
-      "ARCHITECTURE_AGENT.md"
+      "ARCHITECTURE.md"
     ],
     "planned_files": [
       {
@@ -29,7 +29,7 @@
         "content": "version: 1\nprojects: []\nscope: []\nexclude: []\nnodes: []\n"
       },
       {
-        "path": "ARCHITECTURE_AGENT.md",
+        "path": "ARCHITECTURE.md",
         "content": "Read the architecture plan before changing code.\n"
       }
     ],

@@ -165,7 +165,7 @@ nodes: [{id: app, responsibility: App, owns: [src/], allows: [], public: []}]
     bridge.unlink()
     invoke(['validate'], 0)
     (root / 'architecture.yaml').unlink()
-    (root / 'ARCHITECTURE_AGENT.md').unlink()
+    (root / 'ARCHITECTURE.md').unlink()
     assert invoke(['init', '--template', 'mixed'], 2)['diagnostics'][0]['code'] == 'INIT_UNAVAILABLE'
     print(json.dumps({'route': 'isolated local Git pub activation, explicit setup, generated snapshot',
                       'commit': commit, 'staged_files_verified': len(staged_hashes), 'snapshot_sha256': hashlib.sha256(snapshots[0].read_bytes()).hexdigest(),

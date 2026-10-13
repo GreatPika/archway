@@ -127,6 +127,6 @@ nodes: [{id: app, responsibility: App, owns: [src/], allows: [], public: []}]
                 helper.write_bytes(original)
         assert observed[0] == observed[1], (termination, observed)
         termination_results[termination.name] = observed[0][0]
-    for name in ['architecture.yaml', 'ARCHITECTURE_AGENT.md', 'diagram café.mmd']:
+    for name in ['architecture.yaml', 'ARCHITECTURE.md', 'diagram café.mmd']:
         (root / name).unlink()
     return {'cases': count, 'termination': termination_results}

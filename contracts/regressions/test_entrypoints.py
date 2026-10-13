@@ -1,4 +1,4 @@
-"""Independent finite adversarial specification checks; no compilers/filesystem probes."""
+"""Finite entrypoint adversarial specification checks; no compilers/filesystem probes."""
 import copy, importlib.util, json, pathlib, sys
 from jsonschema import Draft202012Validator
 B=pathlib.Path(__file__).resolve().parents[1]
@@ -100,9 +100,8 @@ linked('private-diagnostic-wrong-principal-failure',x,P,False)
 for target,want in [('src/pricing/generated/x.ts','LOCAL_TARGET_EXCLUDED'),('outside/x.ts','LOCAL_TARGET_OUTSIDE_SCOPE'),('src/orphan.ts','LOCAL_TARGET_UNOWNED')]:
  e={'source':'src/missing-owner.ts','resolution':{'kind':'local','path':target}}
  record('target-classification-survives-unowned-source-'+target,oracle.edge_violation(P,e),want)
-report={'description':'Independent finite contract tests. No Archway implementation or compiler certification.','tests':results,'passed':sum(r['passed'] for r in results),'failed':sum(not r['passed'] for r in results)}
-(B/'independent-entrypoints/results.json').write_text(json.dumps(report,indent=2)+'\n')
+report={'description':'Finite entrypoint contract tests. No Archway implementation or compiler certification.','tests':results,'passed':sum(r['passed'] for r in results),'failed':sum(not r['passed'] for r in results)}
 print(json.dumps({k:report[k] for k in ['passed','failed']}))
 for r in results:
  if not r['passed']:print(json.dumps(r))
-assert report['failed']==0,'Independent entrypoint counterexamples remain'
+assert report['failed']==0,'Entrypoint counterexamples remain'
