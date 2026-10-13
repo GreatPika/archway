@@ -2,6 +2,7 @@
 import 'dart:io';
 
 import 'package:crypto/crypto.dart' as crypto;
+import 'package:posix/posix.dart' as posix;
 import 'package:unorm_dart/unorm_dart.dart' as unicode;
 
 const maxArchiveBytes = 512 * 1024 * 1024;
@@ -47,6 +48,7 @@ Future<T> withArchiveInput<T>(
     '.archway-archive-',
   );
   try {
+    if (!Platform.isWindows) posix.chmod(directory.path, '700');
     final snapshot = File('${directory.path}/input');
     await snapshot.create(exclusive: true);
     final output = await snapshot.open(mode: FileMode.write);

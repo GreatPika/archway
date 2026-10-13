@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart' as archive;
 import 'package:crypto/crypto.dart' as crypto;
+import 'package:posix/posix.dart' as posix;
 import 'package:tar/tar.dart';
 
 import 'archive_input.dart';
@@ -16,6 +17,47 @@ Future<void> verifyTarInput(
 ) async {
   final expectedMembers = _preflight(input, inventory);
   inventory.checkMembers(expectedMembers);
+  await _readTar(input, inventory, expectedMembers);
+}
+
+/// Provides verified extracted files only during [inspect], then removes them.
+/// [setMode] is a private fixture seam; callers normally use native permissions.
+Future<T> withTarExtraction<T>(
+  ArchiveInput input,
+  ArchiveInventory inventory,
+  Future<T> Function(Directory directory) inspect, {
+  void Function(String path, int mode) setMode = _setMode,
+}) async {
+  final members = _preflight(input, inventory);
+  inventory.checkMembers(members);
+  final directory = await input.file.parent.createTemp('.archway-extract-');
+  try {
+    _setMode(directory.path, 0x1c0);
+    await _readTar(
+      input,
+      inventory,
+      members,
+      directory: directory,
+      setMode: setMode,
+    );
+    return await inspect(Directory(await directory.resolveSymbolicLinks()));
+  } finally {
+    await directory.delete(recursive: true);
+  }
+}
+
+void _setMode(String path, int mode) {
+  // Windows checks archive-mode provenance but cannot reproduce Unix modes.
+  if (!Platform.isWindows) posix.chmod(path, mode.toRadixString(8));
+}
+
+Future<void> _readTar(
+  ArchiveInput input,
+  ArchiveInventory inventory,
+  List<ArchiveMember> expectedMembers, {
+  Directory? directory,
+  void Function(String path, int mode) setMode = _setMode,
+}) async {
   final reader = TarReader(
     input.file.openRead(),
     maxSpecialFileSize: 1024 * 1024,
@@ -32,23 +74,37 @@ Future<void> verifyTarInput(
         throw const FormatException('TAR reader disagrees with preflight');
       }
       final expected = inventory.files[header.name];
-      var size = 0;
-      final digest = await crypto.sha256
-          .bind(
-            reader.current.contents.map((block) {
-              size += block.length;
-              if (expected == null || size > expected.size) {
-                throw const FormatException('Unexpected TAR content size');
-              }
-              return block;
-            }),
-          )
-          .first;
-      if (expected == null ||
-          size != expected.size ||
-          digest.toString() != expected.sha256) {
-        throw const FormatException('TAR content differs from inventory');
+      RandomAccessFile? output;
+      try {
+        if (directory != null) {
+          final file = File('${directory.path}/${header.name}');
+          await file.parent.create(recursive: true);
+          await file.create(exclusive: true);
+          output = await file.open(mode: FileMode.write);
+        }
+        var size = 0;
+        final digest = await crypto.sha256
+            .bind(
+              reader.current.contents.asyncMap((block) async {
+                size += block.length;
+                if (expected == null || size > expected.size) {
+                  throw const FormatException('Unexpected TAR content size');
+                }
+                await output?.writeFrom(block);
+                return block;
+              }),
+            )
+            .first;
+        if (expected == null ||
+            size != expected.size ||
+            digest.toString() != expected.sha256) {
+          throw const FormatException('TAR content differs from inventory');
+        }
+      } finally {
+        await output?.close();
       }
+      if (directory != null)
+        setMode('${directory.path}/${header.name}', header.mode);
     }
     if (index != expectedMembers.length)
       throw const FormatException('Missing TAR members');

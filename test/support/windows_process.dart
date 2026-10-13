@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:ffi/ffi.dart';
 import 'package:path/path.dart' as p;
 
+import 'windows_process_pipes.dart';
+
 /// Microsoft C runtime argv quoting, with every argument quoted explicitly.
 String windowsCommandLine(List<String> arguments) {
   if (arguments.isEmpty || arguments.any((value) => value.contains('\u0000'))) {
@@ -124,7 +126,7 @@ int confirmWindowsProcessTermination({
 }
 
 /// Owns exactly one native process and its initial suspended thread.
-/// No handles are inherited. Pipe capture and job policy are separate controls.
+/// Optional output capture inherits only its restricted standard handles.
 final class WindowsSuspendedProcess {
   WindowsSuspendedProcess._(this.pid, this._process, this._thread);
 
@@ -132,6 +134,7 @@ final class WindowsSuspendedProcess {
     List<String> arguments, {
     String? workingDirectory,
     Map<String, String>? environment,
+    WindowsProcessPipes? output,
   }) {
     if (!Platform.isWindows || Abi.current() != Abi.windowsX64) {
       throw UnsupportedError('Suspended fixture requires native Windows x64');
@@ -170,21 +173,24 @@ final class WindowsSuspendedProcess {
     final directory = workingDirectory?.toNativeUtf16() ?? nullptr;
     final env = environmentBlock?.toNativeUtf16() ?? nullptr;
     // Native Windows x64 layouts: STARTUPINFOW104, PROCESS_INFORMATION24.
-    final startup = calloc<Uint8>(104);
+    final startup = calloc<Uint8>(output == null ? 104 : 112);
     final information = calloc<Uint8>(24);
+    WindowsSuspendedProcess? process;
     try {
       startup.cast<Uint32>().value = 104;
       (startup + 60).cast<Uint32>().value = 1; // STARTF_USESHOWWINDOW.
-      // wShowWindow remains SW_HIDE=0. No STARTF_USESTDHANDLES yet.
+      // wShowWindow remains SW_HIDE=0.
+      output?.prepareStartup(startup);
       final flags =
           0x4 |
+          (output == null ? 0 : 0x80000) |
           (environment == null ? 0 : 0x400); // SUSPENDED | UNICODE_ENVIRONMENT.
       if (_create!(
             application,
             commandLine,
             nullptr,
             nullptr,
-            0,
+            output == null ? 0 : 1,
             flags,
             env.cast(),
             directory,
@@ -194,11 +200,20 @@ final class WindowsSuspendedProcess {
           0) {
         _fail('CreateProcessW');
       }
-      return WindowsSuspendedProcess._(
+      process = WindowsSuspendedProcess._(
         (information + 16).cast<Uint32>().value,
         information.cast<Pointer<Void>>().value,
         (information + 8).cast<Pointer<Void>>().value,
       );
+      output?.finishSpawn();
+      return process;
+    } catch (_) {
+      try {
+        process?.close();
+      } finally {
+        output?.close();
+      }
+      rethrow;
     } finally {
       calloc.free(information);
       calloc.free(startup);

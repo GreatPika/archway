@@ -26,6 +26,9 @@ void main() {
       expect(input.size, 3);
       expect(input.sha256, abcSha256);
       expect(input.file.path, isNot(source.path));
+      if (!Platform.isWindows) {
+        expect(input.file.parent.statSync().mode & 0xfff, 0x1c0);
+      }
       source.writeAsStringSync('changed');
       expect(await input.file.readAsString(), 'abc');
     }, temporaryParent: snapshots);

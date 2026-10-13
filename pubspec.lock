@@ -226,7 +226,7 @@ packages:
     source: hosted
     version: "1.5.3"
   posix:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: posix
       sha256: bc1bad54ad2b735816e31f8d4600cfde6c7839975085ddfbca48b6c9f7c4044e

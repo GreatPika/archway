@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:ffi/ffi.dart';
 
 import 'windows_process.dart';
+import 'windows_process_pipes.dart';
 
 late final int Function() _error;
 final _kernel = _loadKernel();
@@ -97,6 +98,7 @@ final class WindowsJob {
     List<String> arguments, {
     String? workingDirectory,
     Map<String, String>? environment,
+    WindowsProcessPipes? output,
   }) {
     final handle = _handle ?? (throw StateError('Job is closed'));
     WindowsSuspendedProcess? process;
@@ -105,6 +107,7 @@ final class WindowsJob {
         arguments,
         workingDirectory: workingDirectory,
         environment: environment,
+        output: output,
       );
       if (_assignProcess case final replacement?) {
         replacement(process);
