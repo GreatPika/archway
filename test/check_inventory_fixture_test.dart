@@ -41,8 +41,11 @@ void main() {
             0xa000000c,
           );
           final junction = p.join(root.path, 'junction');
+          final command = windowsInventoryCommand();
+          expect(p.isAbsolute(command), isTrue);
+          expect(File(command).existsSync(), isTrue);
           final created = await runNativeProcess([
-            'cmd.exe',
+            command,
             '/d',
             '/c',
             'mklink',

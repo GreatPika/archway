@@ -119,7 +119,11 @@ final class WindowsPipeTimeout extends TimeoutException {
 }
 
 final class WindowsProcessPipes {
-  WindowsProcessPipes() {
+  WindowsProcessPipes({
+    this.onStdout,
+    this.onStderr,
+    this.retainOutput = true,
+  }) {
     if (!Platform.isWindows || Abi.current() != Abi.windowsX64) {
       throw UnsupportedError('Native Windows x64 pipes required');
     }
@@ -144,6 +148,8 @@ final class WindowsProcessPipes {
       calloc.free(security);
     }
   }
+  final void Function(List<int>)? onStdout, onStderr;
+  final bool retainOutput;
   final _handles = <Pointer<Void>?>[]; // stdin pair, stdout pair, stderr pair.
   final _buffers = [BytesBuilder(copy: false), BytesBuilder(copy: false)];
   Pointer<Void> _attributes = nullptr;
@@ -234,7 +240,9 @@ final class WindowsProcessPipes {
     final amount = count.value > 65536 ? 65536 : count.value;
     if (_read!(handle, bytes, amount, count, nullptr) == 0)
       _fail('ReadFile pipe');
-    _buffers[stream].add(Uint8List.fromList(bytes.asTypedList(count.value)));
+    final chunk = Uint8List.fromList(bytes.asTypedList(count.value));
+    (stream == 0 ? onStdout : onStderr)?.call(chunk);
+    if (retainOutput) _buffers[stream].add(chunk);
   }
 
   Future<({int exitCode, Uint8List stdout, Uint8List stderr})> communicate(

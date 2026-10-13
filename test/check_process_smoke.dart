@@ -18,6 +18,11 @@ void check(bool condition, [Object? details]) {
 bool containsJson(dynamic entries, Object value) =>
     (entries as List).any((e) => sameJson(e, value));
 String fileUri(String path) => File(path).uri.toString();
+// This is intentionally invalid helper evidence, not a host filesystem path.
+// Resolve against the valid parent URI so Windows cannot reject '*' early.
+String wildcardTargetUri(Uri directory) =>
+    directory.resolve('bad*.ts').toString().replaceAll('%2A', '*');
+
 String inventoryHash(List<dynamic> entries) =>
     sha256.convert(utf8.encode(jsonEncode(entries))).toString();
 
@@ -277,8 +282,7 @@ nodes:
       await emptyEdges();
     }
     var changed = clone();
-    final targetUri = fileUri(at('src/core/bad*.ts').path)
-        .replaceAll('%2A', '*');
+    final targetUri = wildcardTargetUri(Directory(at('src/core').path).uri);
     changed['inputs'].add({
       'id': 'bad-target',
       'kind': 'file',
@@ -322,7 +326,7 @@ nodes:
       final target = Directory(p.join(folder.path, 'target'))..createSync();
       final junction = p.join(folder.path, 'alias');
       final create = await runNativeProcess([
-        'cmd.exe',
+        windowsInventoryCommand(),
         '/d',
         '/c',
         'mklink',

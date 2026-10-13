@@ -332,62 +332,90 @@ void main() {
       expect(await File('${root.path}/graph.mmd').readAsString(), expected);
     },
   );
-  test(
-    'overwrite rejects a FIFO with a live reader before sending content',
-    () async {
-      final root = await graphRoot();
-      final fifo = '${root.path}/pipe.mmd';
-      final reader = await Process.start('python3', [
-        '-u',
-        '-c',
-        r'''import os, sys
-os.mkfifo(sys.argv[1])
-fd = os.open(sys.argv[1], os.O_RDONLY | os.O_NONBLOCK)
-print("ready", flush=True)
-sys.stdin.readline()
-print(len(os.read(fd, 65536)), flush=True)
-os.close(fd)
-''',
-        fifo,
-      ]);
-      addTearDown(() async {
-        reader.kill();
-        await reader.exitCode;
-      });
-      final lines = StreamIterator(
-        reader.stdout.transform(utf8.decoder).transform(const LineSplitter()),
-      );
-      expect(await lines.moveNext(), true);
-      expect(lines.current, 'ready');
-      final result = await run(root, [
-        'export',
-        '--format',
-        'mermaid',
-        '--out',
-        'pipe.mmd',
-        '--overwrite',
-      ]);
-      reader.stdin.writeln('inspect');
-      await reader.stdin.flush();
-      expect(await lines.moveNext(), true);
-      expect(
-        lines.current,
-        '0',
-        reason: 'Unsupported outputs must receive no export bytes',
-      );
-      expect(result.$1, 2);
-      expect(result.$2, '');
-      expect(
-        jsonDecode(result.$3)['diagnostics'][0]['code'],
-        'EXPORT_WRITE_FAILED',
-      );
-      expect(await reader.exitCode, 0);
-      await lines.cancel();
-    },
-    skip: Platform.isWindows
-        ? 'POSIX FIFO entries are unavailable on Windows; Win32 sharing faults have separate process coverage.'
-        : false,
-  );
+  for (final observeWrittenBytes in [false, true]) {
+    test(
+      observeWrittenBytes
+          ? 'live FIFO reader observes bytes written after readiness'
+          : 'overwrite rejects a FIFO with a live reader before sending content',
+      () async {
+        final root = await graphRoot();
+        final fifo = '${root.path}/pipe.mmd';
+        final reader = await Process.start(Platform.resolvedExecutable, [
+          'test/support/posix_fifo_reader_child.dart',
+          fifo,
+        ]);
+        var exited = false;
+        final completion = reader.exitCode.then((code) {
+          exited = true;
+          return code;
+        });
+        final errors = <int>[];
+        final errorSubscription = reader.stderr.listen(errors.addAll);
+        final lines = StreamIterator(
+          reader.stdout.transform(utf8.decoder).transform(const LineSplitter()),
+        );
+        addTearDown(() async {
+          try {
+            if (!exited) {
+              reader.kill(ProcessSignal.sigkill);
+              await completion.timeout(const Duration(seconds: 5));
+            }
+          } finally {
+            await Future.wait([
+              lines.cancel(),
+              errorSubscription.cancel(),
+              reader.stdin.close(),
+            ]).timeout(const Duration(seconds: 5));
+          }
+        });
+        expect(
+          await lines.moveNext().timeout(const Duration(seconds: 5)),
+          true,
+        );
+        expect(lines.current, 'ready');
+        final result = await run(root, [
+          'export',
+          '--format',
+          'mermaid',
+          '--out',
+          'pipe.mmd',
+          '--overwrite',
+        ]);
+        if (observeWrittenBytes) {
+          await File(fifo)
+              .writeAsBytes([1, 2, 3, 4, 5])
+              .timeout(const Duration(seconds: 5));
+        }
+        reader.stdin.writeln('inspect');
+        await reader.stdin.flush().timeout(const Duration(seconds: 5));
+        expect(
+          await lines.moveNext().timeout(const Duration(seconds: 5)),
+          true,
+        );
+        expect(
+          lines.current,
+          observeWrittenBytes ? '5' : '0',
+          reason: observeWrittenBytes
+              ? 'The reader must observe real bytes, not a fabricated zero'
+              : 'Unsupported outputs must receive no export bytes',
+        );
+        expect(result.$1, 2);
+        expect(result.$2, '');
+        expect(
+          jsonDecode(result.$3)['diagnostics'][0]['code'],
+          'EXPORT_WRITE_FAILED',
+        );
+        expect(
+          await completion.timeout(const Duration(seconds: 5)),
+          0,
+          reason: utf8.decode(errors, allowMalformed: true),
+        );
+      },
+      skip: Platform.isWindows
+          ? 'POSIX FIFO entries are unavailable on Windows; Win32 sharing faults have separate process coverage.'
+          : false,
+    );
+  }
   test(
     'export refuses intermediate child symlinks for create and overwrite',
     () async {

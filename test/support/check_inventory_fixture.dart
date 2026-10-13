@@ -168,3 +168,19 @@ List<dynamic> windowsInventoryAttributes(String folder, List<dynamic> entries) {
     }
   });
 }
+
+// Junction controls must pass an absolute native executable to the runner.
+String windowsInventoryCommand() {
+  final root = Platform.environment.entries
+      .where((entry) => entry.key.toUpperCase() == 'SYSTEMROOT')
+      .map((entry) => entry.value)
+      .firstOrNull;
+  if (root == null || !p.windows.isAbsolute(root)) {
+    throw StateError('Absolute SystemRoot is required for junction fixtures');
+  }
+  final command = p.windows.join(root, 'System32', 'cmd.exe');
+  if (!File(command).existsSync()) {
+    throw StateError('System command interpreter is missing: $command');
+  }
+  return command;
+}

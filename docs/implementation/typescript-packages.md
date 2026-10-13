@@ -93,12 +93,12 @@ Coverage includes npm v2/v3, aliases, shrinkwrap, workspace/local/HTTPS/Git, pnp
 full/hashed peers and filename truncation, copied/injected local packages, moved
 store, parent snapshots, missing/conflicting metadata and input mutations.
 Same-byte lock symlink retargeting still produces INPUT_CHANGED.
-Package tests require Python 3.12+ for shared offline extraction. Native CI
-binds its current interpreter through `ARCHWAY_TEST_PYTHON` without expanding
-PATH. Local runs may set that test-only variable to an absolute interpreter path;
-otherwise they use `python` on Windows or `python3` on POSIX from PATH. It preserves
-archive bytes and hardlinks, creates native relative directory symlinks last,
-and verifies their traversal before inspection, including on Windows.
+Source package tests use the shared Dart offline extractor in
+`test/support/node_package_fixtures.dart`. It preserves archive bytes and actual
+hardlinks, creates native relative directory symlinks last, and verifies their
+traversal before inspection, including on Windows. The legacy Python helper is
+retained for remaining process-suite callers; their interpreter setup is unchanged.
+Local extractor results do not establish native platform acceptance.
 
 From repository root, with prepared dependencies/assets and native bridge:
 

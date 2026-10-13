@@ -27,6 +27,14 @@ void copyFlutterSdk(Directory source, Directory destination) {
   }
 }
 
+// Same extended absolute spelling as check_inventory_fixture.dart. Keep this
+// conversion at the Win32 boundary; logical fixture paths remain unchanged.
+String flutterWindowsNativePath(String path) => path.startsWith(r'\\?\')
+    ? path
+    : path.startsWith(r'\\')
+    ? '\\\\?\\UNC\\${path.substring(2)}'
+    : '\\\\?\\$path';
+
 void _hardlink(String source, String destination) {
   if (Platform.isWindows) {
     final kernel = DynamicLibrary.open('kernel32.dll');
@@ -40,8 +48,11 @@ void _hardlink(String source, String destination) {
         >('CreateHardLinkW');
     using((arena) {
       if (link(
-            destination.toNativeUtf16(allocator: arena),
-            source.toNativeUtf16(allocator: arena),
+            flutterWindowsNativePath(
+              p.normalize(File(destination).absolute.path),
+            ).toNativeUtf16(allocator: arena),
+            flutterWindowsNativePath(p.normalize(File(source).absolute.path))
+                .toNativeUtf16(allocator: arena),
             nullptr,
           ) ==
           0) {

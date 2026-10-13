@@ -8,6 +8,7 @@ import 'package:test/test.dart';
 
 import 'typescript_fixture.dart' show fixture;
 import 'physical_paths_test.dart' show checkPhysical;
+import 'support/node_package_fixtures.dart';
 
 Future<void> copyTree(Directory source, Directory target) async {
   await target.create(recursive: true);
@@ -42,16 +43,10 @@ Future<Directory> preparedFixture(String name, String main) async {
   }
   if (name == 'npm-override') archives.add('npm-override.tar.gz');
   for (final archive in archives) {
-    final result = await Process.run(
-      Platform.environment['ARCHWAY_TEST_PYTHON'] ??
-          (Platform.isWindows ? 'python' : 'python3'),
-      [
-        'test/node_package_fixture_support.py',
-        'test/fixtures/node-packages/$archive',
-        container.path,
-      ],
+    await extractNodeFixture(
+      File('test/fixtures/node-packages/$archive'),
+      container,
     );
-    expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
   }
   for (final file in ['architecture.yaml']) {
     await File('${scaffold.path}/$file').copy('${root.path}/$file');
