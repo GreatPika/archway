@@ -1,0 +1,42 @@
+{
+  "command": "init",
+  "schema_version": 1,
+  "tool_versions": {
+    "archway": "1.0.0-design",
+    "dart_adapter": null,
+    "typescript_adapter": null,
+    "dart_sdk": null,
+    "node": null,
+    "typescript": null
+  },
+  "resolved_root": "/repo",
+  "policy_path": null,
+  "policy_hash": null,
+  "status": "ok",
+  "exit_code": 0,
+  "diagnostics": [],
+  "payload": {
+    "template": "mixed",
+    "dry_run": true,
+    "outcome": "planned",
+    "planned_paths": [
+      "architecture.yaml",
+      "ARCHITECTURE_AGENT.md"
+    ],
+    "planned_files": [
+      {
+        "path": "architecture.yaml",
+        "content": "version: 1\nprojects: []\nscope: []\nexclude: []\nnodes: []\n"
+      },
+      {
+        "path": "ARCHITECTURE_AGENT.md",
+        "content": "Read the architecture plan before changing code.\n"
+      }
+    ],
+    "created_paths": [
+      "architecture.yaml"
+    ],
+    "residual_paths": [],
+    "conflicting_paths": []
+  }
+}

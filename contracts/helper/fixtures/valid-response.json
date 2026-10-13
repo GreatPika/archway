@@ -1,0 +1,72 @@
+{
+  "protocol_version": 2,
+  "request_id": "r1",
+  "project_id": "app",
+  "status": "complete",
+  "files": [
+    {
+      "path": "src/main.ts",
+      "membership": "member",
+      "coverage": "complete",
+      "input_id": "i1"
+    }
+  ],
+  "facts": [
+    {
+      "source": "src/main.ts",
+      "source_range": {
+        "path": "src/main.ts",
+        "start": {
+          "line": 1,
+          "column": 1
+        },
+        "end": {
+          "line": 1,
+          "column": 24
+        }
+      },
+      "kind": "import",
+      "specifier": "./dep",
+      "type_only": false,
+      "resolution": {
+        "kind": "local",
+        "path": "src/dep.ts",
+        "canonical_file_uri": "file:///repo/src/dep.ts",
+        "via_path": null
+      },
+      "input_ids": [
+        "i1",
+        "i2",
+        "i3"
+      ]
+    }
+  ],
+  "unknowns": [],
+  "tool_errors": [],
+  "inputs": [
+    {
+      "id": "i1",
+      "kind": "file",
+      "observed_uri": "file:///repo/src/main.ts",
+      "canonical_uri": "file:///repo/src/main.ts",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "symlink_hops": []
+    },
+    {
+      "id": "i2",
+      "kind": "file",
+      "observed_uri": "file:///repo/src/dep.ts",
+      "canonical_uri": "file:///repo/src/dep.ts",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "symlink_hops": []
+    },
+    {
+      "id": "i3",
+      "kind": "file",
+      "observed_uri": "file:///repo/tsconfig.json",
+      "canonical_uri": "file:///repo/tsconfig.json",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "symlink_hops": []
+    }
+  ]
+}

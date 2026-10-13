@@ -1,0 +1,32 @@
+{
+  "command": "node",
+  "schema_version": 1,
+  "tool_versions": {
+    "archway": "1.0.0-design",
+    "dart_adapter": null,
+    "typescript_adapter": null,
+    "dart_sdk": null,
+    "node": null,
+    "typescript": null
+  },
+  "resolved_root": "/repo",
+  "policy_path": "architecture.yaml",
+  "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "status": "ok",
+  "exit_code": 0,
+  "diagnostics": [],
+  "payload": {
+    "mode": "catalogue",
+    "nodes": [
+      {
+        "id": "app",
+        "responsibility": "Compose application",
+        "owns_count": 1
+      }
+    ],
+    "total": 2,
+    "omitted": 0,
+    "offset": 0,
+    "limit": null
+  }
+}

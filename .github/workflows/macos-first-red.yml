@@ -1,0 +1,192 @@
+name: macOS source and AOT feasibility
+
+on:
+  workflow_call:
+    inputs:
+      export-installation:
+        description: Export the verified native installation
+        type: boolean
+        required: false
+        default: false
+  workflow_dispatch:
+    inputs:
+      export-installation:
+        description: Export the verified native installation
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-first-red-${{ github.ref }}-${{ inputs.export-installation && 'export' || 'probe' }}
+  cancel-in-progress: true
+
+jobs:
+  macos-init:
+    runs-on: macos-15
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    env:
+      DASH__SUPPRESS_ANALYTICS: "true"
+      PUB_HOSTED_URL: https://pub.dev
+    steps:
+      - name: Preserve source bytes for opt-in export (ephemeral hosted runner only)
+        if: ${{ inputs.export-installation }}
+        run: git config --global core.autocrlf false
+      - name: Check out the reviewed source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify export source bytes before any build
+        if: ${{ inputs.export-installation }}
+        run: |
+          python3 tool/ci/verify_export_sources.py "$GITHUB_SHA"
+      - name: Record and require macOS 15 arm64 on APFS
+        run: |
+          mkdir -p build/macos-probe
+          bash tool/ci/macos_environment.sh 2>&1 | tee build/macos-probe/environment.log
+      - name: Install official pinned Dart SDK and locked dependencies
+        run: |
+          set -o pipefail
+          {
+            export PUB_CACHE="$RUNNER_TEMP/archway-pub-cache"
+            echo "PUB_CACHE=$PUB_CACHE" >> "$GITHUB_ENV"
+            sdk="$RUNNER_TEMP/archway-dart"
+            mkdir -p "$sdk"
+            curl --fail --show-error --silent --location --retry 2 --max-time 180 \
+              https://storage.googleapis.com/dart-archive/channels/stable/release/3.13.3/sdk/dartsdk-macos-arm64-release.zip \
+              -o "$sdk/dartsdk-macos-arm64-release.zip"
+            (cd "$sdk" && echo 'c703bcbb25ca0cc5df9109fb8272d52786ac14782437bd9e365a01985273c1cc  dartsdk-macos-arm64-release.zip' | shasum -a 256 -c -)
+            unzip -q "$sdk/dartsdk-macos-arm64-release.zip" -d "$sdk"
+            export PATH="$sdk/dart-sdk/bin:$PATH"
+            echo "$sdk/dart-sdk/bin" >> "$GITHUB_PATH"
+            dart --version
+            dart --suppress-analytics pub get --enforce-lockfile
+            git diff --exit-code -- pubspec.lock
+            shasum -a 256 pubspec.lock
+            if [[ -f tool/build_native_macos.sh ]]; then
+              bash tool/build_native_macos.sh
+            fi
+          } 2>&1 | tee build/macos-probe/setup.log
+      - name: Policy-only CLI control (no native writes or project hooks)
+        run: |
+          dart --suppress-analytics run tool/ci/macos_init_probe.dart policy 2>&1 | tee build/macos-probe/policy.log
+      - name: Real CLI init must succeed (first target red remains a failure)
+        run: |
+          dart --suppress-analytics run tool/ci/macos_init_probe.dart init 2>&1 | tee build/macos-probe/init.log
+      - name: Nested-directory export through the shared CLI seam
+        run: |
+          dart --suppress-analytics test -r expanded test/catalogue_export_test.dart \
+            --plain-name 'file export exclusively creates output through existing child directories' \
+            2>&1 | tee build/macos-probe/nested-export.log
+      - name: Explicit overwrite through the existing CLI seam
+        run: |
+          dart --suppress-analytics test -r expanded test/catalogue_export_test.dart \
+            --plain-name 'file export exclusively creates output and requires explicit overwrite' \
+            2>&1 | tee build/macos-probe/overwrite.log
+      - name: Literal alias target bytes through the existing CLI seam
+        run: |
+          dart --suppress-analytics test -r expanded test/physical_paths_test.dart \
+            --plain-name 'root canonicalization preserves a literal leading BOM in a link target' \
+            2>&1 | tee build/macos-probe/alias.log
+      - name: Existing native source-seam regression suites
+        run: |
+          {
+            command -v ln
+            command -v python3
+            python3 --version
+            # The existing Linux-only exact-NFC case remains an explicit skip.
+            dart --suppress-analytics test -r expanded \
+              test/bootstrap_test.dart test/catalogue_export_test.dart \
+              test/physical_paths_test.dart
+          } 2>&1 | tee build/macos-probe/native-regression.log
+      - name: Install official pinned external Node for compiler checks
+        run: |
+          set -o pipefail
+          {
+            node_root="$RUNNER_TEMP/archway-node"
+            mkdir -p "$node_root"
+            curl --fail --show-error --silent --location --retry 2 --max-time 180 \
+              https://nodejs.org/dist/v24.21.0/node-v24.21.0-darwin-arm64.tar.gz \
+              -o "$node_root/node-v24.21.0-darwin-arm64.tar.gz"
+            # Official https://nodejs.org/dist/v24.21.0/SHASUMS256.txt
+            (cd "$node_root" && echo 'bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057  node-v24.21.0-darwin-arm64.tar.gz' | shasum -a 256 -c -)
+            tar -xzf "$node_root/node-v24.21.0-darwin-arm64.tar.gz" -C "$node_root"
+            node_bin="$node_root/node-v24.21.0-darwin-arm64/bin"
+            "$node_bin/node" -e 'const a = require("node:assert/strict"); a.equal(process.version, "v24.21.0"); a.equal(process.platform, "darwin"); a.equal(process.arch, "arm64"); console.log(process.version, process.platform, process.arch)'
+            echo "$node_bin" >> "$GITHUB_PATH"
+          } 2>&1 | tee build/macos-probe/node-setup.log
+      - name: Prepare owned pinned helper assets for the AOT fixture
+        run: |
+          {
+            node --version
+            npm --version
+            # Only Archway's locked compiler/vendor dependencies; no project install.
+            bash tool/prepare_typescript.sh
+            git diff --exit-code -- assets/typescript/package-lock.json
+            shasum -a 256 assets/typescript/package-lock.json
+          } 2>&1 | tee build/macos-probe/aot-assets.log
+      - name: Real compiler adapter source regressions (five files, serial)
+        run: |
+          set -euo pipefail
+          {
+            echo "Source: $(git rev-parse HEAD)"
+            command -v dart
+            dart --version
+            command -v node
+            node --version
+            echo "Test root base: $TMPDIR (APFS attested by environment step)"
+            echo 'Selection: all five adapter source files; existing Linux-only chmod case skips on macOS.'
+            dart --suppress-analytics test --concurrency=1 -r expanded \
+              test/inspection_test.dart test/typescript_references_test.dart \
+              test/typescript_projects_test.dart test/dart_inspection_test.dart \
+              test/input_mutations_test.dart
+          } 2>&1 | tee build/macos-probe/adapter-source.log
+      - name: Prepare pinned Python schema validation for process regressions
+        run: |
+          set -o pipefail
+          {
+            python3 -m venv "$RUNNER_TEMP/archway-schema-venv"
+            python="$RUNNER_TEMP/archway-schema-venv/bin/python"
+            "$python" --version
+            # Match the locally exercised version, verified on official PyPI.
+            "$python" -m pip install --index-url https://pypi.org/simple 'jsonschema==4.26.0'
+            "$python" -c 'from importlib.metadata import version; from jsonschema import Draft202012Validator; assert version("jsonschema") == "4.26.0"; Draft202012Validator.check_schema({"type": "object"}); print("jsonschema", version("jsonschema"))'
+            echo "$RUNNER_TEMP/archway-schema-venv/bin" >> "$GITHUB_PATH"
+          } 2>&1 | tee build/macos-probe/schema-setup.log
+      - name: Genuine maintainer-assembled macOS AOT init and process regressions
+        env:
+          EXPORT_INSTALLATION: ${{ inputs.export-installation }}
+        run: |
+          args=()
+          if [[ "$EXPORT_INSTALLATION" == true ]]; then
+            args+=(--artifact-directory "$RUNNER_TEMP/archway-native-export-macos-arm64")
+          fi
+          python3 -u tool/ci/native_assembly_init_probe.py "${args[@]}" \
+            --log-directory build/macos-probe \
+            --dart-sdk "$RUNNER_TEMP/archway-dart/dart-sdk" \
+            --node "$RUNNER_TEMP/archway-node/node-v24.21.0-darwin-arm64/bin/node" \
+            2>&1 | tee build/macos-probe/assembly-init.log
+      - name: Retain verified native installation
+        if: ${{ success() && inputs.export-installation }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: native-installation-macos-arm64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/archway-native-export-macos-arm64/installation.tar
+            ${{ runner.temp }}/archway-native-export-macos-arm64/provenance.json
+          retention-days: 1
+          if-no-files-found: error
+          compression-level: 0
+      - name: Preserve concise probe evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: macos-first-red-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/macos-probe/*.log
+          if-no-files-found: warn
+          retention-days: 1

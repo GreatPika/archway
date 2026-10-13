@@ -1,0 +1,118 @@
+name: Windows Server native implementation probe
+
+on:
+  workflow_call:
+    inputs:
+      export-installation:
+        description: Export the verified native installation
+        type: boolean
+        required: false
+        default: false
+  workflow_dispatch:
+    inputs:
+      export-installation:
+        description: Export the verified native installation
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+concurrency:
+  group: windows-native-probe-${{ github.ref }}-${{ inputs.export-installation && 'export' || 'probe' }}
+  cancel-in-progress: true
+
+jobs:
+  implementation-probe:
+    # Standard hosted entitlement only. Never substitute a paid/larger runner.
+    runs-on: windows-2025
+    timeout-minutes: 15
+    env:
+      DASH__SUPPRESS_ANALYTICS: "true"
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Record actual host and target mismatch
+        run: |
+          $evidence = Join-Path $env:RUNNER_TEMP 'archway-windows-evidence'
+          New-Item -ItemType Directory -Force $evidence | Out-Null
+          $os = Get-CimInstance Win32_OperatingSystem
+          $cpu = Get-CimInstance Win32_Processor | Select-Object Name, Architecture, AddressWidth
+          $drives = @($env:GITHUB_WORKSPACE, $env:RUNNER_TEMP) | ForEach-Object {
+            $device = [IO.Path]::GetPathRoot($_).TrimEnd('\')
+            Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='$device'" |
+              Select-Object DeviceID, FileSystem
+          }
+          [ordered]@{
+            purpose = 'Windows Server implementation evidence ONLY; NOT Windows 11 24H2 certification'
+            required_target = 'Windows 11 24H2 x64 / NTFS'
+            os = $os.Caption; version = $os.Version; build = $os.BuildNumber
+            cpu = $cpu; filesystems = $drives; runner_arch = $env:RUNNER_ARCH
+            image_version = $env:ImageVersion; commit = $env:GITHUB_SHA
+          } | ConvertTo-Json -Depth 5 | Tee-Object "$evidence/host.json"
+          if ($env:RUNNER_ARCH -ne 'X64') { throw 'Expected the standard Windows x64 runner.' }
+      - name: Preserve source bytes for opt-in export (ephemeral hosted runner only)
+        if: ${{ inputs.export-installation }}
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify export source bytes before any build
+        if: ${{ inputs.export-installation }}
+        run: |
+          $python = (Get-Command python -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
+          & $python tool/ci/verify_export_sources.py $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'Export source-byte verification failed.' }
+      - name: Inspect installed C toolchain (no installation)
+        run: ./tool/ci/windows-native-probe.ps1 -Phase toolchain
+      - name: Checksum-verify Dart 3.13.3 and prepare locked dependencies
+        run: ./tool/ci/windows-native-probe.ps1 -Phase setup
+      - name: Independent policy-only baseline
+        run: ./tool/ci/windows-native-probe.ps1 -Phase policy
+      - name: Real CLI.run init success control
+        run: ./tool/ci/windows-native-probe.ps1 -Phase init
+      - name: Missing residual through Bootstrap.initialize (expected success is not inverted)
+        run: ./tool/ci/windows-native-probe.ps1 -Phase residual
+      - name: Nested-directory export through CLI.run (expected success is not inverted)
+        run: ./tool/ci/windows-native-probe.ps1 -Phase nested-export
+      - name: Explicit overwrite through CLI.run (expected success is not inverted)
+        run: ./tool/ci/windows-native-probe.ps1 -Phase overwrite
+      - name: Raw BOM alias through CLI.run (fixture readiness required)
+        run: ./tool/ci/windows-native-probe.ps1 -Phase bom-alias
+      - name: Absolute directory symbolic link through CLI.run (OS tag verified)
+        run: ./tool/ci/windows-native-probe.ps1 -Phase absolute-alias
+      - name: Local directory junction through CLI.run (OS tag verified)
+        run: ./tool/ci/windows-native-probe.ps1 -Phase junction
+      - name: Prepare checksum-verified Node and owned locked AOT assets
+        run: ./tool/ci/windows-native-probe.ps1 -Phase aot-assets
+      - name: Real compiler adapter source suites (file-link readiness, five files)
+        run: ./tool/ci/windows-native-probe.ps1 -Phase adapter-source
+      - name: Genuine Windows maintainer assembly and relocated init (failure remains a failure)
+        env:
+          EXPORT_INSTALLATION: ${{ inputs.export-installation }}
+        run: |
+          $arguments = @{ Phase = 'assembly-init' }
+          if ($env:EXPORT_INSTALLATION -eq 'true') {
+            $arguments.ArtifactDirectory = Join-Path $env:RUNNER_TEMP 'archway-native-export-windows-x64'
+          }
+          ./tool/ci/windows-native-probe.ps1 @arguments
+      - name: Retain verified native installation
+        if: ${{ success() && inputs.export-installation }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: native-installation-windows-x64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/archway-native-export-windows-x64/installation.tar
+            ${{ runner.temp }}/archway-native-export-windows-x64/provenance.json
+          retention-days: 1
+          if-no-files-found: error
+          compression-level: 0
+      - name: Retain bounded evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: windows-server-implementation-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/archway-windows-evidence/
+          retention-days: 1
+          if-no-files-found: error

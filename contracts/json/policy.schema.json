@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:archway:policy:1",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$"
+              },
+              "adapter": {
+                "const": "typescript"
+              },
+              "tsconfig": {
+                "$ref": "#/$defs/path"
+              }
+            },
+            "required": [
+              "id",
+              "adapter",
+              "tsconfig"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$"
+              },
+              "adapter": {
+                "const": "dart"
+              },
+              "package_roots": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/path"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "adapter",
+              "package_roots"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "scope": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/path"
+      }
+    },
+    "exclude": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/path"
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$"
+          },
+          "responsibility": {
+            "type": "string",
+            "minLength": 1
+          },
+          "owns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/path"
+            }
+          },
+          "allows": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$"
+            }
+          },
+          "contracts": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "public": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/path"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "responsibility",
+          "owns",
+          "allows",
+          "public"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "version",
+    "projects",
+    "scope",
+    "exclude",
+    "nodes"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*[\\x00-\\x1f*?\\[\\]{}]).+$"
+    }
+  }
+}

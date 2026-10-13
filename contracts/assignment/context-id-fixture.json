@@ -1,0 +1,20 @@
+{
+  "project_id": "mobile",
+  "context_id": "dart:mobile:1cae82f2d844aadf9779245fb1155928de800190aa6dbb462aaecf7885a5eaea",
+  "descriptor": {
+    "root": "dart_app",
+    "included_paths": [
+      "dart_app"
+    ],
+    "excluded_paths": [
+      "dart_app/example"
+    ],
+    "package_config_path": "dart_app/.dart_tool/package_config.json",
+    "options_paths": [
+      "dart_app/analysis_options.yaml"
+    ],
+    "sdk_version": "3.13.3"
+  },
+  "canonical_descriptor_utf8": "{\"excluded_paths\":[\"dart_app/example\"],\"included_paths\":[\"dart_app\"],\"options_paths\":[\"dart_app/analysis_options.yaml\"],\"package_config_path\":\"dart_app/.dart_tool/package_config.json\",\"root\":\"dart_app\",\"sdk_version\":\"3.13.3\"}",
+  "descriptor_sha256": "1cae82f2d844aadf9779245fb1155928de800190aa6dbb462aaecf7885a5eaea"
+}

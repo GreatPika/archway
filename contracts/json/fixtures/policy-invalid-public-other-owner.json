@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "projects": [],
+  "scope": [
+    "src/",
+    "dart/lib/"
+  ],
+  "exclude": [
+    "src/pricing/generated/"
+  ],
+  "nodes": [
+    {
+      "id": "app",
+      "responsibility": "Compose application",
+      "owns": [
+        "src/app/"
+      ],
+      "allows": [
+        "pricing"
+      ],
+      "public": []
+    },
+    {
+      "id": "pricing",
+      "responsibility": "Calculate prices",
+      "owns": [
+        "src/pricing/",
+        "dart/lib/pricing/",
+        "dart/lib/pricing.dart"
+      ],
+      "allows": [],
+      "public": [
+        "src/app/main.ts"
+      ]
+    }
+  ]
+}

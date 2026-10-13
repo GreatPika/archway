@@ -1,0 +1,31 @@
+#!/bin/sh
+set -eu
+case "${1:-}" in install|upgrade) ;; *) exit 0 ;; esac
+root=${DPKG_ROOT:-}
+admin=${DPKG_ADMINDIR:-$root/var/lib/dpkg}
+conflict() { printf 'Archway conflict: %s\n' "$1" >&2; exit 1; }
+exists() { [ -e "$1" ] || [ -L "$1" ]; }
+owned() {
+    dpkg-query --admindir="$admin" -S "$1" 2>/dev/null |
+        grep -Fqx "archway: $1"
+}
+base=/usr/lib/archway
+if exists "$root$base"; then
+    [ ! -L "$root$base" ] && [ -d "$root$base" ] || conflict "$base is not an ordinary directory"
+    owned "$base" || conflict "$base is not owned by this package"
+fi
+for command in /usr/bin/archway /usr/local/bin/archway; do
+    if exists "$root$command"; then
+        owned "$command" || conflict "$command is not owned by this package"
+        [ -L "$root$command" ] &&
+            [ "$(readlink "$root$command")" = "$base/bin/linux-x64/archway" ] ||
+            conflict "$command no longer points to the owned payload"
+    fi
+done
+if [ -z "$root" ]; then
+    command=$(command -v archway || true)
+    case "$command" in ''|/usr/bin/archway|/bin/archway) ;;
+        *) conflict "archway already resolves to $command" ;; esac
+fi
+# The builder appends the exact candidate inventory here. dpkg owns removal;
+# this preflight never deletes files or writes package/user configuration.

@@ -1,0 +1,9 @@
+.dart_tool/
+coverage/
+build/
+*.snapshot
+native/linux-x64/
+native/macos-arm64/
+native/windows-x64/
+__pycache__/
+*.pyc

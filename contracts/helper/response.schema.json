@@ -1,0 +1,488 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Archway private TypeScript helper response v2",
+  "type": "object",
+  "properties": {
+    "protocol_version": {
+      "const": 2
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "complete",
+        "incomplete",
+        "failed"
+      ]
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//).+$"
+          },
+          "membership": {
+            "enum": [
+              "member",
+              "nonmember",
+              "unknown"
+            ]
+          },
+          "coverage": {
+            "enum": [
+              "complete",
+              "partial",
+              "failed",
+              "not_applicable"
+            ]
+          },
+          "input_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "path",
+          "membership",
+          "coverage",
+          "input_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "facts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fact"
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/diagnostic"
+      }
+    },
+    "tool_errors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/diagnostic"
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "const": "file"
+              },
+              "observed_uri": {
+                "type": "string",
+                "pattern": "^file:///(?:[^\\s?#]|%[0-9A-Fa-f]{2})+$"
+              },
+              "canonical_uri": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^file:///(?:[^\\s?#]|%[0-9A-Fa-f]{2})+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "symlink_hops": {
+                "$ref": "#/$defs/symlink_hops"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "observed_uri",
+              "canonical_uri",
+              "sha256",
+              "symlink_hops"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "const": "directory"
+              },
+              "observed_uri": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^file:///(?:[^\\s?#]|%[0-9A-Fa-f]{2})+$"
+                  },
+                  {
+                    "const": "file:///"
+                  }
+                ]
+              },
+              "canonical_uri": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^file:///(?:[^\\s?#]|%[0-9A-Fa-f]{2})+$"
+                      },
+                      {
+                        "const": "file:///"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "symlink_hops": {
+                "$ref": "#/$defs/symlink_hops"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "observed_uri",
+              "canonical_uri",
+              "sha256",
+              "symlink_hops"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "const": "absent"
+              },
+              "observed_uri": {
+                "type": "string",
+                "pattern": "^file:///(?:[^\\s?#]|%[0-9A-Fa-f]{2})+$"
+              },
+              "canonical_uri": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^file:///(?:[^\\s?#]|%[0-9A-Fa-f]{2})+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "symlink_hops": {
+                "$ref": "#/$defs/symlink_hops"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "observed_uri",
+              "canonical_uri",
+              "symlink_hops"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "protocol_version",
+    "request_id",
+    "project_id",
+    "status",
+    "files",
+    "facts",
+    "unknowns",
+    "tool_errors",
+    "inputs"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "range": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//).+$"
+        },
+        "start": {
+          "type": "object",
+          "properties": {
+            "line": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "column": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "line",
+            "column"
+          ],
+          "additionalProperties": false
+        },
+        "end": {
+          "type": "object",
+          "properties": {
+            "line": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "column": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "line",
+            "column"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "path",
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    },
+    "fact": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//).+$"
+        },
+        "source_range": {
+          "$ref": "#/$defs/range"
+        },
+        "kind": {
+          "enum": [
+            "import",
+            "export",
+            "import_type",
+            "require",
+            "dynamic_import"
+          ]
+        },
+        "specifier": {
+          "type": "string"
+        },
+        "type_only": {
+          "type": "boolean"
+        },
+        "resolution": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "local"
+                },
+                "path": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//).+$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "canonical_file_uri": {
+                  "type": "string",
+                  "pattern": "^file:///(?:[^\\s?#]|%[0-9A-Fa-f]{2})+$"
+                },
+                "via_path": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^file:///(?:[^\\s?#]|%[0-9A-Fa-f]{2})+$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "path",
+                "canonical_file_uri",
+                "via_path"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "external",
+                    "builtin"
+                  ]
+                },
+                "identity": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "kind",
+                "identity"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "unresolved"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "input_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "source",
+        "source_range",
+        "kind",
+        "specifier",
+        "type_only",
+        "resolution",
+        "input_ids"
+      ],
+      "additionalProperties": false
+    },
+    "diagnostic": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//).+$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/range"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "path",
+        "source_range"
+      ],
+      "additionalProperties": false
+    },
+    "symlink_hops": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "observed_uri": {
+            "type": "string",
+            "pattern": "^file:///(?:[^\\s?#]|%[0-9A-Fa-f]{2})+$",
+            "not": {
+              "pattern": "/$"
+            }
+          },
+          "target": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\u0000]*$"
+          }
+        },
+        "required": [
+          "observed_uri",
+          "target"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 40
+    }
+  }
+}

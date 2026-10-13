@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "projects": [
+    {
+      "id": "web",
+      "adapter": "typescript",
+      "tsconfig": "tsconfig.json"
+    },
+    {
+      "id": "mobile",
+      "adapter": "dart",
+      "package_roots": [
+        "dart_app/"
+      ]
+    }
+  ],
+  "exclude": [],
+  "nodes": [
+    {
+      "id": "app",
+      "responsibility": "Compose application",
+      "owns": [
+        "src/app/"
+      ],
+      "public": [],
+      "allows": []
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+Package validation found the following 7 potential issues:
+* Your dependency on "analyzer" should allow more than one version. For example:
+  
+  dependencies:
+    analyzer: ^14.5.0
+  
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "analyzer".
+
+* Your dependency on "package_config" should allow more than one version. For example:
+  
+  dependencies:
+    package_config: ^2.2.0
+  
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "package_config".
+
+* Your dependency on "pub_semver" should allow more than one version. For example:
+  
+  dependencies:
+    pub_semver: ^2.2.1
+  
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "pub_semver".
+
+* Your dependency on "crypto" should allow more than one version. For example:
+  
+  dependencies:
+    crypto: ^3.0.7
+  
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "crypto".
+
+* Your dependency on "yaml" should allow more than one version. For example:
+  
+  dependencies:
+    yaml: ^3.1.4
+  
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "yaml".
+
+* Your dependency on "path" should allow more than one version. For example:
+  
+  dependencies:
+    path: ^1.9.1
+  
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "path".
+
+* Your dependency on "unorm_dart" should allow more than one version. For example:
+  
+  dependencies:
+    unorm_dart: ^0.3.2
+  
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "unorm_dart".

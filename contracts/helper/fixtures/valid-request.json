@@ -1,0 +1,10 @@
+{
+  "protocol_version": 2,
+  "request_id": "r1",
+  "project_id": "app",
+  "root_uri": "file:///repo",
+  "config_path": "tsconfig.json",
+  "expected_files": [
+    "src/main.ts"
+  ]
+}

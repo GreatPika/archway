@@ -1,0 +1,171 @@
+{
+  "purpose": "Policy plus repository acceptance inputs and expected assertions for future real CLI tests; not recorded Archway executions. All unchanged-input cases require successful final revalidation.",
+  "cases": [
+    {
+      "id": "EC01",
+      "scenario": "Bootstrap ignores repository source because scope is empty",
+      "policy": {
+        "version": 1,
+        "projects": [],
+        "scope": [],
+        "exclude": [],
+        "nodes": []
+      },
+      "repository_files": [
+        "src/a.ts"
+      ],
+      "enumeration_complete": true,
+      "expected": {
+        "files": [],
+        "observed_files": 0,
+        "status": "ok",
+        "exit_code": 0,
+        "analysis_complete": true,
+        "warning_codes": [
+          "EMPTY_PLAN"
+        ],
+        "violation_codes": [],
+        "unknown_codes": []
+      }
+    },
+    {
+      "id": "EC02",
+      "scenario": "Empty projects and nodes do not erase a scoped TypeScript source",
+      "policy": {
+        "version": 1,
+        "projects": [],
+        "scope": [
+          "src/"
+        ],
+        "exclude": [],
+        "nodes": []
+      },
+      "repository_files": [
+        "src/a.ts"
+      ],
+      "enumeration_complete": true,
+      "expected": {
+        "files": [
+          {
+            "path": "src/a.ts",
+            "assignment": "missing",
+            "analysis": "not_attempted",
+            "candidates": [],
+            "discovery_complete": true,
+            "unresolved_project_ids": []
+          }
+        ],
+        "observed_files": 1,
+        "status": "incomplete",
+        "exit_code": 2,
+        "analysis_complete": false,
+        "warning_codes": [
+          "EMPTY_PLAN"
+        ],
+        "violation_codes": [
+          "SOURCE_UNOWNED"
+        ],
+        "unknown_codes": [
+          "ANALYSIS_CONTEXT_MISSING"
+        ]
+      }
+    },
+    {
+      "id": "EC03",
+      "scenario": "Unsupported recognized scoped source remains counted with no projects or nodes",
+      "policy": {
+        "version": 1,
+        "projects": [],
+        "scope": [
+          "src/"
+        ],
+        "exclude": [],
+        "nodes": []
+      },
+      "repository_files": [
+        "src/a.js"
+      ],
+      "enumeration_complete": true,
+      "expected": {
+        "files": [
+          {
+            "path": "src/a.js",
+            "assignment": "unsupported",
+            "analysis": "not_attempted",
+            "candidates": [],
+            "discovery_complete": true,
+            "unresolved_project_ids": []
+          }
+        ],
+        "observed_files": 1,
+        "status": "incomplete",
+        "exit_code": 2,
+        "analysis_complete": false,
+        "warning_codes": [
+          "EMPTY_PLAN"
+        ],
+        "violation_codes": [
+          "SOURCE_UNOWNED"
+        ],
+        "unknown_codes": [
+          "UNSUPPORTED_SOURCE_KIND"
+        ]
+      }
+    },
+    {
+      "id": "EC04",
+      "scenario": "Enumeration gap with zero known files cannot be clean",
+      "policy": {
+        "version": 1,
+        "projects": [],
+        "scope": [
+          "src/"
+        ],
+        "exclude": [],
+        "nodes": []
+      },
+      "repository_files": [],
+      "enumeration_complete": false,
+      "expected": {
+        "files": [],
+        "observed_files": 0,
+        "status": "incomplete",
+        "exit_code": 2,
+        "analysis_complete": false,
+        "warning_codes": [
+          "EMPTY_PLAN"
+        ],
+        "violation_codes": [],
+        "unknown_codes": [],
+        "requires_enumeration_failure_diagnostic": "tool_errors"
+      }
+    },
+    {
+      "id": "EC05",
+      "scenario": "Nonempty scope with genuinely absent source can be empty after complete enumeration and identity recheck",
+      "policy": {
+        "version": 1,
+        "projects": [],
+        "scope": [
+          "src/"
+        ],
+        "exclude": [],
+        "nodes": []
+      },
+      "repository_files": [],
+      "enumeration_complete": true,
+      "expected": {
+        "files": [],
+        "observed_files": 0,
+        "status": "ok",
+        "exit_code": 0,
+        "analysis_complete": true,
+        "warning_codes": [
+          "EMPTY_PLAN"
+        ],
+        "violation_codes": [],
+        "unknown_codes": []
+      }
+    }
+  ]
+}

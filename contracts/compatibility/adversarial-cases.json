@@ -1,0 +1,336 @@
+{
+  "kind": "design_expected_cases_not_runtime_results",
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "P01",
+      "input": "src\\a.ts",
+      "expected": "src/a.ts on all hosts; same owner as slash spelling"
+    },
+    {
+      "id": "P02",
+      "input": "./src//x/../a.ts",
+      "expected": "src/a.ts; no filesystem access by owner"
+    },
+    {
+      "id": "P03",
+      "input": "../repo/src/a.ts",
+      "expected": "reject immediate above-root traversal; positional64/policy2"
+    },
+    {
+      "id": "P04",
+      "input": "C:src/a.ts",
+      "expected": "reject drive-relative input on every host"
+    },
+    {
+      "id": "P05",
+      "input": "C:\\src\\a.ts",
+      "expected": "reject absolute policy path on every host"
+    },
+    {
+      "id": "P06",
+      "input": "\\\\server\\share\\a.ts",
+      "expected": "reject UNC policy path"
+    },
+    {
+      "id": "P07",
+      "input": "src/%2e%2e/a.ts",
+      "expected": "literal percent segment, no URL decode or traversal"
+    },
+    {
+      "id": "P08",
+      "input": "src/CON.ts",
+      "expected": "reject portable Windows device name even on Linux"
+    },
+    {
+      "id": "P09",
+      "input": "src/a.ts:secret",
+      "expected": "reject colon/alternate stream syntax"
+    },
+    {
+      "id": "P10",
+      "input": "src/",
+      "expected": "directory prefix; matches src/a.ts, not src2/a.ts"
+    },
+    {
+      "id": "P11",
+      "input": "src",
+      "expected": "exact path, not directory prefix"
+    },
+    {
+      "id": "P12",
+      "input": "a/..",
+      "expected": "canonical root prefix ./"
+    },
+    {
+      "id": "P13",
+      "input": "src/é.ts versus decomposed e+acute",
+      "expected": "same lexical NFC path; conflicting physical entries incomplete"
+    },
+    {
+      "id": "P14",
+      "input": "owns A:src/Foo.ts and B:src/foo.ts",
+      "expected": "lexically distinct; physical collapse/case mismatch incomplete on insensitive FS, separate real files on Linux allowed"
+    },
+    {
+      "id": "P15",
+      "input": "owns A:src/ B:src/a.ts before files exist",
+      "expected": "invalid policy overlap"
+    },
+    {
+      "id": "P16",
+      "input": "owns A:src/ A:src/a.ts",
+      "expected": "normalize redundant own paths; do not double count"
+    },
+    {
+      "id": "P17",
+      "input": "owner src/generated/a.ts; scope src/; exclude src/generated/",
+      "expected": "excluded even if owns src/ exists"
+    },
+    {
+      "id": "F01",
+      "input": "root itself symlink to repository",
+      "expected": "canonicalize root once; child paths relative to canonical root"
+    },
+    {
+      "id": "F02",
+      "input": "included src/link.ts symlink to owned ordinary file",
+      "expected": "incomplete; do not follow; policy-only owner still lexical"
+    },
+    {
+      "id": "F03",
+      "input": "included src/linked/ directory symlink or Windows junction",
+      "expected": "incomplete at directory; do not traverse and falsely report empty corpus"
+    },
+    {
+      "id": "F04",
+      "input": "excluded directory symlink, no import",
+      "expected": "skip subtree; does not itself make incomplete"
+    },
+    {
+      "id": "F05",
+      "input": "node_modules/pkg -> packages/pkg, imported from src/a.ts",
+      "expected": "package alias resolved physically; local packages/pkg target owner; retain specifier+logical+canonical provenance"
+    },
+    {
+      "id": "F06",
+      "input": "local workspace package -> outside canonical root",
+      "expected": "known local outside_scope violation; never external by specifier alone"
+    },
+    {
+      "id": "F07",
+      "input": "ordinary installed package in pnpm store outside root with manifest/lock provenance",
+      "expected": "external; package symlink exception applies"
+    },
+    {
+      "id": "F08",
+      "input": "unknown outside-root alias without package origin",
+      "expected": "incomplete unresolved provenance"
+    },
+    {
+      "id": "F09",
+      "input": "canonical /repo2/a.ts with root /repo",
+      "expected": "outside root; segment containment prevents prefix confusion"
+    },
+    {
+      "id": "F10",
+      "input": "two included hard links of same file",
+      "expected": "distinct canonical path entries retain separate lexical owners; check each resolved import path; no inode equivalence or link-count claim"
+    },
+    {
+      "id": "F11",
+      "input": "case-insensitive disk stores src/foo.ts but resolver reports src/Foo.ts",
+      "expected": "incomplete case mismatch, do not reassign owner silently"
+    },
+    {
+      "id": "F12",
+      "input": "symlink target changes between resolution and verification",
+      "expected": "incomplete changed input; prior independent violations retained"
+    },
+    {
+      "id": "F13",
+      "input": "POSIX source filename contains literal backslash",
+      "expected": "incomplete unrepresentable portable path, not rewritten to a different file"
+    },
+    {
+      "id": "R01",
+      "input": "mixed repo; Node missing; correct Dart SDK",
+      "expected": "Dart facts/violations retained, TS incomplete, check exit2"
+    },
+    {
+      "id": "R02",
+      "input": "owner/validate/init/export with neither SDK nor Node",
+      "expected": "no runtime preflight required; works from native CLI if policy/arguments valid"
+    },
+    {
+      "id": "R03",
+      "input": "Node 24.21.1 or Dart 3.13.4",
+      "expected": "outside exact manifest, affected project incomplete; not silently allowed by semver"
+    },
+    {
+      "id": "R04",
+      "input": "project TypeScript7 installed but bundled TS5.9.3 used",
+      "expected": "report bundled5.9.3; unsupported options/syntax produce incomplete, project compiler never loaded"
+    },
+    {
+      "id": "R05",
+      "input": "NODE_OPTIONS=--require ./evil.js",
+      "expected": "remove preload influence before preflight/helper; no project code execution"
+    },
+    {
+      "id": "R06",
+      "input": "runtime found as executable within selected repo or via PATH dot",
+      "expected": "reject runtime candidate; incomplete, no wrapper execution"
+    },
+    {
+      "id": "R07",
+      "input": "relocated entire archive and cwd differs",
+      "expected": "resolve assets from executable; same helper/compiler identity"
+    },
+    {
+      "id": "R08",
+      "input": "only executable moved; helper asset missing",
+      "expected": "TS incomplete; Plan and available Dart continue"
+    },
+    {
+      "id": "H01",
+      "input": "stdout 67108864 UTF8 bytes, valid response and exit0 within120s",
+      "expected": "accepted if all other checks pass"
+    },
+    {
+      "id": "H02",
+      "input": "stdout 67108865 bytes",
+      "expected": "terminate; reject entire project response; no truncated-success report"
+    },
+    {
+      "id": "H03",
+      "input": "valid JSON early but helper remains alive after120s",
+      "expected": "timeout incomplete; early JSON not accepted"
+    },
+    {
+      "id": "H04",
+      "input": "request8388609 bytes",
+      "expected": "reject before spawn; request limit incomplete"
+    },
+    {
+      "id": "H05",
+      "input": "stderr262145 bytes with valid stdout",
+      "expected": "terminate response invalid; bounded resource policy applies to both streams"
+    },
+    {
+      "id": "H06",
+      "input": "helper timeout and kill not confirmed within2s",
+      "expected": "tool_error; no automatic retry/new helper spawn; do not claim process eliminated"
+    },
+    {
+      "id": "H07",
+      "input": "one project valid violation, next malformed helper response",
+      "expected": "overall incomplete exit2; retain first project violation"
+    },
+    {
+      "id": "C01",
+      "input": "stable Flutter SDK embeds Dart3.13.3; prepared package_config, complete SDK cache",
+      "expected": "design-supported Flutter Dart analysis; record Flutter revision and resolve dart:ui; requires runtime certification before release"
+    },
+    {
+      "id": "C02",
+      "input": "Flutter SDK embeds Dart3.13.2 or missing dart:ui summary/cache",
+      "expected": "affected Dart context incomplete; no flutter precache/pub get/download"
+    },
+    {
+      "id": "C03",
+      "input": "TS project reference with prepared declaration output and explicit leaf projects",
+      "expected": "stock CompilerHost resolves actual .d.ts target; policy applied to declaration path; no remap to source"
+    },
+    {
+      "id": "C04",
+      "input": "TS project reference missing output",
+      "expected": "incomplete; no implicit tsc build or hidden source redirect"
+    },
+    {
+      "id": "C05",
+      "input": "scope contains src/a.js alongside src/a.ts",
+      "expected": "unsupported selected JS source makes incomplete, not silently ignored"
+    },
+    {
+      "id": "C06",
+      "input": "NodeNext/NodeNext or Preserve/Bundler, target ES2022, standard paths alias",
+      "expected": "representative supported standard TS5.9.3 profile, not exclusive whitelist; alias provenance and unique project membership required"
+    },
+    {
+      "id": "C07",
+      "input": "same physical corpus file in two listed TS Programs",
+      "expected": "ambiguous context incomplete; no config-directory or rootDir tie-break"
+    },
+    {
+      "id": "P18",
+      "input": "src/[a].ts or src/{a}.ts",
+      "expected": "reject policy/positional portable path; discovered actual source name gives incomplete unrepresentable path"
+    },
+    {
+      "id": "EP01",
+      "input": "ordinary installed third-party node_modules/pkg/index.d.ts inside canonical root with matching compiler/manifest/lock provenance",
+      "expected": "external; physical in-root location alone does not turn installed third-party into local or require Archway public entry"
+    },
+    {
+      "id": "EP02",
+      "input": "ordinary installed third-party package target in in-root node_modules/.pnpm store with proven package-manager alias chain",
+      "expected": "external; retain provenance and canonical identity; package alias exception does not imply local"
+    },
+    {
+      "id": "EP03",
+      "input": "node_modules/pkg alias resolves to declared workspace package inside canonical root",
+      "expected": "local; canonical workspace target owner and exact public entry checks apply; compiler external-library flag is not sufficient external provenance"
+    },
+    {
+      "id": "EP04",
+      "input": "package-looking import or path under node_modules with unknown/conflicting installed-versus-workspace provenance",
+      "expected": "incomplete; do not infer external from spelling or local from containment alone"
+    },
+    {
+      "id": "EP05",
+      "input": "declared repository path dependency resolves outside canonical root",
+      "expected": "local outside_scope violation, never external merely because target is outside root"
+    },
+    {
+      "id": "EP06",
+      "input": "installed vendor code explicitly included by source scope minus exclude",
+      "expected": "authoritative source corpus remains unchanged; target classification does not silently remove selected source coverage"
+    },
+    {
+      "id": "D01",
+      "input": "actual packed npm local devDependency inside inspected root; scripts disabled; pinned external Node; no Dart/C compiler; offline launch from another cwd",
+      "expected": "fixed native payload and shared assets run; installation is not rejected solely for root containment; core argv/streams/exits preserved"
+    },
+    {
+      "id": "D02",
+      "input": "same packed npm artifact installed globally and invoked from an isolated cache without a local package candidate",
+      "expected": "both real routes execute their own packaged bytes offline; record artifact identity and route separately; unsupported OS/CPU gives explicit pre-launch failure"
+    },
+    {
+      "id": "D03",
+      "input": "source development, npm payload and pub source invocation with a decoy project TypeScript and cwd assets",
+      "expected": "all resolve only own generated assets/typescript/vendor/typescript and fixed helper; no node_modules runtime fallback or project code execution"
+    },
+    {
+      "id": "D04",
+      "input": "invoked installation is selected by broad scope with no matching exclusion; repeat with user-declared installation exclusion",
+      "expected": "first run retains installed sources in authoritative corpus under normal coverage rules; second obeys explicit exclusion; no hidden self/vendor/node_modules exclusion"
+    },
+    {
+      "id": "D05",
+      "input": "pub publishable file set staged exactly into isolated cache; prepared dependencies; global activation and archway from another cwd",
+      "expected": "own package URI resolves prebuilt bridge and shared assets; policy commands need no Node; TS with missing Node is incomplete; do not label this hosted-registry verification"
+    },
+    {
+      "id": "D06",
+      "input": "complete staged native installation relocated; then bridge/helper/compiler missing, corrupted or aliased",
+      "expected": "whole-layout relocation works; required invalid assets fail affected operations explicitly; canonical/no-alias safeguards survive npm/pub delivery; no runtime authenticity guarantee"
+    },
+    {
+      "id": "D07",
+      "input": "npm launcher and direct native payload exercise core errors, exits, streams and termination on each target OS",
+      "expected": "core output/exit contract preserved; pre-launch failures distinguished; record measured platform-specific signal behavior without claiming cross-platform equivalence"
+    }
+  ]
+}

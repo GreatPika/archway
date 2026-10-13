@@ -1,0 +1,747 @@
+[
+  {
+    "file": "fixtures/validate-ok.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/owner-owned.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/owner-excluded.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/owner-outside_scope.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/owner-unowned.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/node-catalogue.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/node-id.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/node-path.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/node-unmatched.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/allows-ids-allowed.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/allows-ids-denied.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/allows-paths-allowed.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/allows-paths-denied.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/allows-paths-undetermined.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/check-empty.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/check-violations.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/check-mixed-incomplete.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/check-invalid-policy.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/check-tool-error.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/check-complete-fact.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/check-resolution-external.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/check-resolution-builtin.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/check-resolution-unresolved.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/validate-usage.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/validate-invalid-policy.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/validate-error.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/owner-usage.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/owner-invalid-policy.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/owner-error.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/node-usage.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/node-invalid-policy.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/node-error.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/allows-usage.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/allows-invalid-policy.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/allows-error.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/check-usage.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/init-usage.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/None-usage.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/init-planned.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/init-created.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/init-conflict.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/init-rolled_back.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/init-partial.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/export-ok.json",
+    "schema": "export-diagnostics",
+    "valid": true
+  },
+  {
+    "file": "fixtures/export-invalid_policy.json",
+    "schema": "export-diagnostics",
+    "valid": true
+  },
+  {
+    "file": "fixtures/export-error.json",
+    "schema": "export-diagnostics",
+    "valid": true
+  },
+  {
+    "file": "fixtures/export-usage_error.json",
+    "schema": "export-diagnostics",
+    "valid": true
+  },
+  {
+    "file": "fixtures/check-external-and-negative-inputs.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/init-root-access-error.json",
+    "schema": "public-result",
+    "valid": true
+  },
+  {
+    "file": "fixtures/invalid-schema-version.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-extra-envelope-key.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-wrong-exit.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-complete-unknowns.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-unowned-id.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-unmatched-success.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-undetermined-owned.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-denied-unowned.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-same-owner-denied.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-pagination-total.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-missing-diagnostic.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-absolute-owner-path.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-traversal-owner-path.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-dry-run-created.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-residual-not-created.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-dry-run-missing-content.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-bad-source-range.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-inconsistent-counts.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-missing-context.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-unknown-command-success.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-no-policy-input-evidence.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-complete-unresolved-fact.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-fact-not-candidate.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-directory-file-coverage.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-missing-context-descriptor.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-empty-edge-range.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-false-complete-file.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-duplicate-slash.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-empty.json",
+    "schema": "policy",
+    "valid": true
+  },
+  {
+    "file": "fixtures/policy-mixed.json",
+    "schema": "policy",
+    "valid": true
+  },
+  {
+    "file": "fixtures/policy-invalid-version.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-unknown-key.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-missing-scope.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-unknown-adapter.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-bad-id.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-missing-responsibility.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-absolute-path.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-glob-path.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-empty-package-roots.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-string-version.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-entrypoints.json",
+    "schema": "policy",
+    "valid": true
+  },
+  {
+    "file": "fixtures/policy-invalid-public-directory.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-public-root.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-public-dot.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-public-dotdot.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-public-excluded.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-public-outside-scope.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-public-unowned.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-public-other-owner.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-public-escape.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-public-glob.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-public-missing.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-public-type.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-invalid-public-unknown-key.json",
+    "schema": "policy",
+    "valid": false
+  },
+  {
+    "file": "fixtures/policy-public-empty.json",
+    "schema": "policy",
+    "valid": true
+  },
+  {
+    "file": "fixtures/policy-public-planned-file.json",
+    "schema": "policy",
+    "valid": true
+  },
+  {
+    "file": "fixtures/policy-public-normalization.json",
+    "schema": "policy",
+    "valid": true
+  },
+  {
+    "file": "fixtures/policy-public-exact-extensionless.json",
+    "schema": "policy",
+    "valid": true
+  },
+  {
+    "file": "fixtures/allows-ids-allowed.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/allows-public-entrypoint.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/allows-private-deep-import.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/allows-same-owner-private.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/allows-private-and-graph-denied.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/allows-sealed-module-ids.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/allows-unowned-source.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/allows-excluded-target.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/allows-outside-target.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/invalid-missing-public-node-detail.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-public-directory-node-detail.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-allows-wrong-scope.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-allows-missing-reason.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-allows-directory-operand.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-allows-false-reason.json",
+    "schema": "public-result",
+    "valid": false
+  },
+  {
+    "file": "fixtures/invalid-linked-private-allowed.json",
+    "schema": "public-result",
+    "valid": false,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/invalid-linked-public-denied.json",
+    "schema": "public-result",
+    "valid": false,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/check-public-import.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/check-private-import.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/check-same-owner-internal.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/check-public-barrel-reexport.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/check-private-type-import.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/check-private-dynamic-import.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/check-dts-final-target.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/check-dts-private-target.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/check-graph-deny-precedence.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/check-excluded-before-public.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/check-outside-before-public.json",
+    "schema": "public-result",
+    "valid": true,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/invalid-linked-check-private-silent-success.json",
+    "schema": "public-result",
+    "valid": false,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/invalid-linked-check-duplicate-boundary-error.json",
+    "schema": "public-result",
+    "valid": false,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/invalid-linked-check-source-redirect-private.json",
+    "schema": "public-result",
+    "valid": false,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/invalid-linked-check-wrong-public-pointer.json",
+    "schema": "public-result",
+    "valid": false,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/invalid-linked-check-wrong-public-project.json",
+    "schema": "public-result",
+    "valid": false,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/invalid-linked-check-wrong-public-path.json",
+    "schema": "public-result",
+    "valid": false,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/invalid-linked-check-missing-public-range.json",
+    "schema": "public-result",
+    "valid": false,
+    "policy": "fixtures/policy-entrypoints.json"
+  },
+  {
+    "file": "fixtures/invalid-linked-check-wrong-allow-pointer.json",
+    "schema": "public-result",
+    "valid": false,
+    "policy": "fixtures/policy-entrypoints.json"
+  }
+]

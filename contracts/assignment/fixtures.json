@@ -1,0 +1,364 @@
+[
+  {
+    "id": "TS01",
+    "scenario": "Ordinary files/include",
+    "path": "src/a.ts",
+    "candidates": [
+      {
+        "project_id": "web",
+        "context_id": "tsconfig.json"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "TS02",
+    "scenario": "include ../shared outside config directory but inside repository",
+    "path": "shared/a.ts",
+    "candidates": [
+      {
+        "project_id": "web",
+        "context_id": "web/tsconfig.json"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "TS03",
+    "scenario": "rootDir does not contain included file",
+    "path": "shared/a.ts",
+    "candidates": [
+      {
+        "project_id": "web",
+        "context_id": "web/tsconfig.json"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "partial: compiler configuration diagnostic if relevant"
+  },
+  {
+    "id": "TS04",
+    "scenario": "compiler exclude, not imported",
+    "path": "src/excluded.ts",
+    "candidates": [],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "missing",
+    "expected_analysis": "not_attempted"
+  },
+  {
+    "id": "TS05",
+    "scenario": "compiler exclude but imported by root file",
+    "path": "src/excluded.ts",
+    "candidates": [
+      {
+        "project_id": "web",
+        "context_id": "tsconfig.json"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "TS06",
+    "scenario": "extends relative include resolved at base config",
+    "path": "shared/a.ts",
+    "candidates": [
+      {
+        "project_id": "web",
+        "context_id": "web/tsconfig.json"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "TS07",
+    "scenario": "two listed configs include same source",
+    "path": "src/a.ts",
+    "candidates": [
+      {
+        "project_id": "app",
+        "context_id": "tsconfig.json"
+      },
+      {
+        "project_id": "test",
+        "context_id": "tsconfig.test.json"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "ambiguous",
+    "expected_analysis": "not_complete"
+  },
+  {
+    "id": "TS08",
+    "scenario": "test program transitively imports app source",
+    "path": "src/a.ts",
+    "candidates": [
+      {
+        "project_id": "app",
+        "context_id": "tsconfig.json"
+      },
+      {
+        "project_id": "test",
+        "context_id": "tsconfig.test.json"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "ambiguous",
+    "expected_analysis": "not_complete"
+  },
+  {
+    "id": "TS09",
+    "scenario": "nested config present but not listed in YAML",
+    "path": "src/nested/a.ts",
+    "candidates": [
+      {
+        "project_id": "app",
+        "context_id": "tsconfig.json"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "TS10",
+    "scenario": "one project failed discovery; one positive membership",
+    "path": "src/a.ts",
+    "candidates": [
+      {
+        "project_id": "app",
+        "context_id": "tsconfig.json"
+      }
+    ],
+    "discovery_complete": false,
+    "supported_source": true,
+    "expected_assignment": "failed",
+    "expected_analysis": "partial"
+  },
+  {
+    "id": "TS11",
+    "scenario": "generated declaration included in corpus and program",
+    "path": "generated/a.d.ts",
+    "candidates": [
+      {
+        "project_id": "app",
+        "context_id": "tsconfig.json"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete; owner required"
+  },
+  {
+    "id": "TS12",
+    "scenario": "generated source not imported and compiler excludes outDir",
+    "path": "generated/a.ts",
+    "candidates": [],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "missing",
+    "expected_analysis": "not_attempted"
+  },
+  {
+    "id": "TS13",
+    "scenario": "solution config only; leaf source not automatically project",
+    "path": "lib/a.ts",
+    "candidates": [],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "missing",
+    "expected_analysis": "not_attempted"
+  },
+  {
+    "id": "TS14",
+    "scenario": "prepared referenced leaf source in explicit leaf only",
+    "path": "lib/a.ts",
+    "candidates": [
+      {
+        "project_id": "lib",
+        "context_id": "lib/tsconfig.json"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "TS15",
+    "scenario": "prepared declaration consumed only by app",
+    "path": "lib/dist/a.d.ts",
+    "candidates": [
+      {
+        "project_id": "app",
+        "context_id": "app/tsconfig.json"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete; target is declaration not source"
+  },
+  {
+    "id": "TS16",
+    "scenario": "missing referenced declaration output",
+    "path": "app/a.ts",
+    "candidates": [
+      {
+        "project_id": "app",
+        "context_id": "app/tsconfig.json"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "partial; unresolved/output gap"
+  },
+  {
+    "id": "TS17",
+    "scenario": "selected .js without imports",
+    "path": "src/a.js",
+    "candidates": [],
+    "discovery_complete": true,
+    "supported_source": false,
+    "expected_assignment": "unsupported",
+    "expected_analysis": "not_attempted"
+  },
+  {
+    "id": "TS18",
+    "scenario": "selected .vue without imports",
+    "path": "src/a.vue",
+    "candidates": [],
+    "discovery_complete": true,
+    "supported_source": false,
+    "expected_assignment": "unsupported",
+    "expected_analysis": "not_attempted"
+  },
+  {
+    "id": "D01",
+    "scenario": "ordinary pub package",
+    "path": "app/lib/a.dart",
+    "candidates": [
+      {
+        "project_id": "mobile",
+        "context_id": "ctx-app"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "D02",
+    "scenario": "nested package found by one project collection",
+    "path": "app/example/lib/a.dart",
+    "candidates": [
+      {
+        "project_id": "mobile",
+        "context_id": "ctx-example"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "D03",
+    "scenario": "same nested package eligible in two YAML projects",
+    "path": "app/example/lib/a.dart",
+    "candidates": [
+      {
+        "project_id": "mobile",
+        "context_id": "ctx-example"
+      },
+      {
+        "project_id": "example",
+        "context_id": "ctx-example"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "ambiguous",
+    "expected_analysis": "not_complete"
+  },
+  {
+    "id": "D04",
+    "scenario": "analyzer exclude does not remove corpus entry",
+    "path": "app/lib/a.g.dart",
+    "candidates": [],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "missing",
+    "expected_analysis": "not_attempted"
+  },
+  {
+    "id": "D05",
+    "scenario": "generated Dart part in supported context",
+    "path": "app/lib/a.g.dart",
+    "candidates": [
+      {
+        "project_id": "mobile",
+        "context_id": "ctx-app"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete; containing library single and known"
+  },
+  {
+    "id": "D06",
+    "scenario": "missing package_config blocks context trust",
+    "path": "app/lib/a.dart",
+    "candidates": [],
+    "discovery_complete": false,
+    "supported_source": true,
+    "expected_assignment": "failed",
+    "expected_analysis": "not_attempted"
+  },
+  {
+    "id": "D07",
+    "scenario": "pub workspace shared package_config",
+    "path": "packages/a/lib/a.dart",
+    "candidates": [
+      {
+        "project_id": "mobile",
+        "context_id": "ctx-workspace"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "D08",
+    "scenario": "imported local file outside every package root",
+    "path": "shared/a.dart",
+    "candidates": [],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "missing",
+    "expected_analysis": "not_attempted; incoming local edge preserved"
+  }
+]

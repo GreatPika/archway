@@ -1,0 +1,1289 @@
+{
+  "status": "acceptance specifications only; not executed compiler results",
+  "count": 32,
+  "cases": [
+    {
+      "id": "ts-barrel-private-origin",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "import {Thing} from '../b/index.js';",
+        "b/index.ts": "export {Thing} from './private.js';",
+        "b/private.ts": "export class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "targets": {
+          "a/use.ts": [
+            "b/index.ts"
+          ],
+          "b/index.ts": [
+            "b/private.ts"
+          ]
+        },
+        "violations": [],
+        "forbidden_implementation": "Do not replace a/use.ts target with b/private.ts."
+      }
+    },
+    {
+      "id": "ts-foreign-private-reexport",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "import {Thing} from '../b/index.js';",
+        "b/index.ts": "export {Thing} from '../c/private.js';",
+        "c/private.ts": "export class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "violations": [
+          "b/index.ts -> c/private.ts: nonpublic target"
+        ],
+        "a_target": "b/index.ts"
+      }
+    },
+    {
+      "id": "ts-local-export-after-import",
+      "language": "typescript",
+      "sources": {
+        "b/index.ts": "import {Thing} from '../c/private.js'; export {Thing};",
+        "c/private.ts": "export class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "violations": [
+          "b/index.ts -> c/private.ts: nonpublic target"
+        ],
+        "edge_count": 1
+      }
+    },
+    {
+      "id": "ts-facade-transitive-permission",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "import {Thing} from '../b/index.js';",
+        "b/index.ts": "export {Thing} from '../c/index.js';",
+        "c/index.ts": "export class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "violations": [],
+        "note": "No synthesized A -> C edge and no transitive symbol rule."
+      }
+    },
+    {
+      "id": "ts-type-reexport",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "import type {Thing} from '../b/private.js';",
+        "b/private.ts": "export interface Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "violations": [
+          "a/use.ts -> b/private.ts: nonpublic target"
+        ],
+        "type_only": true
+      }
+    },
+    {
+      "id": "ts-all-reexport-forms",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "export * from '../b/private.js'; export * as ns from '../b/private.js'; export {Thing as Renamed} from '../b/private.js'; export type {Thing} from '../b/private.js';",
+        "b/private.ts": "export class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "occurrences": 4,
+        "targets": [
+          "b/private.ts",
+          "b/private.ts",
+          "b/private.ts",
+          "b/private.ts"
+        ],
+        "all_violate": "nonpublic target"
+      }
+    },
+    {
+      "id": "ts-import-type-forms",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "type T = import('../b/private.js').Thing; type M = typeof import('../b/private.js');",
+        "b/private.ts": "export class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "occurrences": 2,
+        "all_violate": "nonpublic target"
+      }
+    },
+    {
+      "id": "ts-sideeffect-dynamic-require",
+      "language": "typescript",
+      "sources": {
+        "a/use.cts": "import '../b/private.js'; const p = import('../b/private.js'); import q = require('../b/private.js'); const r = require('../b/private.js');",
+        "b/private.ts": "export const x = 1;"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "supported_occurrences": "All supported literal references checked; ordinary require needs established loader identity. No silent omission."
+      }
+    },
+    {
+      "id": "ts-shadowed-require",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "function require(s: string) { return s; } const x = require('../b/private.js');"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "module_edge": false,
+        "note": "A proven ordinary local function call is not a module import."
+      }
+    },
+    {
+      "id": "ts-computed-import",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "const n = '../b/private.js'; import(n);"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "analysis": "incomplete",
+        "note": "No invented literal fact; positioned unknown."
+      }
+    },
+    {
+      "id": "ts-path-alias-private",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "import {Thing} from '@b';",
+        "b/private.ts": "export class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        },
+        "compiler": {
+          "paths": {
+            "@b": [
+              "./b/private.ts"
+            ]
+          }
+        }
+      },
+      "expected": {
+        "target": "b/private.ts",
+        "violation": "nonpublic target"
+      }
+    },
+    {
+      "id": "ts-package-types",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "import type {Thing} from 'workspace-b';",
+        "b/api.d.ts": "export interface Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        },
+        "package": {
+          "name": "workspace-b",
+          "types": "./api.d.ts",
+          "workspace": "b"
+        }
+      },
+      "expected": {
+        "target": "b/api.d.ts",
+        "classification": "local",
+        "violation": "nonpublic target unless that exact declaration file is listed"
+      }
+    },
+    {
+      "id": "ts-project-reference-redirect",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "import {Thing} from '../b/src/index.js';",
+        "b/src/index.ts": "export class Thing {}",
+        "b/dist/index.d.ts": "export declare class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "B": [
+            "b/src/index.ts"
+          ]
+        },
+        "compiler": "Prepared referenced project, source-reference redirect disabled as baseline"
+      },
+      "expected": {
+        "target": "b/dist/index.d.ts",
+        "violation": "nonpublic target; src/index.ts public does not cover dist/index.d.ts"
+      }
+    },
+    {
+      "id": "ts-import-require-conditions",
+      "language": "typescript",
+      "sources": {
+        "a/use.mts": "import {Thing} from 'workspace-b'; import type {Thing as C} from 'workspace-b' with {'resolution-mode':'require'};",
+        "b/import.d.mts": "export interface Thing {}",
+        "b/require.d.cts": "export interface Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        },
+        "package_exports": "Map import/require type conditions to the distinct declared files"
+      },
+      "expected": {
+        "targets": [
+          "b/import.d.mts",
+          "b/require.d.cts"
+        ],
+        "note": "Resolve per usage mode and compare exact individual public membership."
+      }
+    },
+    {
+      "id": "ts-ambient-merged-target",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "import {Thing} from 'virtual-b';",
+        "b/one.d.ts": "declare module 'virtual-b' { export interface Thing {x: number} }",
+        "c/two.d.ts": "declare module 'virtual-b' { export interface Thing {y: number} }"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "analysis": "incomplete when no unique direct physical target can be proved",
+        "forbidden_implementation": "Never choose first declaration or call virtual-b external by bare syntax."
+      }
+    },
+    {
+      "id": "ts-triple-slash-boundary",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "/// <reference path=\"../b/private.d.ts\" />\nconst x: Secret = {};",
+        "b/private.d.ts": "interface Secret {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "note": "Not one of helper five module edge kinds. Explicitly unsupported/incomplete for boundary-relevant construct unless protocol deliberately expanded; cannot claim full file encapsulation."
+      }
+    },
+    {
+      "id": "dart-barrel-private-origin",
+      "language": "dart",
+      "sources": {
+        "a/use.dart": "import '../b/api.dart'; Thing? x;",
+        "b/api.dart": "export 'private.dart';",
+        "b/private.dart": "class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "targets": {
+          "a/use.dart": [
+            "b/api.dart"
+          ],
+          "b/api.dart": [
+            "b/private.dart"
+          ]
+        },
+        "violations": []
+      }
+    },
+    {
+      "id": "dart-foreign-private-export",
+      "language": "dart",
+      "sources": {
+        "b/api.dart": "export '../c/private.dart' show Thing;",
+        "c/private.dart": "class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "violation": "b/api.dart -> c/private.dart: nonpublic target"
+      }
+    },
+    {
+      "id": "dart-combinators-deferred",
+      "language": "dart",
+      "sources": {
+        "a/use.dart": "import '../b/private.dart' deferred as b show Thing;",
+        "b/private.dart": "class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "target": "b/private.dart",
+        "violation": "nonpublic target; unused/deferred/show does not exempt"
+      }
+    },
+    {
+      "id": "dart-conditional-private-inactive",
+      "language": "dart",
+      "sources": {
+        "a/use.dart": "import '../b/api.dart' if (dart.library.io) '../b/private.dart';",
+        "b/api.dart": "class Thing {}",
+        "b/private.dart": "class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "targets": [
+          "b/api.dart",
+          "b/private.dart"
+        ],
+        "violation": "nonpublic b/private.dart even when inactive"
+      }
+    },
+    {
+      "id": "dart-conditional-unresolved",
+      "language": "dart",
+      "sources": {
+        "a/use.dart": "export '../b/private.dart' if (dart.library.io) '../b/missing.dart';",
+        "b/private.dart": "class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "analysis": "incomplete",
+        "retained_violation": "nonpublic b/private.dart",
+        "note": "Missing branch does not erase known violation."
+      }
+    },
+    {
+      "id": "dart-sameowner-private-part",
+      "language": "dart",
+      "sources": {
+        "b/api.dart": "part 'impl.dart';",
+        "b/impl.dart": "part of 'api.dart'; class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "violations": [],
+        "note": "Confirmed same-owner part/part_of edges need no public membership."
+      }
+    },
+    {
+      "id": "dart-crossowner-part-generic",
+      "language": "dart",
+      "sources": {
+        "a/api.dart": "part '../b/impl.dart';",
+        "b/impl.dart": "part of '../a/api.dart'; class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "note": "Each existing confirmed relationship edge uses generic directed policy. No added library-owner equality rule. A->B requires b/impl.dart public; B->A requires allows B->A and a/api.dart public if reverse edge is recorded."
+      }
+    },
+    {
+      "id": "dart-part-physical-origin",
+      "language": "dart",
+      "sources": {
+        "a/api.dart": "part '../b/impl.dart';",
+        "b/impl.dart": "part of '../a/api.dart'; class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "source_identity": "The part_of occurrence belongs to b/impl.dart owner B, not a/api.dart owner A. Containing-library semantic identity cannot overwrite physical origin."
+      }
+    },
+    {
+      "id": "dart-public-part-import",
+      "language": "dart",
+      "sources": {
+        "a/use.dart": "import '../b/impl.dart';",
+        "b/api.dart": "part 'impl.dart';",
+        "b/impl.dart": "part of 'api.dart'; class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "B": [
+            "b/impl.dart"
+          ]
+        }
+      },
+      "expected": {
+        "plan": "lexical public b/impl.dart is accepted",
+        "check": "invalid standalone part import cannot be claimed complete; compiler unknown/incomplete as relevant"
+      }
+    },
+    {
+      "id": "dart-named-part-of",
+      "language": "dart",
+      "sources": {
+        "b/api.dart": "library named_lib; part 'impl.dart';",
+        "b/impl.dart": "part of named_lib; class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "target_for_part_of": "b/api.dart only when containing library is uniquely established",
+        "note": "Do not treat named_lib as path; multiple or missing containing library is incomplete."
+      }
+    },
+    {
+      "id": "both-public-without-allows",
+      "language": "both",
+      "sources": {
+        "a/use.ts": "import '../c/index.js';",
+        "a/use.dart": "import '../c/api.dart';"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "violation": "missing A -> C permission despite public target"
+      }
+    },
+    {
+      "id": "both-private-sameowner",
+      "language": "both",
+      "sources": {
+        "b/one.ts": "import './private.js';",
+        "b/one.dart": "import 'private.dart';"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "violations": [],
+        "note": "Same-owner entrypoint exemption preserves other root/scope/exclude validation."
+      }
+    },
+    {
+      "id": "ts-triple-slash-types",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "/// <reference types=\"workspace-b\" />\nexport {};"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "analysis": "incomplete",
+        "reason": "Recognized explicit types reference has no supported helper fact kind; positioned unknown, no invented edge."
+      }
+    },
+    {
+      "id": "ts-external-module-augmentation",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "export {}; declare module '../b/private.js' { interface Added {} }",
+        "b/private.ts": "export interface Original {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "analysis": "incomplete",
+        "reason": "Explicit augmentation reference not encoded by five fact kinds. Preserve any other verified imports."
+      }
+    },
+    {
+      "id": "ts-ambient-declaration-not-reference",
+      "language": "typescript",
+      "sources": {
+        "b/global.d.ts": "declare module 'virtual-b' { export interface Thing {} }"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "analysis": "not incomplete merely for this declaration",
+        "reason": "A script-level ambient module declaration is not itself a module dependency reference."
+      }
+    },
+    {
+      "id": "ts-sdk-globals-not-blanket-failure",
+      "language": "typescript",
+      "sources": {
+        "a/use.ts": "export const value: Promise<number> = Promise.resolve(1);"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/index.ts"
+          ],
+          "B": [
+            "b/index.ts"
+          ],
+          "C": [
+            "c/index.ts"
+          ]
+        }
+      },
+      "expected": {
+        "analysis": "not incomplete merely for SDK/global symbols",
+        "reason": "No symbol-provenance tracing or synthetic file edges."
+      }
+    }
+  ]
+}

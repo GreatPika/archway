@@ -1,0 +1,35 @@
+{
+  "command": "allows",
+  "schema_version": 1,
+  "tool_versions": {
+    "archway": "1.0.0-design",
+    "dart_adapter": null,
+    "typescript_adapter": null,
+    "dart_sdk": null,
+    "node": null,
+    "typescript": null
+  },
+  "resolved_root": "/repo",
+  "policy_path": "architecture.yaml",
+  "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "status": "negative",
+  "exit_code": 1,
+  "diagnostics": [],
+  "payload": {
+    "mode": "paths",
+    "policy_only": true,
+    "decision_scope": "file",
+    "policy_decision": "denied",
+    "reason": "not_allowed",
+    "from": {
+      "path": "src/pricing/index.ts",
+      "ownership": "owned",
+      "owner_id": "pricing"
+    },
+    "to": {
+      "path": "src/app/private.ts",
+      "ownership": "owned",
+      "owner_id": "app"
+    }
+  }
+}

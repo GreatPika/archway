@@ -1,0 +1,117 @@
+{
+  "command": "check",
+  "schema_version": 1,
+  "tool_versions": {
+    "archway": "1.0.0-design",
+    "dart_adapter": null,
+    "typescript_adapter": null,
+    "dart_sdk": null,
+    "node": null,
+    "typescript": null
+  },
+  "resolved_root": "/repo",
+  "policy_path": "architecture.yaml",
+  "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "status": "ok",
+  "exit_code": 0,
+  "diagnostics": [],
+  "payload": {
+    "policy_valid": true,
+    "analysis_complete": true,
+    "violations": [],
+    "unknowns": [],
+    "warnings": [],
+    "tool_errors": [],
+    "observed": {
+      "files": 1,
+      "analyzed_files": 1,
+      "edges": 1
+    },
+    "coverage": {
+      "projects": [
+        {
+          "project_id": "web",
+          "adapter": "typescript",
+          "status": "complete",
+          "contexts": [
+            {
+              "context_id": "typescript:web",
+              "descriptor": {
+                "tsconfig": "tsconfig.json"
+              }
+            }
+          ],
+          "files": 1,
+          "analyzed_files": 1
+        }
+      ],
+      "files": [
+        {
+          "path": "src/app/main.ts",
+          "project_id": "web",
+          "context_id": "typescript:web",
+          "candidates": [
+            {
+              "project_id": "web",
+              "context_id": "typescript:web"
+            }
+          ],
+          "assignment": "assigned",
+          "analysis": "complete",
+          "discovery_complete": true,
+          "unresolved_project_ids": []
+        }
+      ]
+    },
+    "facts": {
+      "edges": [
+        {
+          "project_id": "web",
+          "context_id": "typescript:web",
+          "source": "src/app/main.ts",
+          "source_range": {
+            "path": "src/app/main.ts",
+            "start": {
+              "line": 1,
+              "column": 1
+            },
+            "end": {
+              "line": 1,
+              "column": 20
+            }
+          },
+          "kind": "import",
+          "specifier": "./foo",
+          "type_only": false,
+          "resolution": {
+            "kind": "unresolved"
+          }
+        }
+      ]
+    },
+    "input_identity": {
+      "algorithm": "sha256",
+      "atomic_snapshot": false,
+      "inputs": [
+        {
+          "kind": "policy",
+          "location": {
+            "kind": "repository",
+            "path": "architecture.yaml"
+          },
+          "presence": "present",
+          "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "rechecked": true,
+      "changed_inputs": [],
+      "aliases": []
+    },
+    "scope": [
+      "src/"
+    ],
+    "exclude": [],
+    "projects": 1,
+    "nodes": 1
+  }
+}

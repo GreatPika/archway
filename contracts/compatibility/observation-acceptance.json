@@ -1,0 +1,182 @@
+{
+  "purpose": "Future implementation acceptance cases for cross-project aggregation and compiler self-check; no actual compiler execution is represented. Hash labels A/B abbreviate differing valid SHA-256 values in fixture setup.",
+  "cases": [
+    {
+      "id": "IC01",
+      "scenario": "Two project manifests disagree on shared package manifest hash; final read matches first",
+      "projects": [
+        "a",
+        "b",
+        "c"
+      ],
+      "dependent_projects": [
+        "a",
+        "b"
+      ],
+      "observations": [
+        {
+          "project": "a",
+          "hash": "A"
+        },
+        {
+          "project": "b",
+          "hash": "B"
+        }
+      ],
+      "final_hash": "A",
+      "expected": {
+        "status": "incomplete",
+        "exit_code": 2,
+        "diagnostic": "INPUT_CHANGED",
+        "invalidated_fact_projects": [
+          "a",
+          "b"
+        ],
+        "retained_fact_projects": [
+          "c"
+        ],
+        "unresolved_project_ids": [
+          "a",
+          "b"
+        ],
+        "discovery_complete": false,
+        "assignment": "failed",
+        "preserve_independent_violations": true
+      }
+    },
+    {
+      "id": "IC02",
+      "scenario": "Parent baseline absence disagrees with project presence; final read matches project",
+      "dependent_projects": [
+        "a"
+      ],
+      "parent_presence": "absent",
+      "project_presence": "present",
+      "final_presence": "present",
+      "expected": {
+        "status": "incomplete",
+        "diagnostic": "INPUT_CHANGED",
+        "baseline_presence": "absent",
+        "invalidated_fact_projects": [
+          "a"
+        ],
+        "discovery_complete": false
+      }
+    },
+    {
+      "id": "IC03",
+      "scenario": "Same observed alias maps to two targets, including baseline supplier",
+      "dependent_projects": [
+        "a",
+        "b"
+      ],
+      "observed_uri": "file:///repo/node_modules/pkg",
+      "canonical_targets": [
+        "file:///repo/packages/pkg",
+        "file:///cache/pkg"
+      ],
+      "expected": {
+        "status": "incomplete",
+        "diagnostic": "INPUT_CHANGED",
+        "invalidated_fact_projects": [
+          "a",
+          "b"
+        ],
+        "discovery_complete": false,
+        "assignment": "failed"
+      }
+    },
+    {
+      "id": "IC04",
+      "scenario": "Reverse project completion order with identical observations",
+      "completion_orders": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          "b",
+          "a"
+        ]
+      ],
+      "expected": {
+        "same_serialized_result": true,
+        "baseline_order": "parent then sorted project_id",
+        "no_change_diagnostic": true
+      }
+    },
+    {
+      "id": "IC05",
+      "scenario": "Source analyzed before a inherited shared-input conflict",
+      "expected": {
+        "file_analysis": "partial",
+        "project_status": "partial",
+        "assignment": "failed",
+        "preserve_historical_candidates": true,
+        "preserve_descriptors": true
+      }
+    },
+    {
+      "id": "IC06",
+      "scenario": "Same canonical file appears as source in one project and resolution in another with different bytes",
+      "observations": [
+        {
+          "project": "a",
+          "role": "source",
+          "canonical_uri": "file:///repo/shared.d.ts",
+          "hash": "A"
+        },
+        {
+          "project": "b",
+          "role": "resolution",
+          "canonical_uri": "file:///repo/shared.d.ts",
+          "hash": "B"
+        }
+      ],
+      "expected": {
+        "status": "incomplete",
+        "diagnostic": "INPUT_CHANGED",
+        "invalidated_fact_projects": [
+          "a",
+          "b"
+        ],
+        "discovery_complete": false,
+        "representation_unique_by": "kind+location",
+        "conflict_detection": "underlying location regardless of role"
+      }
+    },
+    {
+      "id": "IC07",
+      "scenario": "Observed path changes from file to directory",
+      "expected": {
+        "status": "incomplete",
+        "diagnostic": "INPUT_CHANGED",
+        "conflict_detection": "underlying location regardless of role"
+      }
+    },
+    {
+      "id": "VC01",
+      "scenario": "Actual loaded ts.version differs from bundled 5.9.3",
+      "actual_version": "5.9.2",
+      "expected_version": "5.9.3",
+      "expected": {
+        "program_constructed": false,
+        "helper_status": "failed",
+        "usable_facts": [],
+        "public_typescript_version": null,
+        "private_schema_changed": false,
+        "helper_diagnostic_array": "tool_errors"
+      }
+    },
+    {
+      "id": "VC02",
+      "scenario": "Actual loaded ts.version matches bundled 5.9.3",
+      "actual_version": "5.9.3",
+      "expected_version": "5.9.3",
+      "expected": {
+        "compiler_self_check_passes": true,
+        "does_not_prove_complete_analysis": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+name: archway
+description: Check TypeScript and Dart dependencies against an explicit architecture policy.
+version: 0.1.0
+repository: https://github.com/GreatPika/archway
+publish_to: none
+environment:
+  sdk: '>=3.13.3 <4.0.0'
+dependencies:
+  analyzer: 14.5.0
+  package_config: 2.2.0
+  pub_semver: 2.2.1
+  crypto: 3.0.7
+  yaml: 3.1.4
+  path: 1.9.1
+  unorm_dart: 0.3.2
+dev_dependencies:
+  test: 1.33.0
+executables:
+  archway:

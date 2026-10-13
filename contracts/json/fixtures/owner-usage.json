@@ -1,0 +1,30 @@
+{
+  "command": "owner",
+  "schema_version": 1,
+  "tool_versions": {
+    "archway": "1.0.0-design",
+    "dart_adapter": null,
+    "typescript_adapter": null,
+    "dart_sdk": null,
+    "node": null,
+    "typescript": null
+  },
+  "resolved_root": "/repo",
+  "policy_path": "architecture.yaml",
+  "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "status": "usage_error",
+  "exit_code": 64,
+  "diagnostics": [
+    {
+      "code": "TEST_ERROR",
+      "severity": "error",
+      "message": "test error",
+      "rule_pointer": null,
+      "source_range": null,
+      "project_id": null,
+      "path": null,
+      "recovery_hints": []
+    }
+  ],
+  "payload": null
+}

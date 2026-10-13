@@ -1,0 +1,3180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:archway:public-result:1",
+  "type": "object",
+  "properties": {
+    "command": {
+      "enum": [
+        "validate",
+        "owner",
+        "node",
+        "allows",
+        "check",
+        "init",
+        null
+      ]
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "tool_versions": {
+      "$ref": "#/$defs/versions"
+    },
+    "resolved_root": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "policy_path": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/path"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "policy_hash": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/hash"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "negative",
+        "incomplete",
+        "invalid_policy",
+        "error",
+        "usage_error"
+      ]
+    },
+    "exit_code": {
+      "enum": [
+        0,
+        1,
+        2,
+        64
+      ]
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/diagnostic"
+      }
+    },
+    "payload": {}
+  },
+  "required": [
+    "command",
+    "schema_version",
+    "tool_versions",
+    "resolved_root",
+    "policy_path",
+    "policy_hash",
+    "status",
+    "exit_code",
+    "diagnostics",
+    "payload"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?:\\./|(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*//)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*(?:^|/)\\.(?:/|$)).+)$"
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "position": {
+      "type": "object",
+      "properties": {
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "line",
+        "column"
+      ],
+      "additionalProperties": false
+    },
+    "range": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/file_path"
+        },
+        "start": {
+          "$ref": "#/$defs/position"
+        },
+        "end": {
+          "$ref": "#/$defs/position"
+        }
+      },
+      "required": [
+        "path",
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    },
+    "diagnostic": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        },
+        "severity": {
+          "enum": [
+            "error",
+            "warning",
+            "info"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rule_pointer": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:/(?:[^~/]|~[01])*)*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/range"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "path": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/path"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recovery_hints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "message",
+        "rule_pointer",
+        "source_range",
+        "project_id",
+        "path",
+        "recovery_hints"
+      ],
+      "additionalProperties": false
+    },
+    "neighbor": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "responsibility": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "responsibility"
+      ],
+      "additionalProperties": false
+    },
+    "node": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "responsibility": {
+          "type": "string"
+        },
+        "owns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "contracts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "allows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/neighbor"
+          }
+        },
+        "allowed_dependents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/neighbor"
+          }
+        },
+        "public": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/file_path"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "responsibility",
+        "owns",
+        "contracts",
+        "allows",
+        "allowed_dependents",
+        "public"
+      ],
+      "additionalProperties": false
+    },
+    "owner": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "path": {
+              "$ref": "#/$defs/path"
+            },
+            "ownership": {
+              "const": "owned"
+            },
+            "owner_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "path",
+            "ownership",
+            "owner_id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "path": {
+              "$ref": "#/$defs/path"
+            },
+            "ownership": {
+              "enum": [
+                "excluded",
+                "outside_scope",
+                "unowned"
+              ]
+            },
+            "owner_id": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "path",
+            "ownership",
+            "owner_id"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "validate": {
+      "type": "object",
+      "properties": {
+        "policy_valid": {
+          "const": true
+        },
+        "projects": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nodes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "policy_valid",
+        "projects",
+        "nodes"
+      ],
+      "additionalProperties": false
+    },
+    "catalogue": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "const": "catalogue"
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "responsibility": {
+                "type": "string"
+              },
+              "owns_count": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "responsibility",
+              "owns_count"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "omitted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "nodes",
+        "total",
+        "omitted",
+        "offset",
+        "limit"
+      ],
+      "additionalProperties": false
+    },
+    "node_id": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "const": "id"
+        },
+        "node": {
+          "$ref": "#/$defs/node"
+        }
+      },
+      "required": [
+        "mode",
+        "node"
+      ],
+      "additionalProperties": false
+    },
+    "node_path": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "const": "path"
+        },
+        "ownership": {
+          "$ref": "#/$defs/owner"
+        },
+        "node": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "ownership",
+        "node"
+      ],
+      "additionalProperties": false
+    },
+    "allows_ids": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "const": "ids"
+        },
+        "policy_only": {
+          "const": true
+        },
+        "from_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "to_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_decision": {
+          "enum": [
+            "allowed",
+            "denied"
+          ]
+        },
+        "decision_scope": {
+          "const": "module"
+        },
+        "reason": {
+          "enum": [
+            "same_owner",
+            "declared_allow",
+            "not_allowed"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "policy_only",
+        "from_id",
+        "to_id",
+        "policy_decision",
+        "decision_scope",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "reason": {
+                "enum": [
+                  "same_owner",
+                  "declared_allow"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "policy_decision": {
+                "const": "allowed"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "reason": {
+                "enum": [
+                  "not_allowed",
+                  "target_not_public"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "policy_decision": {
+                "const": "denied"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "reason": {
+                "const": "ownership_unknown"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "policy_decision": {
+                "const": "undetermined"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "allows_paths": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "const": "paths"
+        },
+        "policy_only": {
+          "const": true
+        },
+        "from": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/owner"
+            },
+            {
+              "properties": {
+                "path": {
+                  "$ref": "#/$defs/file_path"
+                }
+              }
+            }
+          ]
+        },
+        "to": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/owner"
+            },
+            {
+              "properties": {
+                "path": {
+                  "$ref": "#/$defs/file_path"
+                }
+              }
+            }
+          ]
+        },
+        "policy_decision": {
+          "enum": [
+            "allowed",
+            "denied",
+            "undetermined"
+          ]
+        },
+        "decision_scope": {
+          "const": "file"
+        },
+        "reason": {
+          "enum": [
+            "same_owner",
+            "declared_allow",
+            "not_allowed",
+            "target_not_public",
+            "ownership_unknown"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "policy_only",
+        "from",
+        "to",
+        "policy_decision",
+        "decision_scope",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "from": {
+                "properties": {
+                  "ownership": {
+                    "const": "owned"
+                  }
+                }
+              },
+              "to": {
+                "properties": {
+                  "ownership": {
+                    "const": "owned"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "policy_decision": {
+                "enum": [
+                  "allowed",
+                  "denied"
+                ]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "policy_decision": {
+                "const": "undetermined"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "reason": {
+                "enum": [
+                  "same_owner",
+                  "declared_allow"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "policy_decision": {
+                "const": "allowed"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "reason": {
+                "enum": [
+                  "not_allowed",
+                  "target_not_public"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "policy_decision": {
+                "const": "denied"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "reason": {
+                "const": "ownership_unknown"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "policy_decision": {
+                "const": "undetermined"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "resolution": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "local"
+            },
+            "path": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/path"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "canonical_file_uri": {
+              "type": "string",
+              "pattern": "^file:///.+"
+            },
+            "via_path": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^file:///.+"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "path",
+            "canonical_file_uri",
+            "via_path"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "enum": [
+                "external",
+                "builtin"
+              ]
+            },
+            "identity": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "kind",
+            "identity"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "unresolved"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "edge": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "$ref": "#/$defs/file_path"
+        },
+        "source_range": {
+          "$ref": "#/$defs/range"
+        },
+        "kind": {
+          "enum": [
+            "import",
+            "export",
+            "import_type",
+            "require",
+            "dynamic_import",
+            "part",
+            "part_of"
+          ]
+        },
+        "specifier": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type_only": {
+          "type": "boolean"
+        },
+        "resolution": {
+          "$ref": "#/$defs/resolution"
+        },
+        "context_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "project_id",
+        "source",
+        "source_range",
+        "kind",
+        "specifier",
+        "type_only",
+        "resolution",
+        "context_id"
+      ],
+      "additionalProperties": false
+    },
+    "file_coverage": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/file_path"
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "context_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "context_id": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "project_id",
+              "context_id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "assignment": {
+          "enum": [
+            "assigned",
+            "missing",
+            "ambiguous",
+            "unsupported",
+            "failed"
+          ]
+        },
+        "analysis": {
+          "enum": [
+            "complete",
+            "partial",
+            "failed",
+            "not_attempted"
+          ]
+        },
+        "discovery_complete": {
+          "type": "boolean"
+        },
+        "unresolved_project_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "path",
+        "project_id",
+        "context_id",
+        "candidates",
+        "assignment",
+        "analysis",
+        "discovery_complete",
+        "unresolved_project_ids"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "assignment": {
+                "const": "assigned"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "context_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "candidates": {
+                "minItems": 1,
+                "maxItems": 1
+              },
+              "discovery_complete": {
+                "const": true
+              },
+              "unresolved_project_ids": {
+                "maxItems": 0
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "project_id": {
+                "type": "null"
+              },
+              "context_id": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "assignment": {
+                "const": "missing"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "candidates": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "assignment": {
+                "const": "ambiguous"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "candidates": {
+                "minItems": 2
+              }
+            }
+          }
+        }
+      ]
+    },
+    "project_coverage": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "adapter": {
+          "enum": [
+            "dart",
+            "typescript"
+          ]
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "partial",
+            "failed"
+          ]
+        },
+        "files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "analyzed_files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "contexts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "context_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "descriptor": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/ts_context"
+                  },
+                  {
+                    "$ref": "#/$defs/dart_context"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "context_id",
+              "descriptor"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "project_id",
+        "adapter",
+        "status",
+        "files",
+        "analyzed_files",
+        "contexts"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "adapter": {
+                "const": "typescript"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "contexts": {
+                "items": {
+                  "properties": {
+                    "descriptor": {
+                      "$ref": "#/$defs/ts_context"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "contexts": {
+                "items": {
+                  "properties": {
+                    "descriptor": {
+                      "$ref": "#/$defs/dart_context"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "input": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "policy",
+            "source",
+            "config",
+            "manifest",
+            "resolution",
+            "inventory",
+            "sdk"
+          ]
+        },
+        "location": {
+          "$ref": "#/$defs/inventory_location"
+        },
+        "presence": {
+          "enum": [
+            "present",
+            "absent"
+          ]
+        },
+        "hash": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/hash"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "location",
+        "presence",
+        "hash"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "presence": {
+                "const": "present"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "hash": {
+                "$ref": "#/$defs/hash"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "hash": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "inventory"
+              },
+              "presence": {
+                "const": "present"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "location": {
+                "$ref": "#/$defs/location"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "identity": {
+      "type": "object",
+      "properties": {
+        "algorithm": {
+          "const": "sha256"
+        },
+        "atomic_snapshot": {
+          "const": false
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/input"
+          }
+        },
+        "rechecked": {
+          "type": "boolean"
+        },
+        "changed_inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inventory_location"
+          }
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "observed_file_uri": {
+                "type": "string",
+                "pattern": "^file:///.+"
+              },
+              "canonical_file_uri": {
+                "type": "string",
+                "pattern": "^file:///.+"
+              }
+            },
+            "required": [
+              "observed_file_uri",
+              "canonical_file_uri"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "algorithm",
+        "atomic_snapshot",
+        "inputs",
+        "rechecked",
+        "changed_inputs",
+        "aliases"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "changed_inputs": {
+                "contains": {
+                  "$ref": "#/$defs/root_inventory_location"
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "inputs": {
+                "contains": {
+                  "properties": {
+                    "kind": {
+                      "const": "inventory"
+                    },
+                    "presence": {
+                      "const": "present"
+                    },
+                    "location": {
+                      "$ref": "#/$defs/root_inventory_location"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "presence",
+                    "location"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "check": {
+      "type": "object",
+      "properties": {
+        "policy_valid": {
+          "type": "boolean"
+        },
+        "analysis_complete": {
+          "type": "boolean"
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/diagnostic"
+          }
+        },
+        "unknowns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/diagnostic"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/diagnostic"
+          }
+        },
+        "tool_errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/diagnostic"
+          }
+        },
+        "observed": {
+          "type": "object",
+          "properties": {
+            "files": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "analyzed_files": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "edges": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "files",
+            "analyzed_files",
+            "edges"
+          ],
+          "additionalProperties": false
+        },
+        "coverage": {
+          "type": "object",
+          "properties": {
+            "projects": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/project_coverage"
+              }
+            },
+            "files": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/file_coverage"
+              }
+            }
+          },
+          "required": [
+            "projects",
+            "files"
+          ],
+          "additionalProperties": false
+        },
+        "facts": {
+          "type": "object",
+          "properties": {
+            "edges": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/edge"
+              }
+            }
+          },
+          "required": [
+            "edges"
+          ],
+          "additionalProperties": false
+        },
+        "input_identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "scope": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "projects": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nodes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "policy_valid",
+        "analysis_complete",
+        "violations",
+        "unknowns",
+        "warnings",
+        "tool_errors",
+        "observed",
+        "coverage",
+        "facts",
+        "input_identity",
+        "scope",
+        "exclude",
+        "projects",
+        "nodes"
+      ],
+      "additionalProperties": false
+    },
+    "init": {
+      "type": "object",
+      "properties": {
+        "template": {
+          "enum": [
+            "dart",
+            "typescript",
+            "mixed"
+          ]
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "outcome": {
+          "enum": [
+            "planned",
+            "created",
+            "conflict",
+            "rolled_back",
+            "partial"
+          ]
+        },
+        "planned_paths": {
+          "const": [
+            "architecture.yaml",
+            "ARCHITECTURE_AGENT.md"
+          ]
+        },
+        "planned_files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "enum": [
+                  "architecture.yaml",
+                  "ARCHITECTURE_AGENT.md"
+                ]
+              },
+              "content": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "content"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "created_paths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "architecture.yaml",
+              "ARCHITECTURE_AGENT.md"
+            ]
+          }
+        },
+        "residual_paths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "architecture.yaml",
+              "ARCHITECTURE_AGENT.md"
+            ]
+          }
+        },
+        "conflicting_paths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "architecture.yaml",
+              "ARCHITECTURE_AGENT.md"
+            ]
+          }
+        }
+      },
+      "required": [
+        "template",
+        "dry_run",
+        "outcome",
+        "planned_paths",
+        "planned_files",
+        "created_paths",
+        "residual_paths",
+        "conflicting_paths"
+      ],
+      "additionalProperties": false
+    },
+    "versions": {
+      "type": "object",
+      "properties": {
+        "archway": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dart_adapter": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "typescript_adapter": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dart_sdk": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "node": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "typescript": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "archway",
+        "dart_adapter",
+        "typescript_adapter",
+        "dart_sdk",
+        "node",
+        "typescript"
+      ],
+      "additionalProperties": false
+    },
+    "location": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "repository"
+            },
+            "path": {
+              "$ref": "#/$defs/path"
+            }
+          },
+          "required": [
+            "kind",
+            "path"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "external"
+            },
+            "canonical_file_uri": {
+              "type": "string",
+              "pattern": "^file:///.+"
+            }
+          },
+          "required": [
+            "kind",
+            "canonical_file_uri"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ts_context": {
+      "type": "object",
+      "properties": {
+        "tsconfig": {
+          "$ref": "#/$defs/path"
+        }
+      },
+      "required": [
+        "tsconfig"
+      ],
+      "additionalProperties": false
+    },
+    "dart_context": {
+      "type": "object",
+      "properties": {
+        "root": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/path"
+            },
+            {
+              "type": "string",
+              "pattern": "^file:///.+"
+            }
+          ]
+        },
+        "included_paths": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/path"
+              },
+              {
+                "type": "string",
+                "pattern": "^file:///.+"
+              }
+            ]
+          }
+        },
+        "excluded_paths": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/path"
+              },
+              {
+                "type": "string",
+                "pattern": "^file:///.+"
+              }
+            ]
+          }
+        },
+        "package_config_path": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/path"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^file:///.+"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "options_paths": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/path"
+              },
+              {
+                "type": "string",
+                "pattern": "^file:///.+"
+              }
+            ]
+          }
+        },
+        "sdk_version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "root",
+        "included_paths",
+        "excluded_paths",
+        "package_config_path",
+        "options_paths",
+        "sdk_version"
+      ],
+      "additionalProperties": false
+    },
+    "file_path": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/path"
+        },
+        {
+          "pattern": "[^/]$"
+        }
+      ]
+    },
+    "root_inventory_location": {
+      "const": {
+        "kind": "external",
+        "canonical_file_uri": "file:///"
+      }
+    },
+    "inventory_location": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/location"
+        },
+        {
+          "$ref": "#/$defs/root_inventory_location"
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "command": {
+          "const": "validate"
+        },
+        "status": {
+          "const": "ok"
+        },
+        "exit_code": {
+          "const": 0
+        },
+        "payload": {
+          "$ref": "#/$defs/validate"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "validate"
+        },
+        "status": {
+          "const": "invalid_policy"
+        },
+        "exit_code": {
+          "const": 2
+        },
+        "payload": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "validate"
+        },
+        "status": {
+          "const": "error"
+        },
+        "exit_code": {
+          "const": 2
+        },
+        "payload": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "validate"
+        },
+        "status": {
+          "const": "usage_error"
+        },
+        "exit_code": {
+          "const": 64
+        },
+        "payload": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "owner"
+        },
+        "status": {
+          "const": "ok"
+        },
+        "exit_code": {
+          "const": 0
+        },
+        "payload": {
+          "$ref": "#/$defs/owner"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "owner"
+        },
+        "status": {
+          "const": "negative"
+        },
+        "exit_code": {
+          "const": 1
+        },
+        "payload": {
+          "$ref": "#/$defs/owner"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "owner"
+        },
+        "status": {
+          "const": "invalid_policy"
+        },
+        "exit_code": {
+          "const": 2
+        },
+        "payload": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "owner"
+        },
+        "status": {
+          "const": "error"
+        },
+        "exit_code": {
+          "const": 2
+        },
+        "payload": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "owner"
+        },
+        "status": {
+          "const": "usage_error"
+        },
+        "exit_code": {
+          "const": 64
+        },
+        "payload": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "node"
+        },
+        "status": {
+          "const": "ok"
+        },
+        "exit_code": {
+          "const": 0
+        },
+        "payload": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/catalogue"
+            },
+            {
+              "$ref": "#/$defs/node_id"
+            },
+            {
+              "$ref": "#/$defs/node_path"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "node"
+        },
+        "status": {
+          "const": "negative"
+        },
+        "exit_code": {
+          "const": 1
+        },
+        "payload": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/catalogue"
+            },
+            {
+              "$ref": "#/$defs/node_id"
+            },
+            {
+              "$ref": "#/$defs/node_path"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "node"
+        },
+        "status": {
+          "const": "invalid_policy"
+        },
+        "exit_code": {
+          "const": 2
+        },
+        "payload": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "node"
+        },
+        "status": {
+          "const": "error"
+        },
+        "exit_code": {
+          "const": 2
+        },
+        "payload": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "node"
+        },
+        "status": {
+          "const": "usage_error"
+        },
+        "exit_code": {
+          "const": 64
+        },
+        "payload": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "allows"
+        },
+        "status": {
+          "const": "ok"
+        },
+        "exit_code": {
+          "const": 0
+        },
+        "payload": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/allows_ids"
+            },
+            {
+              "$ref": "#/$defs/allows_paths"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "allows"
+        },
+        "status": {
+          "const": "negative"
+        },
+        "exit_code": {
+          "const": 1
+        },
+        "payload": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/allows_ids"
+            },
+            {
+              "$ref": "#/$defs/allows_paths"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "allows"
+        },
+        "status": {
+          "const": "invalid_policy"
+        },
+        "exit_code": {
+          "const": 2
+        },
+        "payload": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "allows"
+        },
+        "status": {
+          "const": "error"
+        },
+        "exit_code": {
+          "const": 2
+        },
+        "payload": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "allows"
+        },
+        "status": {
+          "const": "usage_error"
+        },
+        "exit_code": {
+          "const": 64
+        },
+        "payload": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "check"
+        },
+        "status": {
+          "const": "ok"
+        },
+        "exit_code": {
+          "const": 0
+        },
+        "payload": {
+          "$ref": "#/$defs/check"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "check"
+        },
+        "status": {
+          "const": "negative"
+        },
+        "exit_code": {
+          "const": 1
+        },
+        "payload": {
+          "$ref": "#/$defs/check"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "check"
+        },
+        "status": {
+          "const": "incomplete"
+        },
+        "exit_code": {
+          "const": 2
+        },
+        "payload": {
+          "$ref": "#/$defs/check"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "check"
+        },
+        "status": {
+          "const": "invalid_policy"
+        },
+        "exit_code": {
+          "const": 2
+        },
+        "payload": {
+          "$ref": "#/$defs/check"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "check"
+        },
+        "status": {
+          "const": "error"
+        },
+        "exit_code": {
+          "const": 2
+        },
+        "payload": {
+          "$ref": "#/$defs/check"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "check"
+        },
+        "status": {
+          "const": "usage_error"
+        },
+        "exit_code": {
+          "const": 64
+        },
+        "payload": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "init"
+        },
+        "status": {
+          "const": "ok"
+        },
+        "exit_code": {
+          "const": 0
+        },
+        "payload": {
+          "$ref": "#/$defs/init"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "init"
+        },
+        "status": {
+          "const": "error"
+        },
+        "exit_code": {
+          "const": 2
+        },
+        "payload": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/init"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": "init"
+        },
+        "status": {
+          "const": "usage_error"
+        },
+        "exit_code": {
+          "const": 64
+        },
+        "payload": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "properties": {
+        "command": {
+          "const": null
+        },
+        "status": {
+          "const": "usage_error"
+        },
+        "exit_code": {
+          "const": 64
+        },
+        "payload": {
+          "type": "null"
+        }
+      }
+    }
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "ok"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "diagnostics": {
+            "items": {
+              "properties": {
+                "severity": {
+                  "enum": [
+                    "warning",
+                    "info"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "invalid_policy",
+              "error",
+              "usage_error"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "diagnostics": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": {
+            "const": "init"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "policy_hash": {
+            "type": "null"
+          },
+          "policy_path": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "ok",
+              "negative",
+              "incomplete"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "resolved_root": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "command": {
+                "enum": [
+                  "validate",
+                  "owner",
+                  "node",
+                  "allows",
+                  "check"
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "status": {
+                "enum": [
+                  "ok",
+                  "negative",
+                  "incomplete"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "policy_path": {
+            "$ref": "#/$defs/path"
+          },
+          "policy_hash": {
+            "$ref": "#/$defs/hash"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": {
+            "const": "owner"
+          },
+          "status": {
+            "const": "ok"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "ownership": {
+                "const": "owned"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": {
+            "const": "owner"
+          },
+          "status": {
+            "const": "negative"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "ownership": {
+                "enum": [
+                  "excluded",
+                  "outside_scope",
+                  "unowned"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": {
+            "const": "node"
+          },
+          "status": {
+            "const": "ok"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "anyOf": [
+              {
+                "properties": {
+                  "mode": {
+                    "enum": [
+                      "catalogue",
+                      "id"
+                    ]
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "mode": {
+                    "const": "path"
+                  },
+                  "ownership": {
+                    "properties": {
+                      "ownership": {
+                        "const": "owned"
+                      }
+                    }
+                  },
+                  "node": {
+                    "$ref": "#/$defs/node"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": {
+            "const": "node"
+          },
+          "status": {
+            "const": "negative"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "mode": {
+                "const": "path"
+              },
+              "ownership": {
+                "properties": {
+                  "ownership": {
+                    "enum": [
+                      "excluded",
+                      "outside_scope",
+                      "unowned"
+                    ]
+                  }
+                }
+              },
+              "node": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": {
+            "const": "allows"
+          },
+          "status": {
+            "const": "ok"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "policy_decision": {
+                "const": "allowed"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": {
+            "const": "allows"
+          },
+          "status": {
+            "const": "negative"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "policy_decision": {
+                "enum": [
+                  "denied",
+                  "undetermined"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": {
+            "const": "check"
+          },
+          "status": {
+            "const": "ok"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "policy_valid": {
+                "const": true
+              },
+              "analysis_complete": {
+                "const": true
+              },
+              "violations": {
+                "maxItems": 0
+              },
+              "unknowns": {
+                "maxItems": 0
+              },
+              "tool_errors": {
+                "maxItems": 0
+              },
+              "coverage": {
+                "properties": {
+                  "files": {
+                    "items": {
+                      "properties": {
+                        "assignment": {
+                          "const": "assigned"
+                        },
+                        "analysis": {
+                          "const": "complete"
+                        },
+                        "discovery_complete": {
+                          "const": true
+                        },
+                        "unresolved_project_ids": {
+                          "maxItems": 0
+                        }
+                      }
+                    }
+                  },
+                  "projects": {
+                    "items": {
+                      "properties": {
+                        "status": {
+                          "const": "complete"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "input_identity": {
+                "properties": {
+                  "rechecked": {
+                    "const": true
+                  },
+                  "changed_inputs": {
+                    "maxItems": 0
+                  },
+                  "inputs": {
+                    "minItems": 1
+                  }
+                }
+              },
+              "facts": {
+                "properties": {
+                  "edges": {
+                    "items": {
+                      "properties": {
+                        "resolution": {
+                          "properties": {
+                            "kind": {
+                              "enum": [
+                                "local",
+                                "external",
+                                "builtin"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": {
+            "const": "check"
+          },
+          "status": {
+            "const": "negative"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "policy_valid": {
+                "const": true
+              },
+              "analysis_complete": {
+                "const": true
+              },
+              "violations": {
+                "minItems": 1
+              },
+              "unknowns": {
+                "maxItems": 0
+              },
+              "tool_errors": {
+                "maxItems": 0
+              },
+              "coverage": {
+                "properties": {
+                  "files": {
+                    "items": {
+                      "properties": {
+                        "assignment": {
+                          "const": "assigned"
+                        },
+                        "analysis": {
+                          "const": "complete"
+                        },
+                        "discovery_complete": {
+                          "const": true
+                        },
+                        "unresolved_project_ids": {
+                          "maxItems": 0
+                        }
+                      }
+                    }
+                  },
+                  "projects": {
+                    "items": {
+                      "properties": {
+                        "status": {
+                          "const": "complete"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "input_identity": {
+                "properties": {
+                  "rechecked": {
+                    "const": true
+                  },
+                  "changed_inputs": {
+                    "maxItems": 0
+                  },
+                  "inputs": {
+                    "minItems": 1
+                  }
+                }
+              },
+              "facts": {
+                "properties": {
+                  "edges": {
+                    "items": {
+                      "properties": {
+                        "resolution": {
+                          "properties": {
+                            "kind": {
+                              "enum": [
+                                "local",
+                                "external",
+                                "builtin"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": {
+            "const": "check"
+          },
+          "status": {
+            "const": "incomplete"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "policy_valid": {
+                "const": true
+              },
+              "analysis_complete": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": {
+            "const": "check"
+          },
+          "status": {
+            "const": "invalid_policy"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "policy_valid": {
+                "const": false
+              },
+              "analysis_complete": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": {
+            "const": "check"
+          },
+          "status": {
+            "const": "error"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "analysis_complete": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "command": {
+                "const": "init"
+              }
+            }
+          },
+          {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "outcome": {
+                    "const": "planned"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "status": {
+            "const": "ok"
+          },
+          "payload": {
+            "properties": {
+              "dry_run": {
+                "const": true
+              },
+              "created_paths": {
+                "maxItems": 0
+              },
+              "residual_paths": {
+                "maxItems": 0
+              },
+              "conflicting_paths": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "command": {
+                "const": "init"
+              }
+            }
+          },
+          {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "outcome": {
+                    "const": "created"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "status": {
+            "const": "ok"
+          },
+          "payload": {
+            "properties": {
+              "dry_run": {
+                "const": false
+              },
+              "conflicting_paths": {
+                "maxItems": 0
+              },
+              "created_paths": {
+                "const": [
+                  "architecture.yaml",
+                  "ARCHITECTURE_AGENT.md"
+                ]
+              },
+              "residual_paths": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "command": {
+                "const": "init"
+              }
+            }
+          },
+          {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "outcome": {
+                    "const": "conflict"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "status": {
+            "const": "error"
+          },
+          "payload": {
+            "properties": {
+              "created_paths": {
+                "maxItems": 0
+              },
+              "residual_paths": {
+                "maxItems": 0
+              },
+              "conflicting_paths": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "command": {
+                "const": "init"
+              }
+            }
+          },
+          {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "outcome": {
+                    "const": "rolled_back"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "status": {
+            "const": "error"
+          },
+          "payload": {
+            "properties": {
+              "dry_run": {
+                "const": false
+              },
+              "residual_paths": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "command": {
+                "const": "init"
+              }
+            }
+          },
+          {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "outcome": {
+                    "const": "partial"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "status": {
+            "const": "error"
+          },
+          "payload": {
+            "properties": {
+              "dry_run": {
+                "const": false
+              },
+              "residual_paths": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": {
+            "const": "init"
+          },
+          "payload": {
+            "type": "object",
+            "properties": {
+              "dry_run": {
+                "const": true
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "planned_files": {
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": {
+            "const": "init"
+          },
+          "payload": {
+            "type": "object",
+            "properties": {
+              "dry_run": {
+                "const": false
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "planned_files": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "invalid_policy",
+              "error",
+              "usage_error"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "diagnostics": {
+            "contains": {
+              "properties": {
+                "severity": {
+                  "const": "error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

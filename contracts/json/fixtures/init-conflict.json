@@ -1,0 +1,44 @@
+{
+  "command": "init",
+  "schema_version": 1,
+  "tool_versions": {
+    "archway": "1.0.0-design",
+    "dart_adapter": null,
+    "typescript_adapter": null,
+    "dart_sdk": null,
+    "node": null,
+    "typescript": null
+  },
+  "resolved_root": "/repo",
+  "policy_path": null,
+  "policy_hash": null,
+  "status": "error",
+  "exit_code": 2,
+  "diagnostics": [
+    {
+      "code": "TEST_ERROR",
+      "severity": "error",
+      "message": "test error",
+      "rule_pointer": null,
+      "source_range": null,
+      "project_id": null,
+      "path": null,
+      "recovery_hints": []
+    }
+  ],
+  "payload": {
+    "template": "mixed",
+    "dry_run": false,
+    "outcome": "conflict",
+    "planned_paths": [
+      "architecture.yaml",
+      "ARCHITECTURE_AGENT.md"
+    ],
+    "planned_files": [],
+    "created_paths": [],
+    "residual_paths": [],
+    "conflicting_paths": [
+      "ARCHITECTURE_AGENT.md"
+    ]
+  }
+}

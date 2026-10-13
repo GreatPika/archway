@@ -1,0 +1,8 @@
+{
+  "name": "archway-typescript-helper",
+  "private": true,
+  "dependencies": {
+    "typescript": "5.9.3",
+    "yaml": "2.8.1"
+  }
+}
