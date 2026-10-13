@@ -99,6 +99,7 @@ final class WindowsJob {
     String? workingDirectory,
     Map<String, String>? environment,
     WindowsProcessPipes? output,
+    bool newConsole = false,
   }) {
     final handle = _handle ?? (throw StateError('Job is closed'));
     WindowsSuspendedProcess? process;
@@ -108,6 +109,7 @@ final class WindowsJob {
         workingDirectory: workingDirectory,
         environment: environment,
         output: output,
+        newConsole: newConsole,
       );
       if (_assignProcess case final replacement?) {
         replacement(process);

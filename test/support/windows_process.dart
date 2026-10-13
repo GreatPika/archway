@@ -135,6 +135,7 @@ final class WindowsSuspendedProcess {
     String? workingDirectory,
     Map<String, String>? environment,
     WindowsProcessPipes? output,
+    bool newConsole = false,
   }) {
     if (!Platform.isWindows || Abi.current() != Abi.windowsX64) {
       throw UnsupportedError('Suspended fixture requires native Windows x64');
@@ -183,6 +184,7 @@ final class WindowsSuspendedProcess {
       output?.prepareStartup(startup);
       final flags =
           0x4 |
+          (newConsole ? 0x10 : 0) | // CREATE_NEW_CONSOLE, not a process group.
           (output == null ? 0 : 0x80000) |
           (environment == null ? 0 : 0x400); // SUSPENDED | UNICODE_ENVIRONMENT.
       if (_create!(
