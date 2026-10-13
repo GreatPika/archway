@@ -46,7 +46,7 @@ Future<void> main(List<String> arguments) async {
     final firstTarget = '..${Platform.pathSeparator}second';
     // Node creates actual directory symlinks on every target, preserving raw
     // relative spelling rather than Dart's Windows junction normalization.
-    final links = await _capture(node, [
+    final links = await capture(node, [
       '-e',
       '''const fs = require('fs');
 fs.symlinkSync('empty', $second, 'dir');
@@ -80,7 +80,7 @@ exclude: [src/first/]
 nodes: [{id: app, responsibility: App, owns: [src/], allows: [], public: []}]
 ''');
     final helper = File(p.join(install.path, 'assets/typescript/helper.cjs'));
-    final captured = await _capture(
+    final captured = await capture(
       node,
       [helper.path],
       input: jsonEncode({
@@ -123,7 +123,7 @@ process.stdin.on('end', () => {
   process.stdout.write(Buffer.from('$encoded', 'base64'));
 });
 ''');
-    final result = await _capture(
+    final result = await capture(
       binary.path,
       ['--root', root.path, 'check'],
       environment: {...Platform.environment, 'PATH': p.dirname(node)},
@@ -161,10 +161,11 @@ process.stdin.on('end', () => {
   stdout.writeln('1 bounded independent hop-only evidence recheck passed');
 }
 
-Future<_Captured> _capture(
+Future<_Captured> capture(
   String program,
   List<String> arguments, {
   String input = '',
+  Duration timeout = const Duration(seconds: 30),
   Map<String, String>? environment,
 }) async {
   final child = await Process.start(
@@ -174,22 +175,74 @@ Future<_Captured> _capture(
     includeParentEnvironment: false,
   );
   final out = <int>[], err = <int>[];
+  final eofs = [Completer<void>(), Completer<void>()];
+  final subscriptions = <StreamSubscription<List<int>>>[];
+  var exited = false, failed = false;
   final completion = Future.wait<Object?>([
-    child.exitCode,
-    child.stdout.forEach(out.addAll),
-    child.stderr.forEach(err.addAll),
+    child.exitCode.then((code) {
+      exited = true;
+      return code;
+    }),
+    ...eofs.map((done) => done.future),
     () async {
       child.stdin.add(utf8.encode(input));
       await child.stdin.close();
     }(),
-  ]);
+  ], eagerError: true);
+  completion.ignore();
   try {
-    final results = await completion.timeout(const Duration(seconds: 30));
+    final streams = [child.stdout, child.stderr];
+    final buffers = [out, err];
+    for (var index = 0; index < streams.length; index++) {
+      final done = eofs[index];
+      subscriptions.add(
+        streams[index].listen(
+          buffers[index].addAll,
+          onDone: () {
+            if (!done.isCompleted) done.complete();
+          },
+          onError: (Object error, StackTrace stack) {
+            if (!done.isCompleted) done.completeError(error, stack);
+          },
+        ),
+      );
+    }
+    final results = await completion.timeout(timeout);
     return (code: results.first as int, out: out, err: err);
   } on TimeoutException {
-    child.kill(ProcessSignal.sigkill);
-    await completion.timeout(const Duration(seconds: 2));
+    failed = true;
     throw TimeoutException('$arguments timed out; stdout=$out; stderr=$err');
+  } catch (_) {
+    failed = true;
+    rethrow;
+  } finally {
+    Object? failure;
+    StackTrace? trace;
+    try {
+      if (!exited) {
+        child.kill(ProcessSignal.sigkill);
+        await child.exitCode.timeout(const Duration(seconds: 2));
+      }
+    } catch (error, stack) {
+      failure = error;
+      trace = stack;
+    }
+    try {
+      // A deadline and direct-child exit do not dispose descendant-held pipes.
+      // Start both cancellations even if one fails.
+      await Future.wait(
+        subscriptions.map((stream) async => await stream.cancel()),
+      ).timeout(const Duration(seconds: 2));
+    } catch (error, stack) {
+      failure ??= error;
+      trace ??= stack;
+    } finally {
+      for (final done in eofs) {
+        if (!done.isCompleted)
+          done.completeError(StateError('Capture closed before EOF'));
+      }
+    }
+    if (!failed && failure != null) Error.throwWithStackTrace(failure, trace!);
   }
 }
 
