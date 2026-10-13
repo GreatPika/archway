@@ -30,6 +30,18 @@ void main() {
     expect(snapshots.listSync(), isEmpty);
   }
 
+  test('owned snapshot expands after original input changes', () async {
+    final source = File(p.join(root.path, 'owned.gz'))
+      ..writeAsBytesSync(gzip.encode([97, 98, 99]));
+    await withArchiveInput(source, (input) async {
+      source.writeAsBytesSync([0]);
+      await withGzipSnapshot(input, (expanded) async {
+        expect(await expanded.readAsBytes(), [97, 98, 99]);
+      });
+    }, temporaryParent: snapshots);
+    expect(snapshots.listSync(), isEmpty);
+  });
+
   test(
     'gzip input yields decoded bytes in an owned file and cleans it up',
     () async {

@@ -319,7 +319,46 @@ void main() {
       });
       expect(
         manifest['dart_sdk'],
-        p.join(root.path, 'flutter/bin/cache/dart-sdk'),
+        p.join(root.path, 'flutter', 'bin', 'cache', 'dart-sdk'),
+      );
+    },
+  );
+
+  test(
+    'manifest uses native Windows components for every serialized fixture path',
+    () {
+      final windows = p.Context(style: p.Style.windows);
+      final manifest = nativeFixtureManifest(
+        root: Directory(windows.join(r'C:\fixture root', 'prepared')),
+        target: 'windows-x64',
+        source: {},
+        environment: {},
+        flutter: {},
+        gitPubspecSha: 'a' * 64,
+        readiness: {},
+        paths: windows,
+      );
+      expect(
+        {
+          for (final key in [
+            'dart_sdk',
+            'wrong_node',
+            'pub_fixture',
+            'git_fixture',
+            'flutter_sdk',
+            'flutter_fixture',
+          ])
+            key: manifest[key],
+        },
+        {
+          'dart_sdk': r'C:\fixture root\prepared\flutter\bin\cache\dart-sdk',
+          'wrong_node':
+              r'C:\fixture root\prepared\node-v24.19.0-win-x64\node.exe',
+          'pub_fixture': r'C:\fixture root\prepared\pub',
+          'git_fixture': r'C:\fixture root\prepared\git-fixture',
+          'flutter_sdk': r'C:\fixture root\prepared\flutter',
+          'flutter_fixture': r'C:\fixture root\prepared\flutter-fixture',
+        },
       );
     },
   );

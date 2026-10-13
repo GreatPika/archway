@@ -82,6 +82,62 @@ void main() {
     expect(snapshots.listSync(), isEmpty);
   }
 
+  test(
+    'discovers original root manifest bytes before inventory is known',
+    () async {
+      final source = File(p.join(root.path, 'manifest.tar'))
+        ..writeAsBytesSync(ordinary(name: 'manifest.json'));
+      await withArchiveInput(source, (input) async {
+        expect(await readTarManifest(input), [97, 98, 99]);
+      });
+    },
+  );
+
+  test(
+    'manifest discovery rejects duplicates, missing roots and unsafe frames',
+    () async {
+      final manifest = ordinary(name: 'manifest.json');
+      final duplicate = [...manifest.take(1024), ...manifest];
+      for (final bytes in [
+        duplicate,
+        ordinary(),
+        ordinary(name: 'manifest.json', mode: 0x1ed),
+        [...manifest]..[515] = 1,
+        changedHeader(manifest, (h) => h[156] = 50),
+        withPax(paxRecord('size', '3'), following: manifest),
+      ]) {
+        final source = File(p.join(root.path, 'bad-manifest.tar'))
+          ..writeAsBytesSync(bytes);
+        await expectLater(
+          withArchiveInput(source, readTarManifest, temporaryParent: snapshots),
+          throwsFormatException,
+        );
+        expect(snapshots.listSync(), isEmpty);
+      }
+    },
+  );
+
+  test('discovery bounds entries before a manifest inventory exists', () async {
+    final zero = tarConverter.convert(
+      TarEntry.data(TarHeader(name: 'zero', mode: 0x1a4), []),
+    );
+    final bytes = <int>[
+      for (var i = 0; i <= maxArchiveEntries; i++)
+        ...changedHeader(zero, (h) {
+          h.fillRange(0, 100, 0);
+          final name = ascii.encode('item-$i');
+          h.setRange(0, name.length, name);
+        }).take(512),
+      ...ordinary(name: 'manifest.json'),
+    ];
+    final source = File(p.join(root.path, 'many.tar'))..writeAsBytesSync(bytes);
+    await expectLater(
+      withArchiveInput(source, readTarManifest, temporaryParent: snapshots),
+      throwsFormatException,
+    );
+    expect(snapshots.listSync(), isEmpty);
+  });
+
   test('ordinary TAR contents match the complete expected inventory', () async {
     await verify(ordinary());
   });

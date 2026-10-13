@@ -98,8 +98,8 @@ void main() {
       () async {
         await expectLater(
           f.run(
-            execute: (name, cmd, cwd, env, logs) async {
-              final proof = await f.execute(name, cmd, cwd, env, logs);
+            execute: (name, cmd, cwd, env, logs, {required timeout}) async {
+              final proof = await f.execute(name, cmd, cwd, env, logs, timeout: timeout);
               if (name == failed) {
                 final failure = {...proof, 'exit_code': 7};
                 RunnerFixture.write(logs, '$name.json', jsonEncode(failure));
@@ -177,8 +177,8 @@ void main() {
     test('$error stops before later suites but verifies archive', () async {
       await expectLater(
         f.run(
-          execute: (name, cmd, cwd, env, logs) async {
-            await f.execute(name, cmd, cwd, env, logs);
+          execute: (name, cmd, cwd, env, logs, {required timeout}) async {
+            await f.execute(name, cmd, cwd, env, logs, timeout: timeout);
             throw error;
           },
         ),
@@ -310,8 +310,8 @@ void main() {
       );
       await expectLater(
         f.run(
-          execute: (name, cmd, cwd, env, logs) async {
-            final stub = await f.execute(name, cmd, cwd, env, logs);
+          execute: (name, cmd, cwd, env, logs, {required timeout}) async {
+            final stub = await f.execute(name, cmd, cwd, env, logs, timeout: timeout);
             if (name != 'plan_query') return stub;
             return executeSuite(
               name,
@@ -319,6 +319,7 @@ void main() {
               cwd,
               env,
               logs,
+              timeout: timeout,
             );
           },
         ),
@@ -367,9 +368,10 @@ void main() {
         f.manifest,
         f.output,
         () => f.events.add('verify'),
-        execute: (name, cmd, cwd, env, logs) async {
+        execute: (name, cmd, cwd, env, logs, {required timeout}) async {
           if (!name.startsWith('source-'))
-            return f.execute(name, cmd, cwd, env, logs);
+            return f.execute(name, cmd, cwd, env, logs, timeout: timeout);
+          expect(timeout.inSeconds, name == 'source-tests' ? 900 : 600);
           f.calls.add(name);
           expect(cmd.first, p.join(f.paths['dart_sdk']!, 'bin', 'dart'));
           expect(cwd, isNot(f.repo.path));
@@ -424,14 +426,15 @@ void main() {
   test('real spawn failure retains its receipt and stops the runner', () async {
     await expectLater(
       f.run(
-        execute: (name, cmd, cwd, env, logs) async {
-          await f.execute(name, cmd, cwd, env, logs);
+        execute: (name, cmd, cwd, env, logs, {required timeout}) async {
+          await f.execute(name, cmd, cwd, env, logs, timeout: timeout);
           return executeSuite(
             name,
             [p.join(f.root.path, 'absent')],
             cwd,
             env,
             logs,
+            timeout: timeout,
           );
         },
       ),
@@ -538,8 +541,10 @@ class RunnerFixture {
     List<String> command,
     String cwd,
     Map<String, String> env,
-    Directory logs,
-  ) async {
+    Directory logs, {
+    required Duration timeout,
+  }) async {
+    expect(timeout.inSeconds, 600);
     calls.add(name);
     events.add(name);
     final sdk = paths['dart_sdk']!;

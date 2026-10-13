@@ -65,6 +65,7 @@ Future<Map<String, Object?>> runAcceptance(
           repository.path,
           environment,
           output,
+          timeout: suiteTimeout,
         ),
       );
     } on SuiteExitFailure catch (error) {

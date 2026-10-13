@@ -11,6 +11,27 @@ import '../tool/ci/native_acceptance.dart';
 import '../tool/ci/native_acceptance_capture.dart';
 
 void main() {
+  test('explicit aggregate budget is retained in the original receipt', () async {
+    final temp = Directory.systemTemp.createTempSync('acceptance-budget-');
+    addTearDown(() => temp.deleteSync(recursive: true));
+    final script = File(p.join(temp.path, 'child.dart'))
+      ..writeAsStringSync('void main() {}');
+    final proof = await executeSuite(
+      'source-tests',
+      [Platform.resolvedExecutable, script.path],
+      Directory.current.path,
+      Platform.environment,
+      temp,
+      timeout: const Duration(seconds: 900),
+    );
+    expect(proof['timeout_seconds'], 900);
+    expect(proof['exit_code'], 0);
+    expect(proof['timed_out'], false);
+    expect(
+      jsonDecode(File(p.join(temp.path, 'source-tests.json')).readAsStringSync()),
+      proof,
+    );
+  });
   test(
     'capture write failure stops and reaps rather than waiting for child',
     () async {

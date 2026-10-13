@@ -26,13 +26,18 @@ Map<String, String> sourceTestEnvironment(
     });
 }
 
+// The complete growing source inventory has its own aggregate wall budget.
+// Native process suites and source dependency preparation retain 600 seconds.
+const sourceSuiteTimeout = Duration(seconds: 900);
+
 typedef SourceExecute = Future<Map<String, Object?>> Function(
   String name,
   List<String> command,
   String cwd,
   Map<String, String> environment,
-  Directory output,
-);
+  Directory output, {
+  required Duration timeout,
+});
 
 String _sha(File file) => sha256.convert(file.readAsBytesSync()).toString();
 
@@ -220,6 +225,7 @@ Future<Map<String, Object?>> runSourceTests(
       source.path,
       env,
       output,
+      timeout: suiteTimeout,
     );
     if (_sha(_ordinary(source, 'pubspec.lock')) != snapshot['pubspec.lock']) {
       throw const FormatException(
@@ -232,6 +238,7 @@ Future<Map<String, Object?>> runSourceTests(
       source.path,
       env,
       output,
+      timeout: sourceSuiteTimeout,
     );
     final events = File(p.join(output.path, execution['stdout'] as String))
         .readAsLinesSync()

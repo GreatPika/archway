@@ -42,6 +42,12 @@ void main() {
     );
   });
   final corruptions = <String, void Function(Evidence)>{
+    'source-only budget on native suite': (e) {
+      final receipt = (e.acceptance['suites'] as List).first as Map;
+      receipt['timeout_seconds'] = 900;
+      File(p.join(e.directory.path, '${receipt['suite']}.json'))
+          .writeAsStringSync(jsonEncode(receipt));
+    },
     'unknown target': (e) => e.proof['target'] = 'linux-arm64',
     'unremoved original': (e) =>
         (e.proof['relocation'] as Map)['original_removed'] = false,

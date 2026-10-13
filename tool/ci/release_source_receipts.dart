@@ -175,6 +175,7 @@ Future<void> validateSource(
     directory,
     paths,
     suite: 'source-tests',
+    expectedTimeout: 900,
   );
   final events = const LineSplitter()
       .convert(utf8.decode(logs['stdout']!))

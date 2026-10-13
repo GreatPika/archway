@@ -21,6 +21,30 @@ Future<void> verifyTarInput(
   await _readTar(input, inventory, expectedMembers);
 }
 
+/// Reads only the bounded root manifest after the shared structural preflight.
+Future<Uint8List> readTarManifest(ArchiveInput input) async {
+  ({int offset, int size})? manifest;
+  _preflight(
+    input,
+    null,
+    onMember: (member, offset) {
+      if (member.name != 'manifest.json') return;
+      if (member.size > maxArchiveJsonBytes || member.mode != 0x1a4) {
+        throw const FormatException('Invalid TAR manifest metadata');
+      }
+      manifest = (offset: offset, size: member.size);
+    },
+  );
+  final found = manifest;
+  if (found == null) throw const FormatException('Missing TAR manifest');
+  final file = input.file.openSync();
+  try {
+    return _read(file, found.offset, found.size);
+  } finally {
+    file.closeSync();
+  }
+}
+
 /// Provides verified extracted files only during [inspect], then removes them.
 /// [setMode] is a private fixture seam; callers normally use native permissions.
 Future<T> withTarExtraction<T>(
@@ -122,12 +146,18 @@ Future<void> _readTar(
   }
 }
 
-List<ArchiveMember> _preflight(ArchiveInput input, ArchiveInventory inventory) {
+List<ArchiveMember> _preflight(
+  ArchiveInput input,
+  ArchiveInventory? inventory, {
+  void Function(ArchiveMember member, int offset)? onMember,
+}) {
   if (input.size > maxArchiveBytes || input.size % 512 != 0) {
     throw const FormatException('Unaligned or oversized TAR snapshot');
   }
   final file = input.file.openSync();
   final members = <ArchiveMember>[];
+  final seen = <String>{};
+  var total = 0;
   try {
     var offset = 0;
     Map<String, String>? pax;
@@ -154,14 +184,24 @@ List<ArchiveMember> _preflight(ArchiveInput input, ArchiveInventory inventory) {
         pax = _pax(_read(file, offset + 512, size));
       } else {
         final name = pax?['path'] ?? header.filename;
-        final expected = inventory.files[name];
-        if (expected == null ||
-            size != expected.size ||
-            header.mode != expected.mode ||
-            members.length >= inventory.files.length) {
-          throw const FormatException('Unexpected TAR member metadata');
+        total += size;
+        if (!seen.add(name) ||
+            members.length >= maxArchiveEntries ||
+            total > maxArchiveBytes) {
+          throw const FormatException('Duplicate or oversized TAR inventory');
         }
-        members.add((name: name, size: size, mode: header.mode));
+        if (inventory != null) {
+          final expected = inventory.files[name];
+          if (expected == null ||
+              size != expected.size ||
+              header.mode != expected.mode ||
+              members.length >= inventory.files.length) {
+            throw const FormatException('Unexpected TAR member metadata');
+          }
+        }
+        final member = (name: name, size: size, mode: header.mode);
+        members.add(member);
+        onMember?.call(member, offset + 512);
         pax = null;
       }
       offset = next;

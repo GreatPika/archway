@@ -17,6 +17,23 @@ Future<T> withGzipInput<T>(
   int maxBytes = maxArchiveBytes,
   int maxExpandedBytes = maxArchiveBytes,
 }) async {
+  return withArchiveInput(
+    source,
+    (snapshot) =>
+        withGzipSnapshot(snapshot, inspect, maxExpandedBytes: maxExpandedBytes),
+    temporaryParent: temporaryParent,
+    expected: expected,
+    maxBytes: maxBytes,
+  );
+}
+
+/// Expands an already-owned snapshot without copying its compressed bytes again.
+/// The expanded file exists only for [inspect], including on callback failure.
+Future<T> withGzipSnapshot<T>(
+  ArchiveInput snapshot,
+  Future<T> Function(File expanded) inspect, {
+  int maxExpandedBytes = maxArchiveBytes,
+}) async {
   if (maxExpandedBytes < 0 || maxExpandedBytes > maxArchiveBytes) {
     throw ArgumentError.value(
       maxExpandedBytes,
@@ -24,49 +41,46 @@ Future<T> withGzipInput<T>(
       'Must tighten the archive bound',
     );
   }
-  return withArchiveInput(
-    source,
-    (snapshot) async {
-      final expanded = File(p.join(snapshot.file.parent.path, 'expanded'));
-      await expanded.create(exclusive: true);
-      final handle = _OutputHandle(await expanded.open(mode: FileMode.write));
-      archive.InputFileStream? input;
-      archive.OutputFileStream? output;
+  final directory = await snapshot.file.parent.createTemp('.expanded-');
+  try {
+    final expanded = File(p.join(directory.path, 'expanded'));
+    await expanded.create(exclusive: true);
+    final handle = _OutputHandle(await expanded.open(mode: FileMode.write));
+    archive.InputFileStream? input;
+    archive.OutputFileStream? output;
+    try {
+      input = archive.InputFileStream(snapshot.file.path);
+      // Prevent fallback inflation: even if optional gzip headers are bad,
+      // the retained 1f8b prefix fails zlib FCHECK before unbounded decoding.
+      if (input.length < 10 ||
+          input.readUint16() != 0x8b1f ||
+          input.readByte() != 8) {
+        throw const FormatException('Expected gzip header');
+      }
+      input.reset();
+      output = archive.OutputFileStream.withFileHandle(handle);
+      if (!archive.GZipDecoderWeb().decodeStream(
+        input,
+        _GzipOutput(output, maxExpandedBytes),
+        verify: true,
+      )) {
+        throw const FormatException('Malformed or truncated gzip input');
+      }
+    } finally {
       try {
-        input = archive.InputFileStream(snapshot.file.path);
-        // Prevent fallback inflation: even if optional gzip headers are bad,
-        // the retained 1f8b prefix fails zlib FCHECK before unbounded decoding.
-        if (input.length < 10 ||
-            input.readUint16() != 0x8b1f ||
-            input.readByte() != 8) {
-          throw const FormatException('Expected gzip header');
-        }
-        input.reset();
-        output = archive.OutputFileStream.withFileHandle(handle);
-        if (!archive.GZipDecoderWeb().decodeStream(
-          input,
-          _GzipOutput(output, maxExpandedBytes),
-          verify: true,
-        )) {
-          throw const FormatException('Malformed or truncated gzip input');
-        }
+        input?.closeSync();
       } finally {
         try {
-          input?.closeSync();
+          output?.closeSync();
         } finally {
-          try {
-            output?.closeSync();
-          } finally {
-            handle.closeSync();
-          }
+          handle.closeSync();
         }
       }
-      return inspect(expanded);
-    },
-    temporaryParent: temporaryParent,
-    expected: expected,
-    maxBytes: maxBytes,
-  );
+    }
+    return await inspect(expanded);
+  } finally {
+    await directory.delete(recursive: true);
+  }
 }
 
 // Adapt only the already-created private file handle; never open another path.

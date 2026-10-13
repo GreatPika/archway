@@ -209,11 +209,12 @@ const flutterBase =
 const wrongNodeBase = 'https://nodejs.org/dist/v$fixtureWrongNodeVersion/';
 String wrongNodeName(String target) =>
     'node-v$fixtureWrongNodeVersion-${fixtureWrongNodePins[target]!.archive}';
-String wrongNodePath(Directory root, String target) => p.join(
-  root.path,
-  wrongNodeName(target).replaceFirst(RegExp(r'\.(tar\.gz|zip)$'), ''),
-  target == 'windows-x64' ? 'node.exe' : 'bin/node',
-);
+String wrongNodePath(Directory root, String target, {p.Context? paths}) =>
+    (paths ?? p.context).join(
+      root.path,
+      wrongNodeName(target).replaceFirst(RegExp(r'\.(tar\.gz|zip)$'), ''),
+      target == 'windows-x64' ? 'node.exe' : 'bin/node',
+    );
 
 Map<String, Object?> nativeFixtureManifest({
   required Directory root,
@@ -223,16 +224,23 @@ Map<String, Object?> nativeFixtureManifest({
   required Map<String, dynamic> flutter,
   required String gitPubspecSha,
   required Map<String, Map<String, String>> readiness,
+  p.Context? paths,
 }) => {
   'schema_version': 1,
   'source': source,
   'target': target,
-  'dart_sdk': p.join(root.path, 'flutter/bin/cache/dart-sdk'),
-  'wrong_node': wrongNodePath(root, target),
-  'pub_fixture': p.join(root.path, 'pub'),
-  'git_fixture': p.join(root.path, 'git-fixture'),
-  'flutter_sdk': p.join(root.path, 'flutter'),
-  'flutter_fixture': p.join(root.path, 'flutter-fixture'),
+  'dart_sdk': (paths ?? p.context).join(
+    root.path,
+    'flutter',
+    'bin',
+    'cache',
+    'dart-sdk',
+  ),
+  'wrong_node': wrongNodePath(root, target, paths: paths),
+  'pub_fixture': (paths ?? p.context).join(root.path, 'pub'),
+  'git_fixture': (paths ?? p.context).join(root.path, 'git-fixture'),
+  'flutter_sdk': (paths ?? p.context).join(root.path, 'flutter'),
+  'flutter_fixture': (paths ?? p.context).join(root.path, 'flutter-fixture'),
   'environment': {
     for (final e in environment.entries)
       if (!{

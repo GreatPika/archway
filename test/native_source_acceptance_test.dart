@@ -78,8 +78,8 @@ void main() {
       addTearDown(fixture.close);
       await expectLater(
         fixture.run(
-          execute: (name, command, cwd, env, logs) async {
-            final proof = await fixture.execute(name, command, cwd, env, logs);
+          execute: (name, command, cwd, env, logs, {required timeout}) async {
+            final proof = await fixture.execute(name, command, cwd, env, logs, timeout: timeout);
             if (name == 'source-tests')
               File(p.join(cwd, changed)).writeAsStringSync('mutated');
             return proof;
@@ -95,8 +95,8 @@ void main() {
     addTearDown(fixture.close);
     await expectLater(
       fixture.run(
-        execute: (name, command, cwd, env, logs) async {
-          final proof = await fixture.execute(name, command, cwd, env, logs);
+        execute: (name, command, cwd, env, logs, {required timeout}) async {
+          final proof = await fixture.execute(name, command, cwd, env, logs, timeout: timeout);
           File(p.join(cwd, 'pubspec.lock')).writeAsStringSync('mutated');
           return proof;
         },
@@ -110,8 +110,8 @@ void main() {
     addTearDown(fixture.close);
     await expectLater(
       fixture.run(
-        execute: (name, command, cwd, env, logs) async {
-          final proof = await fixture.execute(name, command, cwd, env, logs);
+        execute: (name, command, cwd, env, logs, {required timeout}) async {
+          final proof = await fixture.execute(name, command, cwd, env, logs, timeout: timeout);
           if (name == 'source-tests')
             SourceFixture.write(fixture.repo, 'lib/code.dart', 'mutated');
           return proof;
@@ -159,8 +159,8 @@ void main() {
       addTearDown(fixture.close);
       await expectLater(
         fixture.run(
-          execute: (name, command, cwd, env, logs) async {
-            final proof = await fixture.execute(name, command, cwd, env, logs);
+          execute: (name, command, cwd, env, logs, {required timeout}) async {
+            final proof = await fixture.execute(name, command, cwd, env, logs, timeout: timeout);
             if (name == 'source-tests') {
               final file = File(p.join(cwd, 'lib/code.dart'));
               file.deleteSync();
@@ -180,8 +180,8 @@ void main() {
       addTearDown(fixture.close);
       await expectLater(
         fixture.run(
-          execute: (name, command, cwd, env, logs) async {
-            final proof = await fixture.execute(name, command, cwd, env, logs);
+          execute: (name, command, cwd, env, logs, {required timeout}) async {
+            final proof = await fixture.execute(name, command, cwd, env, logs, timeout: timeout);
             if (name == 'source-tests') {
               File(p.join(logs.path, proof['stdout'] as String))
                   .writeAsStringSync('{"type":"done","success":true}\n');
@@ -200,8 +200,8 @@ void main() {
       addTearDown(fixture.close);
       await expectLater(
         fixture.run(
-          execute: (name, command, cwd, env, logs) async {
-            await fixture.execute(name, command, cwd, env, logs);
+          execute: (name, command, cwd, env, logs, {required timeout}) async {
+            await fixture.execute(name, command, cwd, env, logs, timeout: timeout);
             throw StateError('runner failed');
           },
         ),
@@ -290,8 +290,10 @@ final class SourceFixture {
     List<String> command,
     String cwd,
     Map<String, String> env,
-    Directory logs,
-  ) async {
+    Directory logs, {
+    required Duration timeout,
+  }) async {
+    expect(timeout.inSeconds, name == 'source-tests' ? 900 : 600);
     calls.add(name);
     snapshot = cwd;
     expect(

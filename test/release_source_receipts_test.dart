@@ -76,7 +76,7 @@ class Fixture {
         dart,
         'test',
         '--reporter=json',
-      ], eventLog()),
+      ], eventLog(), timeout: 900),
       'tests': {
         'suites': [testPath],
         'passed': 1,
@@ -140,15 +140,16 @@ class Fixture {
   Map<String, dynamic> execution(
     String suite,
     List<String> command,
-    String stdout,
-  ) {
+    String stdout, {
+    int timeout = 600,
+  }) {
     final receipt = <String, dynamic>{
       'suite': suite,
       'command': command,
       'exit_code': 0,
       'timed_out': false,
       'elapsed_seconds': 0.25,
-      'timeout_seconds': 600,
+      'timeout_seconds': timeout,
     };
     for (final stream in ['stdout', 'stderr']) {
       final bytes = utf8.encode(stream == 'stdout' ? stdout : '');
@@ -167,6 +168,7 @@ class Fixture {
       'source-tests',
       List<String>.from(source['execution']['command']),
       text,
+      timeout: 900,
     );
   }
 
@@ -181,6 +183,13 @@ class Fixture {
 }
 
 void main() {
+  test('complete source execution accepts its explicit 900 second budget', () async {
+    final f = Fixture('macos-arm64');
+    addTearDown(f.close);
+    expect(f.source['preparation']['timeout_seconds'], 600);
+    expect(f.source['execution']['timeout_seconds'], 900);
+    await f.validate();
+  });
   for (final recorded in [
     '/fixtures/dart-sdk/child/../bin/dart',
     '//fixtures/dart-sdk/bin/dart',
@@ -356,6 +365,12 @@ void main() {
     'preparation exit': (f) => f.source['preparation']['exit_code'] = 1,
     'execution exit': (f) => f.source['execution']['exit_code'] = 1,
     'preparation timeout': (f) => f.source['preparation']['timed_out'] = true,
+    'preparation source-only timeout budget': (f) =>
+        f.source['preparation']['timeout_seconds'] = 900,
+    'execution obsolete process-suite timeout budget': (f) =>
+        f.source['execution']['timeout_seconds'] = 600,
+    'execution fractional timeout budget': (f) =>
+        f.source['execution']['timeout_seconds'] = 900.0,
     'execution timeout budget': (f) =>
         f.source['execution']['timeout_seconds'] = 599,
     'summary pass count': (f) => f.source['tests']['passed'] = 2,
