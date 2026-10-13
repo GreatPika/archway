@@ -360,28 +360,32 @@ void main() {
     }
   });
   test(
-    'missing local contracts warn while remote contracts are never fetched',
+    'missing local contracts warn while remote references remain metadata',
     () async {
-      final result = await loadPolicy({
-        'version': 1,
-        'projects': [],
-        'scope': [],
-        'exclude': [],
-        'nodes': [
-          {
-            'id': 'app',
-            'responsibility': 'App',
-            'owns': [],
-            'public': [],
-            'allows': [],
-            'contracts': [
-              'docs/./missing.md',
-              'https://invalid.example/never-fetch',
-              'docs/missing.md',
-            ],
-          },
-        ],
-      });
+      final requests = <Uri>[];
+      final result = await HttpOverrides.runZoned(
+        () => loadPolicy({
+          'version': 1,
+          'projects': [],
+          'scope': [],
+          'exclude': [],
+          'nodes': [
+            {
+              'id': 'app',
+              'responsibility': 'App',
+              'owns': [],
+              'public': [],
+              'allows': [],
+              'contracts': [
+                'docs/./missing.md',
+                'https://invalid.example/never-fetch',
+                'docs/missing.md',
+              ],
+            },
+          ],
+        }),
+        createHttpClient: (_) => _RecordingHttpClient(requests),
+      );
       expect(result.status, 'ok');
       expect(result.plan!.node('app')!['contracts'], [
         'docs/missing.md',
@@ -391,6 +395,7 @@ void main() {
       expect(result.diagnostics.single.severity, 'warning');
       expect(result.diagnostics.single.rulePointer, '/nodes/0/contracts/0');
       expect(result.diagnostics.single.path, 'docs/missing.md');
+      expect(requests, isEmpty, reason: 'Remote contracts remain metadata.');
     },
   );
   test(
@@ -562,36 +567,6 @@ void main() {
       expect(result.diagnostics.single.code, 'EMPTY_PLAN');
     },
   );
-
-  test(
-    'empty arrays do not make anchored or aliased YAML acceptable',
-    () async {
-      final root = await Directory.systemTemp.createTemp('archway-alias-');
-      addTearDown(() => root.delete(recursive: true));
-      await File('${root.path}/architecture.yaml').writeAsString(
-        'version: 1\nprojects: &empty []\nscope: *empty\nexclude: []\nnodes: []\n',
-      );
-      final result = await Plan.load(RepositorySelection(root.path));
-      expect(result.status, 'invalid_policy');
-      expect(result.diagnostics.single.code, 'POLICY_PARSE_ERROR');
-    },
-  );
-
-  test('YAML version and tag directives cannot bypass the restricted grammar', () async {
-    final root = await Directory.systemTemp.createTemp('archway-directives-');
-    addTearDown(() => root.delete(recursive: true));
-    for (final prefix in [
-      '%YAML 1.1\n---\n',
-      '%TAG !x! tag:example.org,2026:\n---\n',
-    ]) {
-      await File('${root.path}/architecture.yaml').writeAsString(
-        '${prefix}version: 1\nprojects: []\nscope: []\nexclude: []\nnodes: []\n',
-      );
-      final result = await Plan.load(RepositorySelection(root.path));
-      expect(result.status, 'invalid_policy');
-      expect(result.diagnostics.single.code, 'POLICY_PARSE_ERROR');
-    }
-  });
 }
 
 Future<PlanLoad> loadPolicy(Map<String, Object?> policy) async {
@@ -600,4 +575,26 @@ Future<PlanLoad> loadPolicy(Map<String, Object?> policy) async {
   await File('${root.path}/architecture.yaml')
       .writeAsString(jsonEncode(policy));
   return Plan.load(RepositorySelection(root.path));
+}
+
+// Observe requests, not harmless client construction, without opening a socket.
+class _RecordingHttpClient implements HttpClient {
+  _RecordingHttpClient(this.requests);
+
+  final List<Uri> requests;
+
+  @override
+  Future<HttpClientRequest> getUrl(Uri url) => openUrl('GET', url);
+
+  @override
+  Future<HttpClientRequest> openUrl(String method, Uri url) {
+    requests.add(url);
+    return Future.error(StateError('Unexpected contract request: $url'));
+  }
+
+  @override
+  void close({bool force = false}) {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

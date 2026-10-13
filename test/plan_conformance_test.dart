@@ -22,6 +22,7 @@ void main() {
         '${empty}extra: .nan\n',
         '${empty}extra: .inf\n',
         '${empty}extra: -.Inf\n',
+        'version: 1\nprojects: &empty []\nscope: *empty\nexclude: []\nnodes: []\n',
         '${empty}extra: &value plain\n',
         '${empty}extra: &value []\n',
         '${empty}extra: &value {}\n',
