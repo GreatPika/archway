@@ -60,11 +60,12 @@ void _close(Pointer<Void> handle) {
 /// Owns an actual filename containing byte FF (POSIX) or code unit DCFF
 /// (Windows). Never passes the malformed Windows path through UTF-8.
 final class MalformedNativeFile {
-  MalformedNativeFile(String parent, String name)
-    : _path = '$parent${Platform.pathSeparator}$name\uDCFF',
+  MalformedNativeFile(String parent, String name, {String suffix = ''})
+    : _path = '$parent${Platform.pathSeparator}$name\uDCFF$suffix',
       _bytes = Uint8List.fromList([
         ...utf8.encode('$parent${Platform.pathSeparator}$name'),
         0xff,
+        ...utf8.encode(suffix),
       ]);
 
   final String _path;
@@ -72,6 +73,40 @@ final class MalformedNativeFile {
 
   String get windowsPath => _path;
   Uint8List get posixPath => Uint8List.fromList(_bytes);
+
+  void createDirectory() {
+    if (!Platform.isWindows) {
+      Directory.fromRawPath(_bytes).createSync();
+      return;
+    }
+    final create = _kernel!
+        .lookupFunction<
+          Int32 Function(Pointer<Utf16>, Pointer<Void>),
+          int Function(Pointer<Utf16>, Pointer<Void>)
+        >('CreateDirectoryW');
+    using((arena) {
+      if (create(_path.toNativeUtf16(allocator: arena), nullptr) == 0) {
+        _windowsError('CreateDirectoryW malformed directory');
+      }
+    });
+  }
+
+  void deleteDirectory() {
+    if (!Platform.isWindows) {
+      Directory.fromRawPath(_bytes).deleteSync();
+      return;
+    }
+    final remove = _kernel!
+        .lookupFunction<
+          Int32 Function(Pointer<Utf16>),
+          int Function(Pointer<Utf16>)
+        >('RemoveDirectoryW');
+    using((arena) {
+      if (remove(_path.toNativeUtf16(allocator: arena)) == 0) {
+        _windowsError('RemoveDirectoryW malformed directory');
+      }
+    });
+  }
 
   void create([List<int> contents = const []]) {
     if (!Platform.isWindows) {
