@@ -13,6 +13,53 @@ bool expectedSkip(String target, String path, String name, String? reason) {
       }.contains(name))
     return true;
   final entry = (path, name);
+  if (target == 'windows-x64' &&
+      ((entry ==
+                  (
+                    'test/windows_installer_registry_test.dart',
+                    'native registry rejects unsupported ABI before opening keys',
+                  ) &&
+              reason == 'Non-native Windows registry host control') ||
+          (entry ==
+                  (
+                    'test/windows_installer_fixture_test.dart',
+                    'deletion-only lock and entry removal reject unsupported hosts',
+                  ) &&
+              reason == 'Non-native Windows installer fixture host control'))) {
+    return true;
+  }
+  if (path == 'test/native_acceptance_windows_job_test.dart') {
+    if (target == 'windows-x64' &&
+        name ==
+            'Windows job completion rejects unsupported hosts before launch' &&
+        reason == 'Non-Windows job completion host control.')
+      return true;
+    if (target != 'windows-x64' &&
+        reason == 'Native Windows owned job completion control.' &&
+        const {
+          'Windows owned job completion: silent',
+          'Windows owned job completion: retained',
+          'Windows owned job completion: nonzero',
+          'Windows owned job completion: timeout',
+          'Windows owned job completion: opt-out',
+        }.contains(name))
+      return true;
+  }
+  if (path == 'test/native_acceptance_windows_stdin_test.dart') {
+    if (target == 'windows-x64' &&
+        name ==
+            'Windows stdin options reject unsupported hosts before launch' &&
+        reason == 'Non-Windows stdin host control.')
+      return true;
+    if (target != 'windows-x64' &&
+        reason == 'Native Windows file stdin control.' &&
+        const {
+          'Windows file stdin preserves exact bytes and EOF through suite capture',
+          'Windows file stdin rejects invalid inputs and releases failed spawn handles',
+          'Windows file stdin retains the restricted inherited handle list',
+        }.contains(name))
+      return true;
+  }
   // These POSIX staging fixtures remain visible on Windows without running
   // their chmod/umask setup. No missing dependency or empty suite qualifies.
   if (path == 'test/macos_installer_builder_test.dart') {
@@ -124,6 +171,14 @@ bool expectedSkip(String target, String path, String name, String? reason) {
   // These exact cases are new platform-qualified fixture controls. Each reason
   // matches its owning test's Platform guard; dependencies never qualify.
   const windowsOnly = {
+    (
+      'test/windows_installer_fixture_test.dart',
+      'Windows deletion lock permits reads and writes but denies deletion',
+    ): 'Native Windows deletion-only sharing fixture',
+    (
+      'test/windows_installer_fixture_test.dart',
+      'Windows directory entry removal never traverses a junction target',
+    ): 'Native Windows nonrecursive junction removal fixture',
     (
       'test/installation_directory_test.dart',
       'rejects a Windows junction root',

@@ -14,6 +14,14 @@ Future<NativeProcessResult> assertAotInit(
   Map<String, String>? environment,
   String label = 'AOT',
   Duration timeout = const Duration(seconds: 30),
+  Future<NativeProcessResult> Function(
+        List<String>, {
+        required Duration timeout,
+        String? workingDirectory,
+        Map<String, String>? environment,
+      })
+      run =
+      runNativeProcess,
 }) async {
   void require(bool condition, String message) {
     if (!condition) throw StateError(message);
@@ -35,7 +43,7 @@ Future<NativeProcessResult> assertAotInit(
     '--template',
     'mixed',
   ];
-  final result = await runNativeProcess(
+  final result = await run(
     command == null ? arguments : command(arguments),
     workingDirectory: cwd.path,
     environment:

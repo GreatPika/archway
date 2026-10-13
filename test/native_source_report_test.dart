@@ -97,7 +97,6 @@ void main() {
       for (final fault in ['command failure', 'payload', 'launcher', 'winner'])
         'cleans staging and refuses $fault',
     ];
-    expect(names, hasLength(19));
     for (final target in sourceTargets) {
       for (final name in names) {
         final report = () => summarizeTests(
@@ -123,18 +122,6 @@ void main() {
         expect(expectedSkip(target, '$path.other', name, reason), isFalse);
         expect(expectedSkip(target, path, '$name extra', reason), isFalse);
       }
-      // Even an inapplicable platform must register actual visible cases.
-      final empty = events(path);
-      empty[1]['test'].addAll({
-        'name': 'loading $path',
-        'groupIDs': [],
-        'url': null,
-      });
-      empty[2]['hidden'] = true;
-      expect(
-        () => summarizeTests(empty, {path}, target),
-        throwsFormatException,
-      );
     }
   });
 

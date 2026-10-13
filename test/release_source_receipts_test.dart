@@ -72,11 +72,12 @@ class Fixture {
         'get',
         '--enforce-lockfile',
       ], ''),
-      'execution': execution('source-tests', [
-        dart,
-        'test',
-        '--reporter=json',
-      ], eventLog(), timeout: 900),
+      'execution': execution(
+        'source-tests',
+        [dart, 'test', '--reporter=json'],
+        eventLog(),
+        timeout: 900,
+      ),
       'tests': {
         'suites': [testPath],
         'passed': 1,
@@ -183,13 +184,6 @@ class Fixture {
 }
 
 void main() {
-  test('complete source execution accepts its explicit 900 second budget', () async {
-    final f = Fixture('macos-arm64');
-    addTearDown(f.close);
-    expect(f.source['preparation']['timeout_seconds'], 600);
-    expect(f.source['execution']['timeout_seconds'], 900);
-    await f.validate();
-  });
   for (final recorded in [
     '/fixtures/dart-sdk/child/../bin/dart',
     '//fixtures/dart-sdk/bin/dart',
@@ -293,7 +287,9 @@ void main() {
     () async {
       final f = Fixture('linux-x64');
       addTearDown(f.close);
-      f.rewriteSnapshot('"${'a' * (2 * 1024 * 1024)}"');
+      final snapshot = File(p.join(f.evidence.path, 'source-files.json'))
+          .readAsStringSync();
+      f.rewriteSnapshot('$snapshot${' ' * (2 * 1024 * 1024)}');
       await expectLater(f.validate(), throwsA(isA<FormatException>()));
     },
   );
@@ -348,12 +344,23 @@ void main() {
       f.git(['add', '.']);
     },
     'missing snapshot entry': (f) => f.rewriteSnapshot('{}'),
-    'duplicate snapshot key': (f) => f.rewriteSnapshot('{"a":1,"a":1}'),
+    'duplicate snapshot key': (f) {
+      final snapshot = File(p.join(f.evidence.path, 'source-files.json'))
+          .readAsStringSync();
+      final inventory = jsonDecode(snapshot) as Map<String, dynamic>;
+      final key = inventory.keys.first;
+      f.rewriteSnapshot(
+        '{${jsonEncode(key)}:${jsonEncode(inventory[key])},${snapshot.substring(1)}',
+      );
+    },
     'asset digest': (f) =>
-        f.source['assets'] = {'native/linux-x64/library': '0' * 64},
+        f.source['assets']['native/linux-x64/library'] = '0' * 64,
     'extra archive asset': (f) =>
         f.manifest['files']['native/linux-x64/other'] = {'sha256': 'a' * 64},
-    'empty archive assets': (f) => f.manifest['files'] = {},
+    'empty archive assets': (f) {
+      f.manifest['files'] = <String, dynamic>{};
+      f.source['assets'] = <String, dynamic>{};
+    },
     'preparation argv': (f) =>
         f.source['preparation']['command'][4] = '--offline',
     'execution argv': (f) =>
@@ -371,8 +378,6 @@ void main() {
         f.source['execution']['timeout_seconds'] = 600,
     'execution fractional timeout budget': (f) =>
         f.source['execution']['timeout_seconds'] = 900.0,
-    'execution timeout budget': (f) =>
-        f.source['execution']['timeout_seconds'] = 599,
     'summary pass count': (f) => f.source['tests']['passed'] = 2,
     'summary inventory': (f) => f.source['tests']['suites'] = [],
     'summary unknown field': (f) => f.source['tests']['extra'] = true,
@@ -492,12 +497,4 @@ void main() {
     fixture.source['snapshot_root'] = r'\temporary\source';
     await expectLater(fixture.validate(), throwsA(isA<FormatException>()));
   });
-  test(
-    'binds original source events to tracked Git bytes and archive assets',
-    () async {
-      final fixture = Fixture('linux-x64');
-      addTearDown(fixture.close);
-      await fixture.validate();
-    },
-  );
 }

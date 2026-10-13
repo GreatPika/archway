@@ -154,6 +154,8 @@ Future<Map<String, Object?>> executeSuite(
   Directory output, {
   Duration timeout = suiteTimeout,
   void Function(Map<String, Object?> proof)? onProof,
+  File? windowsStdinFile,
+  bool waitForWindowsJobEmpty = false,
 }) async {
   if (!RegExp(r'^[a-z][a-z0-9_-]*$').hasMatch(name) ||
       command.isEmpty ||
@@ -184,6 +186,8 @@ Future<Map<String, Object?>> executeSuite(
       out,
       err,
       timeout,
+      windowsStdinFile: windowsStdinFile,
+      waitForWindowsJobEmpty: waitForWindowsJobEmpty,
     );
   } catch (error, trace) {
     timedOut = error is TimeoutException;

@@ -6,14 +6,77 @@ import '../../test/support/windows_job.dart';
 import '../../test/support/windows_process.dart';
 import '../../test/support/windows_process_pipes.dart';
 
+/// The same monotonic operation budget gates startup and successful completion.
+Duration windowsCaptureRemaining(Duration timeout, Duration elapsed) {
+  if (elapsed >= timeout)
+    throw TimeoutException('Acceptance deadline', timeout);
+  return timeout - elapsed;
+}
+
+/// Narrow Windows owner boundary shared by native capture and failure controls.
+Future<int> captureWithWindowsOwners({
+  required Future<int> Function() capture,
+  required void Function() closeJob,
+  required void Function() closeChild,
+  required void Function() closePipes,
+  void Function(Object, StackTrace)? reportCleanupFailure,
+}) async {
+  Object? failure;
+  StackTrace? failureStack;
+  int? code;
+  void close(void Function() closer) {
+    try {
+      closer();
+    } catch (error, stack) {
+      if (failure == null) {
+        failure = error;
+        failureStack = stack;
+      } else {
+        try {
+          if (reportCleanupFailure != null) {
+            reportCleanupFailure(error, stack);
+          } else {
+            // This is the invoking process's stderr, never a child log handle.
+            stderr.writeln(
+              'Windows acceptance cleanup unconfirmed: $error\n$stack',
+            );
+          }
+        } catch (_) {
+          // A broken diagnostic sink must not replace the first failure.
+        }
+      }
+    }
+  }
+
+  try {
+    code = await capture();
+  } catch (error, stack) {
+    failure = error;
+    failureStack = stack;
+  } finally {
+    close(closeJob);
+    close(closeChild);
+    close(closePipes);
+  }
+  if (failure != null) Error.throwWithStackTrace(failure!, failureStack!);
+  return code!;
+}
+
 Future<int> captureAcceptanceProcess(
   List<String> command,
   String repository,
   Map<String, String> environment,
   RandomAccessFile stdout,
   RandomAccessFile stderr,
-  Duration timeout,
-) async {
+  Duration timeout, {
+  File? windowsStdinFile,
+  bool waitForWindowsJobEmpty = false,
+}) async {
+  final windowsElapsed = waitForWindowsJobEmpty ? (Stopwatch()..start()) : null;
+  if ((windowsStdinFile != null || waitForWindowsJobEmpty) &&
+      !Platform.isWindows) {
+    throw UnsupportedError('Windows capture options require native Windows');
+  }
   void write(RandomAccessFile file, List<int> bytes) {
     file.writeFromSync(bytes);
     file.flushSync();
@@ -23,31 +86,42 @@ Future<int> captureAcceptanceProcess(
     WindowsProcessPipes? pipes;
     WindowsJob? job;
     WindowsSuspendedProcess? child;
-    try {
-      pipes = WindowsProcessPipes(
-        onStdout: (bytes) => write(stdout, bytes),
-        onStderr: (bytes) => write(stderr, bytes),
-        retainOutput: false,
-      );
-      job = WindowsJob();
-      child = job.spawn(
-        command,
-        output: pipes,
-        workingDirectory: repository,
-        environment: environment,
-      );
-      return (await pipes.communicate(() => child!.exitCode, timeout)).exitCode;
-    } finally {
-      try {
-        job?.close();
-      } finally {
-        try {
-          child?.close();
-        } finally {
-          pipes?.close();
-        }
-      }
-    }
+    return captureWithWindowsOwners(
+      capture: () async {
+        pipes = WindowsProcessPipes(
+          onStdout: (bytes) => write(stdout, bytes),
+          onStderr: (bytes) => write(stderr, bytes),
+          retainOutput: false,
+          stdinFile: windowsStdinFile,
+        );
+        job = WindowsJob();
+        child = job!.spawn(
+          command,
+          output: pipes,
+          workingDirectory: repository,
+          environment: environment,
+        );
+        final result = await pipes!.communicate(
+          () {
+            final code = child!.exitCode;
+            if (code == null ||
+                (waitForWindowsJobEmpty && job!.activeProcessCount != 0)) {
+              return null;
+            }
+            return code;
+          },
+          windowsElapsed == null
+              ? timeout
+              : windowsCaptureRemaining(timeout, windowsElapsed.elapsed),
+        );
+        if (windowsElapsed != null)
+          windowsCaptureRemaining(timeout, windowsElapsed.elapsed);
+        return result.exitCode;
+      },
+      closeJob: () => job?.close(),
+      closeChild: () => child?.close(),
+      closePipes: () => pipes?.close(),
+    );
   }
 
   final elapsed = Stopwatch()..start();

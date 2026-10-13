@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
+import 'package:path/path.dart' as p;
 
 late final int Function() _error;
 final _api = _loadApi();
@@ -113,6 +114,37 @@ final _read = _api
         Pointer<Void>,
       )
     >('ReadFile');
+final _open = _api
+    ?.lookupFunction<
+      Pointer<Void> Function(
+        Pointer<Utf16>,
+        Uint32,
+        Uint32,
+        Pointer<Void>,
+        Uint32,
+        Uint32,
+        Pointer<Void>,
+      ),
+      Pointer<Void> Function(
+        Pointer<Utf16>,
+        int,
+        int,
+        Pointer<Void>,
+        int,
+        int,
+        Pointer<Void>,
+      )
+    >('CreateFileW');
+final _type = _api
+    ?.lookupFunction<
+      Uint32 Function(Pointer<Void>),
+      int Function(Pointer<Void>)
+    >('GetFileType');
+final _information = _api
+    ?.lookupFunction<
+      Int32 Function(Pointer<Void>, Pointer<Uint8>),
+      int Function(Pointer<Void>, Pointer<Uint8>)
+    >('GetFileInformationByHandle');
 Never _fail(String operation) => throw OSError(operation, _error());
 
 final class WindowsPipeTimeout extends TimeoutException {
@@ -127,6 +159,7 @@ final class WindowsProcessPipes {
     this.onStdout,
     this.onStderr,
     this.retainOutput = true,
+    File? stdinFile,
   }) {
     if (!Platform.isWindows || Abi.current() != Abi.windowsX64) {
       throw UnsupportedError('Native Windows x64 pipes required');
@@ -136,14 +169,15 @@ final class WindowsProcessPipes {
     try {
       security.cast<Uint32>().value = 24;
       (security + 16).cast<Int32>().value = 1; // Inheritable child ends.
-      for (var index = 0; index < 3; index++) {
+      if (stdinFile != null) _openStdin(stdinFile, security.cast());
+      for (var index = stdinFile == null ? 0 : 1; index < 3; index++) {
         if (_pipe!(pair, pair + 1, security.cast(), 0) == 0)
           _fail('CreatePipe');
         _handles.addAll([pair[0], pair[1]]);
         if (index != 0 && _inherit!(pair[0], 1, 0) == 0)
           _fail('SetHandleInformation');
       }
-      _consume(1); // Child stdin is EOF; no input is used by these consumers.
+      _consume(1); // Null input remains immediate EOF; files need no writer.
     } catch (_) {
       close();
       rethrow;
@@ -159,6 +193,45 @@ final class WindowsProcessPipes {
   Pointer<Void> _attributes = nullptr;
   Pointer<Pointer<Void>> _allowed = nullptr;
   bool _initialized = false, _capturing = false, _closed = false;
+
+  void _openStdin(File file, Pointer<Void> security) {
+    if (!p.windows.isAbsolute(file.path) ||
+        !p.windows.equals(file.path, file.resolveSymbolicLinksSync())) {
+      throw ArgumentError('Windows stdin requires a canonical ordinary file');
+    }
+    final path = file.path.toNativeUtf16();
+    final information = calloc<Uint8>(52); // BY_HANDLE_FILE_INFORMATION.
+    try {
+      final handle = _open!(
+        path,
+        0x80000000,
+        1,
+        security,
+        3,
+        0x00200080,
+        nullptr,
+      ); // READ, share READ, OPEN_EXISTING, OPEN_REPARSE_POINT.
+      if (handle.address == -1 || handle.address == 0xffffffffffffffff) {
+        _fail('CreateFileW stdin');
+      }
+      _handles.addAll([
+        handle,
+        null,
+      ]); // Ownership precedes fallible validation.
+      if (_type!(handle) != 1)
+        throw ArgumentError('Windows stdin must be disk-backed');
+      if (_information!(handle, information) == 0)
+        _fail('GetFileInformationByHandle stdin');
+      if (information.cast<Uint32>().value & 0x410 != 0) {
+        throw ArgumentError(
+          'Windows stdin must not be a directory or reparse point',
+        );
+      }
+    } finally {
+      calloc.free(information);
+      malloc.free(path);
+    }
+  }
 
   void prepareStartup(Pointer<Uint8> startup) {
     if (_closed || _attributes != nullptr || _handles[0] == null) {

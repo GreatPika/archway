@@ -326,3 +326,59 @@ final class ExclusiveWindowsFileLock {
     if (handle != null) _close(handle);
   }
 }
+
+/// Denies only deletion: the stale-file installer case must still permit reads.
+final class DeleteDeniedWindowsFileLock {
+  DeleteDeniedWindowsFileLock(String path) {
+    _requireWindowsInstallerFixture();
+    final nativePath = path.toNativeUtf16();
+    try {
+      final handle = _createFile!(
+        nativePath,
+        0x80000000, // GENERIC_READ
+        3, // FILE_SHARE_READ | FILE_SHARE_WRITE, without FILE_SHARE_DELETE.
+        nullptr,
+        3, // OPEN_EXISTING
+        0x80, // FILE_ATTRIBUTE_NORMAL
+        nullptr,
+      );
+      if (handle.address == -1 || handle.address == 0xffffffffffffffff) {
+        _windowsError('CreateFileW deletion-only sharing lock');
+      }
+      _handle = handle;
+    } finally {
+      malloc.free(nativePath);
+    }
+  }
+
+  Pointer<Void>? _handle;
+
+  void close() {
+    final handle = _handle;
+    _handle = null; // Close consumes ownership even when it reports failure.
+    if (handle != null) _close(handle);
+  }
+}
+
+/// Removes only the directory/junction entry, never recursively visits a target.
+void removeWindowsDirectoryEntry(String path) {
+  _requireWindowsInstallerFixture();
+  final remove = _kernel!
+      .lookupFunction<
+        Int32 Function(Pointer<Utf16>),
+        int Function(Pointer<Utf16>)
+      >('RemoveDirectoryW');
+  using((arena) {
+    if (remove(path.toNativeUtf16(allocator: arena)) == 0) {
+      _windowsError('RemoveDirectoryW installer fixture');
+    }
+  });
+}
+
+void _requireWindowsInstallerFixture() {
+  if (!Platform.isWindows || Abi.current() != Abi.windowsX64) {
+    throw UnsupportedError(
+      'Installer file fixture requires native Windows x64',
+    );
+  }
+}
