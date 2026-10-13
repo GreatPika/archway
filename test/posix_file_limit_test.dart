@@ -12,16 +12,19 @@ void main() {
       final root = Directory.systemTemp.createTempSync('archway-file-limit-');
       final output = File('${root.path}/partial café');
       try {
+        final input = File('${root.path}/input')..writeAsStringSync('abc');
         final child = await Process.start(
           Platform.resolvedExecutable,
           [
             File('test/support/posix_file_limit_child.dart').absolute.path,
             '/bin/sh',
             '-c',
-            'printf "%s\\n" "\$\$"; printf abc > "\$1"; '
+            // Keep failed-write buffering out of the shell's status stream.
+            'printf "%s\\n" "\$\$"; /bin/cat "\$2" > "\$1"; '
                 'code=\$?; printf "survived:%s\\n" "\$code"; exit "\$code"',
             'fixture',
             output.path,
+            input.path,
           ],
           environment: {'PATH': '/no-runtime-here'},
         );
@@ -36,7 +39,7 @@ void main() {
           final code = result[0] as int;
           expect(
             code,
-            greaterThan(0),
+            inInclusiveRange(1, 127),
             reason: 'Expected write failure, not a signal',
           );
           expect(result[1], '${child.pid}\nsurvived:$code\n');
