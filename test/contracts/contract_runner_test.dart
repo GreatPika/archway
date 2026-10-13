@@ -50,6 +50,7 @@ void main() {
         'archway-contract-dispatch-',
       );
       addTearDown(() => root.deleteSync(recursive: true));
+      Directory('${root.path}/helper/fixtures').createSync(recursive: true);
       File('${root.path}/manifest.json').writeAsStringSync('{"files":{}}');
       File('${root.path}/unlisted.json').writeAsStringSync('{}');
       var dispatched = false;

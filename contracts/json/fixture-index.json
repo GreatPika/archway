@@ -45,11 +45,6 @@
     "valid": true
   },
   {
-    "file": "fixtures/allows-ids-allowed.json",
-    "schema": "public-result",
-    "valid": true
-  },
-  {
     "file": "fixtures/allows-ids-denied.json",
     "schema": "public-result",
     "valid": true

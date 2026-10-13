@@ -207,10 +207,13 @@ void main() {
         'symlink_hops': [],
       });
     }, valid: true);
-    scenario(
-      'empty-file-uri',
-      (a, b) => b['inputs'][0]['observed_uri'] = 'file:///',
-    );
+    scenario('empty-file-uri', (a, b) {
+      b['inputs'].add({
+        ...b['inputs'][2],
+        'id': 'extra',
+        'observed_uri': 'file:///',
+      });
+    });
     test(
       'nonzero exit',
       () => expect(

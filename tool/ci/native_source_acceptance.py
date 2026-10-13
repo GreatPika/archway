@@ -31,7 +31,7 @@ def expected_skip(target, path, name, reason=None):
         ('test/physical_paths_test.dart', 'an exact NFC scope cannot hide a differently normalized physical entry'),
     }
     posix = {
-        ('test/physical_paths_test.dart', 'unrepresentable and NFC-colliding entries are incomplete without a global failure'),
+        ('test/physical_paths_test.dart', 'unrepresentable and non-NFC entries are incomplete without a global failure'),
         ('test/physical_paths_test.dart', 'a literal POSIX backslash filename cannot become a clean absent portable path'),
     }
     entry = (path, name)

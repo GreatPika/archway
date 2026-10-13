@@ -97,10 +97,13 @@ bool expectedSkip(String target, String path, String name, String? reason) {
           'verified fallback cleans failed inspect and preserves primary failure',
           'mixed root preserves unrelated bytes and only removes exact marker',
           'temporary cleanup cannot replace an active primary failure',
-        }.contains(name)) return true;
+        }.contains(name))
+      return true;
     if (target == 'macos-arm64' &&
-        name == 'native lifecycle refuses wrong host before output or commands' &&
-        reason == 'Non-native macOS host control') return true;
+        name ==
+            'native lifecycle refuses wrong host before output or commands' &&
+        reason == 'Non-native macOS host control')
+      return true;
   }
 
   const windows = {
@@ -144,7 +147,7 @@ bool expectedSkip(String target, String path, String name, String? reason) {
   const posix = {
     (
       'test/physical_paths_test.dart',
-      'unrepresentable and NFC-colliding entries are incomplete without a global failure',
+      'unrepresentable and non-NFC entries are incomplete without a global failure',
     ),
     (
       'test/physical_paths_test.dart',

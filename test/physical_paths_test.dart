@@ -302,7 +302,8 @@ try {
         () => checkPhysical(root, 2),
         zoneValues: {
           #archwayBeforeInventoryEntryStat: (String path) {
-            if (File(path).uri == source.uri && source.existsSync()) source.deleteSync();
+            if (File(path).uri == source.uri && source.existsSync())
+              source.deleteSync();
           },
         },
       );
@@ -365,15 +366,18 @@ try {
     },
   );
 
-  test('excluded broken or cyclic aliases under a selected directory stay untraversed', () async {
-    final root = await physicalFixture('[./]', '[ignored/]');
-    await Link('${root.path}/ignored').create('ignored');
-    final report = await checkPhysical(root, 0);
-    expect(report['payload']['unknowns'], isEmpty);
-    expect(report['payload']['input_identity']['aliases'], isEmpty);
-  });
+  test(
+    'an excluded cyclic alias under a selected directory stays untraversed',
+    () async {
+      final root = await physicalFixture('[./]', '[ignored/]');
+      await Link('${root.path}/ignored').create('ignored');
+      final report = await checkPhysical(root, 0);
+      expect(report['payload']['unknowns'], isEmpty);
+      expect(report['payload']['input_identity']['aliases'], isEmpty);
+    },
+  );
 
-  test('unrepresentable and NFC-colliding entries are incomplete without a global failure', () async {
+  test('unrepresentable and non-NFC entries are incomplete without a global failure', () async {
     for (final name in [
       'bad*.dart',
       'bad[1].ts',

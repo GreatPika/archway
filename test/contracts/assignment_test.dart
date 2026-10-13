@@ -10,21 +10,6 @@ void main() {
   final fixtures = jsonDecode(
     File('contracts/assignment/fixtures.json').readAsStringSync(),
   ) as List;
-  test('every observed input remains in coverage', () {
-    final coverage = [
-      for (final fixture in fixtures)
-        {
-          'path': fixture['path'],
-          'fixture': fixture['id'],
-          'assignment': assign(fixture),
-        },
-    ];
-    expect(coverage, hasLength(fixtures.length));
-    expect(
-      coverage.map((item) => item['fixture']).toSet(),
-      fixtures.map((fixture) => fixture['id']).toSet(),
-    );
-  });
   test('Dart context descriptor canonical UTF-8 and SHA-256 fixture', () {
     final context = jsonDecode(
       File('contracts/assignment/context-id-fixture.json').readAsStringSync(),

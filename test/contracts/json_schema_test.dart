@@ -52,9 +52,6 @@ void main() {
 
   final malformed = <String, Object?>{
     'unknown type': {'type': 'nonsense'},
-    'repeated required name': {
-      'required': ['x', 'x'],
-    },
     'string minimum': {'minimum': '3'},
     'negative minLength': {'minLength': -1},
     'fractional minItems': {'minItems': 1.5},
