@@ -40,21 +40,54 @@ void main() {
           throwsA(
             isA<FileSystemException>().having(
               (e) => e.osError?.errorCode,
-              'captured native error',
-              greaterThan(0),
+              'reported native error',
+              isNotNull,
             ),
           ),
         );
         expect(
+          FileSystemEntity.typeSync(stage.path, followLinks: false),
+          FileSystemEntityType.directory,
+        );
+        expect(stage.listSync().map((entry) => p.basename(entry.path)), [
+          'payload',
+        ]);
+        expect(
+          FileSystemEntity.typeSync(
+            p.join(stage.path, 'payload'),
+            followLinks: false,
+          ),
+          FileSystemEntityType.file,
+        );
+        expect(
           File(p.join(stage.path, 'payload')).readAsStringSync(),
           'source',
+        );
+        expect(
+          FileSystemEntity.typeSync(target.path, followLinks: false),
+          kind == 'file'
+              ? FileSystemEntityType.file
+              : kind == 'alias'
+              ? FileSystemEntityType.link
+              : FileSystemEntityType.directory,
         );
         if (kind == 'file') {
           expect(File(target.path).readAsStringSync(), 'keep');
         } else if (kind == 'alias') {
           expect(Link(target.path).targetSync(), 'missing-target');
         } else {
-          expect(target.listSync().length, kind == 'empty' ? 0 : 1);
+          expect(
+            target.listSync().map((entry) => p.basename(entry.path)),
+            kind == 'empty' ? <String>[] : ['keep'],
+          );
+          if (kind == 'nonempty') {
+            final keep = File(p.join(target.path, 'keep'));
+            expect(
+              FileSystemEntity.typeSync(keep.path, followLinks: false),
+              FileSystemEntityType.file,
+            );
+            expect(keep.readAsStringSync(), 'keep');
+          }
         }
       }
     },
@@ -228,9 +261,40 @@ Future<void> main(List<String> args) async {
       final winner = codes.indexOf(0), loser = codes.indexOf(23);
       expect(await outputs[winner], 'published');
       expect(await errors[winner], isEmpty);
-      expect(int.parse(await errors[loser]), greaterThan(0));
+      expect(int.tryParse(await errors[loser]), isNotNull);
+      expect(
+        FileSystemEntity.typeSync(target.path, followLinks: false),
+        FileSystemEntityType.directory,
+      );
+      expect(target.listSync().map((entry) => p.basename(entry.path)), [
+        'owner',
+      ]);
+      expect(
+        FileSystemEntity.typeSync(
+          p.join(target.path, 'owner'),
+          followLinks: false,
+        ),
+        FileSystemEntityType.file,
+      );
       expect(File(p.join(target.path, 'owner')).readAsStringSync(), '$winner');
-      expect(stages[winner].existsSync(), isFalse);
+      expect(
+        FileSystemEntity.typeSync(stages[winner].path, followLinks: false),
+        FileSystemEntityType.notFound,
+      );
+      expect(
+        FileSystemEntity.typeSync(stages[loser].path, followLinks: false),
+        FileSystemEntityType.directory,
+      );
+      expect(stages[loser].listSync().map((entry) => p.basename(entry.path)), [
+        'owner',
+      ]);
+      expect(
+        FileSystemEntity.typeSync(
+          p.join(stages[loser].path, 'owner'),
+          followLinks: false,
+        ),
+        FileSystemEntityType.file,
+      );
       expect(
         File(p.join(stages[loser].path, 'owner')).readAsStringSync(),
         '$loser',

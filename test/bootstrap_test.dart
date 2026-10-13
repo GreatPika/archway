@@ -5,23 +5,6 @@ import 'package:archway/src/bootstrap/bootstrap.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('dry-run previews both complete files without writes', () async {
-    final root = await Directory.systemTemp.createTemp('archway-init-');
-    addTearDown(() => root.delete(recursive: true));
-    final result = await Bootstrap().initialize(root.path, 'dart', true);
-    expect(result.outcome, 'planned');
-    expect(result.plannedPaths, ['architecture.yaml', 'ARCHITECTURE.md']);
-    expect(result.plannedFiles.map((f) => f.path), result.plannedPaths);
-    expect(
-      result.plannedFiles.first.content,
-      contains('version: 1\nprojects: []\nscope: []\nexclude: []\nnodes: []\n'),
-    );
-    expect(result.plannedFiles.last.content, contains('archway check'));
-    expect(result.createdPaths, isEmpty);
-    expect(result.residualPaths, isEmpty);
-    expect(result.conflictingPaths, isEmpty);
-    expect(await root.list().toList(), isEmpty);
-  });
   test('init preserves the legacy guide without migrating it', () async {
     final root = await Directory.systemTemp.createTemp('archway-legacy-');
     addTearDown(() => root.delete(recursive: true));
@@ -175,10 +158,12 @@ void main() {
       zoneValues: {
         #archwayBootstrapFault: (String stage, String path) {
           if (stage == 'beforeWrite' && path == 'ARCHITECTURE.md')
-            throw FileSystemException('Injected write failure', path);
+            throw const FileSystemException('Injected write failure');
         },
       },
     );
+    expect(result.diagnostics.first.code, 'INIT_WRITE_FAILED');
+    expect(result.diagnostics.first.path, 'ARCHITECTURE.md');
     expect(result.outcome, 'partial');
     expect(result.createdPaths, ['architecture.yaml', 'ARCHITECTURE.md']);
     expect(result.residualPaths, result.createdPaths);
@@ -292,7 +277,20 @@ void main() {
     final policies = <String>{};
     for (final template in ['dart', 'typescript', 'mixed']) {
       final result = await Bootstrap().initialize(root.path, template, true);
+      expect(result.outcome, 'planned');
+      expect(result.plannedPaths, ['architecture.yaml', 'ARCHITECTURE.md']);
+      expect(result.plannedFiles.map((f) => f.path), result.plannedPaths);
+      expect(result.createdPaths, isEmpty);
+      expect(result.residualPaths, isEmpty);
+      expect(result.conflictingPaths, isEmpty);
+      expect(await root.list().toList(), isEmpty);
       final policy = result.plannedFiles.first.content;
+      expect(
+        policy,
+        contains(
+          'version: 1\nprojects: []\nscope: []\nexclude: []\nnodes: []\n',
+        ),
+      );
       expect(
         policy.split('\n').where((line) => !line.startsWith('#')).join('\n'),
         'version: 1\nprojects: []\nscope: []\nexclude: []\nnodes: []\n',
@@ -318,7 +316,6 @@ void main() {
     }
     expect(policies, hasLength(3));
     expect(guides, hasLength(1));
-    expect(await root.list().toList(), isEmpty);
   });
 
   test(
@@ -352,21 +349,6 @@ void main() {
       expect(await root.list().toList(), isEmpty);
     },
   );
-  test('write errors identify the actual contractual target even without an OS path', () async {
-    final root = await Directory.systemTemp.createTemp('archway-fault-path-');
-    addTearDown(() => root.delete(recursive: true));
-    final result = await runZoned(
-      () => Bootstrap().initialize(root.path, 'dart', false),
-      zoneValues: {
-        #archwayBootstrapFault: (String stage, String path) {
-          if (stage == 'beforeWrite')
-            throw const FileSystemException('Injected write failure');
-        },
-      },
-    );
-    expect(result.diagnostics.first.path, 'architecture.yaml');
-  });
-
   test('directory close failure retains an operational outcome after file creation', () async {
     final root = await Directory.systemTemp.createTemp('archway-close-fail-');
     addTearDown(() => root.delete(recursive: true));
