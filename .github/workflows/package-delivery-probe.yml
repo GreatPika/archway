@@ -116,10 +116,11 @@ jobs:
             --node "$RUNNER_TEMP/archway-node/node-v24.21.0-linux-x64/bin/node" \
             --artifact-directory "$RUNNER_TEMP/archway-native-export-linux-x64" \
             2>&1 | tee build/delivery-probe/assembly.log
-      - name: Dart installed CLI and permission-child acceptance
+      - name: Dart installed CLI and resource acceptance
         run: |
           set -euo pipefail
           dart --suppress-analytics test -r expanded test/linux_unprivileged_cli_test.dart \
+            test/posix_file_limit_test.dart \
             2>&1 | tee build/delivery-probe/dart-cli-child.log
           installation="$RUNNER_TEMP/archway-dart-cli-linux-x64"
           mkdir "$installation"
@@ -127,6 +128,9 @@ jobs:
           dart --suppress-analytics run test/cli_process_smoke.dart \
             "$installation/bin/linux-x64/archway" \
             2>&1 | tee build/delivery-probe/dart-cli.log
+          dart --suppress-analytics run test/dart_resource_process_smoke.dart \
+            "$installation/bin/linux-x64/archway" "$RUNNER_TEMP/archway-dart/dart-sdk" \
+            2>&1 | tee build/delivery-probe/dart-resource.log
       - name: Retain verified native installation
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
