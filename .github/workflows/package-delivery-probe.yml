@@ -135,6 +135,9 @@ jobs:
           dart --suppress-analytics run test/dart_resource_process_smoke.dart \
             "$installation/bin/linux-x64/archway" "$RUNNER_TEMP/archway-dart/dart-sdk" \
             2>&1 | tee build/delivery-probe/dart-resource.log
+          dart --suppress-analytics run test/alias_hop_recheck_process_smoke.dart \
+            "$installation/bin/linux-x64/archway" "$RUNNER_TEMP/archway-node/node-v24.21.0-linux-x64/bin/node" \
+            2>&1 | tee build/delivery-probe/dart-alias-hop-recheck.log
       - name: Retain verified native installation
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -539,6 +542,14 @@ jobs:
           if os.name == 'nt':
               subprocess.run([sys.executable, '-m', 'unittest', 'windows_output_lock_test'],
                              env=environment, check=True)
+              # Preparation is explicit: fixture setup does not prepare this checkout.
+              subprocess.run([str(dart), '--suppress-analytics', 'pub', 'get', '--enforce-lockfile'],
+                             env=environment, check=True, timeout=180)
+              subprocess.run(['git', 'diff', '--exit-code', '--', 'pubspec.lock'], check=True)
+              subprocess.run([str(dart), '--suppress-analytics', 'test',
+                              'test/windows_console_test.dart'], env=environment, check=True, timeout=60)
+              subprocess.run([str(dart), '--suppress-analytics', 'run',
+                              'test/windows_console_capability.dart'], env=environment, check=True, timeout=180)
           PYTHON
       - name: Execute the final native archive on its actual host
         run: |

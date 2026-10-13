@@ -36,6 +36,42 @@ void main() {
   });
   tearDown(() => root.deleteSync(recursive: true));
 
+  test(
+    'observed 0751 round trips retain hostile member and mode refusal',
+    () async {
+      const name = 'bin/linux-x64/archway';
+      final files = {name: (size: 3, mode: 0x1e9, sha256: abc)};
+      expect(() => ArchiveInventory(files), throwsFormatException);
+      expect(
+        () => ArchiveInventory.observedSourceRoundTrip({
+          name: (size: 3, mode: 0x9e9, sha256: abc),
+        }),
+        throwsFormatException,
+      );
+      final inventory = ArchiveInventory.observedSourceRoundTrip(files);
+      for (final bytes in [
+        for (final path in ['other', '../escape', 'bin//linux-x64/archway'])
+          member(path, mode: 0x1e9),
+        for (final type in [TypeFlag.symlink, TypeFlag.dir])
+          member(name, mode: 0x1e9, type: type),
+        [...member(name, mode: 0x1e9).take(1024), ...member(name, mode: 0x1e9)],
+      ]) {
+        final source = File(p.join(root.path, 'invalid.tar'))
+          ..writeAsBytesSync(bytes);
+        await withArchiveInput(source, (input) async {
+          await expectLater(
+            withTarExtraction(input, inventory, (_) async {
+              fail('Invalid observed-source archive reached inspection');
+            }),
+            throwsFormatException,
+          );
+        }, temporaryParent: snapshots);
+        expect(snapshots.listSync(), isEmpty);
+      }
+      expect(File(p.join(root.path, 'escape')).existsSync(), isFalse);
+    },
+  );
+
   test('extracted files are exclusively created, never overwritten', () async {
     final source = File(p.join(root.path, 'exclusive.tar'))
       ..writeAsBytesSync([...member('first').take(1024), ...member('second')]);

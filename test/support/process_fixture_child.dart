@@ -3,6 +3,13 @@ import 'dart:convert';
 import 'dart:io';
 
 Future<void> main(List<String> arguments) async {
+  // Install the real POSIX handler before publishing the atomic ready marker.
+  final interruptible =
+      arguments.length == 2 && arguments.first == '--sigint-exit-23';
+  final signal = interruptible
+      ? ProcessSignal.sigint.watch().listen((_) => exit(23))
+      : null;
+  if (interruptible) arguments = arguments.skip(1).toList();
   if (arguments.isNotEmpty) {
     final marker = File(arguments.first);
     final pending = File('${marker.path}.pending');
@@ -16,4 +23,5 @@ Future<void> main(List<String> arguments) async {
     pending.renameSync(marker.path);
   }
   await Future<void>.delayed(const Duration(seconds: 60));
+  await signal?.cancel();
 }

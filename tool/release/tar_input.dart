@@ -27,11 +27,14 @@ Future<T> withTarExtraction<T>(
   ArchiveInput input,
   ArchiveInventory inventory,
   Future<T> Function(Directory directory) inspect, {
+  Directory? temporaryParent,
   void Function(String path, int mode) setMode = _setMode,
 }) async {
   final members = _preflight(input, inventory);
   inventory.checkMembers(members);
-  final directory = await input.file.parent.createTemp('.archway-extract-');
+  final directory = await (temporaryParent ?? input.file.parent).createTemp(
+    '.archway-extract-',
+  );
   try {
     _setMode(directory.path, 0x1c0);
     await _readTar(

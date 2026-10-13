@@ -37,6 +37,52 @@ void main() {
     });
   }
 
+  // Windows real console delivery is covered by windows_console_capability.dart.
+  if (!Platform.isWindows) {
+    test('LifecycleSupportTest.test_real_ctrl_c_reports_and_exits', () async {
+      final directory = Directory.systemTemp.createTempSync('archway-sigint-');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final marker = File('${directory.path}/ready');
+      final process = await Process.start(Platform.resolvedExecutable, [
+        '--suppress-analytics',
+        'run',
+        'test/support/process_fixture_child.dart',
+        '--sigint-exit-23',
+        marker.path,
+      ]);
+      final output = process.stdout.transform(utf8.decoder).join();
+      final errors = process.stderr.transform(utf8.decoder).join();
+      var exited = false;
+      final completion = process.exitCode.then((value) {
+        exited = true;
+        return value;
+      });
+      final result = Future.wait<Object>([completion, output, errors]);
+      try {
+        final readiness = Stopwatch()..start();
+        while (!marker.existsSync() &&
+            !exited &&
+            readiness.elapsed < const Duration(seconds: 10)) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        }
+        expect(marker.existsSync(), isTrue, reason: 'SIGINT handler not ready');
+        expect(isProcessAlive(process.pid), isTrue);
+        expect(process.kill(ProcessSignal.sigint), isTrue);
+        final values = await result.timeout(const Duration(seconds: 10));
+        expect(values[0], 23, reason: '${values[1]}\n${values[2]}');
+        expect(values[1], isEmpty);
+        expect(values[2], isEmpty);
+        expect(isProcessAlive(process.pid), isFalse);
+      } finally {
+        if (!exited) {
+          process.kill(ProcessSignal.sigkill);
+          await completion.timeout(const Duration(seconds: 5));
+        }
+        await result.timeout(const Duration(seconds: 5));
+      }
+    });
+  }
+
   test(
     'LifecycleSupportTest.test_live_probe_does_not_terminate_process',
     () async {

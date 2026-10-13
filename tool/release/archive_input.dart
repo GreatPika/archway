@@ -88,7 +88,27 @@ final class ArchiveInventory {
     int maxFileBytes = maxArchiveFileBytes,
     int maxTotalBytes = maxArchiveBytes,
     int maxEntries = maxArchiveEntries,
-  }) : files = Map.unmodifiable(files) {
+  }) : this._(files, maxFileBytes, maxTotalBytes, maxEntries, false);
+
+  /// Only for round-tripping observed trusted source permissions, not imports.
+  ArchiveInventory.observedSourceRoundTrip(
+    Map<String, ArchiveFileIdentity> files, {
+    int maxTotalBytes = maxArchiveBytes,
+  }) : this._(
+         files,
+         maxArchiveFileBytes,
+         maxTotalBytes,
+         maxArchiveEntries,
+         true,
+       );
+
+  ArchiveInventory._(
+    Map<String, ArchiveFileIdentity> files,
+    int maxFileBytes,
+    int maxTotalBytes,
+    int maxEntries,
+    bool observedSource,
+  ) : files = Map.unmodifiable(files) {
     if (maxFileBytes < 0 ||
         maxFileBytes > maxArchiveFileBytes ||
         maxTotalBytes < 0 ||
@@ -102,8 +122,11 @@ final class ArchiveInventory {
     }
     var total = 0;
     for (final entry in files.values) {
-      // Existing Unix 0644/0755 and Windows 0666/0777 producer modes only.
-      if (!{0x1a4, 0x1ed, 0x1b6, 0x1ff}.contains(entry.mode) ||
+      // Imports retain known producer modes; observed sources allow ordinary bits.
+      final modeAllowed = observedSource
+          ? entry.mode >= 0 && entry.mode <= 0x1ff
+          : {0x1a4, 0x1ed, 0x1b6, 0x1ff}.contains(entry.mode);
+      if (!modeAllowed ||
           entry.sha256.length != 64 ||
           !RegExp(r'^[0-9a-f]{64}$').hasMatch(entry.sha256)) {
         throw const FormatException('Invalid archive file identity');
