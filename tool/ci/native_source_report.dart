@@ -2,6 +2,16 @@
 const sourceTargets = {'linux-x64', 'macos-arm64', 'windows-x64'};
 
 bool expectedSkip(String target, String path, String name, String? reason) {
+  if (target == 'windows-x64' &&
+      path == 'test/windows_installer_prepare_test.dart' &&
+      reason == 'POSIX-only invalid Windows filename fixture.' &&
+      const {
+        'refuses installer member CON.txt before output',
+        'refuses installer member trailing. before output',
+        'refuses installer member trailing  before output',
+        'refuses installer member bad*name before output',
+      }.contains(name))
+    return true;
   final entry = (path, name);
   // These POSIX staging fixtures remain visible on Windows without running
   // their chmod/umask setup. No missing dependency or empty suite qualifies.
@@ -28,6 +38,22 @@ bool expectedSkip(String target, String path, String name, String? reason) {
             'native build refuses actual non-macOS host before any mutation' &&
         reason == 'Non-macOS host control')
       return true;
+  }
+
+  if (path == 'test/native_macos_installer_probe_test.dart') {
+    if (target == 'windows-x64' &&
+        reason == 'POSIX macOS installer lifecycle fixture' &&
+        const {
+          'synthetic lifecycle builds old then final, upgrades and removes owned files',
+          'filesystem refusals include dangling links and precede output or commands',
+          'receipt query failures never permit compiler or installation commands',
+          'verified fallback cleans failed inspect and preserves primary failure',
+          'mixed root preserves unrelated bytes and only removes exact marker',
+          'temporary cleanup cannot replace an active primary failure',
+        }.contains(name)) return true;
+    if (target == 'macos-arm64' &&
+        name == 'native lifecycle refuses wrong host before output or commands' &&
+        reason == 'Non-native macOS host control') return true;
   }
 
   const windows = {
@@ -175,7 +201,36 @@ bool expectedSkip(String target, String path, String name, String? reason) {
       }.contains(name)) {
     return true;
   }
+  if (target != 'linux-x64' &&
+      path == 'test/native_linux_installer_probe_test.dart' &&
+      reason == 'Requires Linux synthetic installer orchestration.' &&
+      {
+        'compiler discovery skips inert PATH files and rejects no executable',
+        'synthetic upgrade inspects final bytes, preserves foreign files and receipts',
+        'primary inspection failure survives cleanup failure with durable logs',
+        'fixture rejects root aliases and foreign destination aliases',
+        'evidence parent alias is rejected before writing inside input',
+        'fixture CLI rejects an unmarked root without changing it',
+      }.contains(name)) {
+    return true;
+  }
   const posixOnly = {
+    (
+      'test/installer_command_recorder_test.dart',
+      'retains installer records and exact original log names',
+    ): 'POSIX installer command capture.',
+    (
+      'test/installer_command_recorder_test.dart',
+      'records nonzero before throwing and accepts only exact expected exit',
+    ): 'POSIX installer command capture.',
+    (
+      'test/installer_command_recorder_test.dart',
+      'timeout retains live partial streams without invented exit',
+    ): 'POSIX installer command capture.',
+    (
+      'test/installer_command_recorder_test.dart',
+      'spawn failure retains proof and exclusive evidence never becomes history',
+    ): 'POSIX installer command capture.',
     (
       'test/installation_directory_test.dart',
       'compares physical modes only when requested',

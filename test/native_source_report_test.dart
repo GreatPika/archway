@@ -33,6 +33,45 @@ List<Map<String, dynamic>> events(
   {'type': 'done', 'success': true},
 ];
 void main() {
+  test(
+    'installer filename skips bind only unrepresentable Windows fixtures',
+    () {
+      const path = 'test/windows_installer_prepare_test.dart';
+      const reason = 'POSIX-only invalid Windows filename fixture.';
+      for (final member in ['CON.txt', 'trailing.', 'trailing ', 'bad*name']) {
+        final name = 'refuses installer member $member before output';
+        for (final target in sourceTargets) {
+          final report = () => summarizeTests(
+            events(path, name: name, skipped: true, reason: reason),
+            {path},
+            target,
+          );
+          if (target == 'windows-x64') {
+            expect((report()['skipped'] as List).single['reason'], reason);
+          } else {
+            expect(report, throwsFormatException);
+          }
+          for (final wrong in [null, '', '$reason ', 'missing permission']) {
+            expect(expectedSkip(target, path, name, wrong), isFalse);
+          }
+          expect(expectedSkip(target, '$path.other', name, reason), isFalse);
+          expect(expectedSkip(target, path, '$name changed', reason), isFalse);
+        }
+      }
+      for (final name in [
+        'refuses installer member UNINSdata/file before output',
+        'refuses installer member .ARCHWAY-state/file before output',
+        'refuses installer member bad{brace} before output',
+        'refuses installer member bad}brace before output',
+        'refuses case directory before output',
+        'refuses linked input files and payload root',
+      ]) {
+        for (final target in sourceTargets) {
+          expect(expectedSkip(target, path, name, reason), isFalse);
+        }
+      }
+    },
+  );
   test('Linux installer guards bind all exact cases, hosts and reasons', () {
     const path = 'test/linux_installer_builder_test.dart';
     const reason = 'Requires Linux dpkg archive packaging.';
@@ -287,7 +326,45 @@ void main() {
   test(
     'new platform guards require exact file name reason and inapplicable host',
     () {
-      const cases = [
+      final cases = [
+        for (final name in [
+          'compiler discovery skips inert PATH files and rejects no executable',
+          'synthetic upgrade inspects final bytes, preserves foreign files and receipts',
+          'primary inspection failure survives cleanup failure with durable logs',
+          'fixture rejects root aliases and foreign destination aliases',
+          'evidence parent alias is rejected before writing inside input',
+          'fixture CLI rejects an unmarked root without changing it',
+        ])
+          (
+            'test/native_linux_installer_probe_test.dart',
+            name,
+            'Requires Linux synthetic installer orchestration.',
+            {'macos-arm64', 'windows-x64'},
+          ),
+        (
+          'test/installer_command_recorder_test.dart',
+          'retains installer records and exact original log names',
+          'POSIX installer command capture.',
+          {'windows-x64'},
+        ),
+        (
+          'test/installer_command_recorder_test.dart',
+          'records nonzero before throwing and accepts only exact expected exit',
+          'POSIX installer command capture.',
+          {'windows-x64'},
+        ),
+        (
+          'test/installer_command_recorder_test.dart',
+          'timeout retains live partial streams without invented exit',
+          'POSIX installer command capture.',
+          {'windows-x64'},
+        ),
+        (
+          'test/installer_command_recorder_test.dart',
+          'spawn failure retains proof and exclusive evidence never becomes history',
+          'POSIX installer command capture.',
+          {'windows-x64'},
+        ),
         (
           'test/preparation_process_test.dart',
           'stderr open failure closes the already opened stdout handle',

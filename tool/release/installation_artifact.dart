@@ -169,7 +169,7 @@ Future<(ArchiveInventory, Map<String, File>)> _inventory(
     if (type == FileSystemEntityType.directory &&
         entry is Directory &&
         directories.contains(name)) {
-      await for (final child in entry.list(followLinks: false)) {
+      await for (final child in _directoryEntries(entry)) {
         await visit(child);
       }
     } else if (type == FileSystemEntityType.file &&
@@ -203,6 +203,51 @@ Future<(ArchiveInventory, Map<String, File>)> _inventory(
     ArchiveInventory.observedSourceRoundTrip(sorted, maxTotalBytes: limit),
     sources,
   );
+}
+
+// As at the corpus enumeration boundary, Dart's Windows directory lister needs
+// an extended path. Keep that spelling inside listing only; every child still
+// goes through the original-path reparse, canonical identity and type guards.
+Stream<FileSystemEntity> _directoryEntries(Directory directory) async* {
+  final native = directory.path;
+  // Leave the existing directory/listing seam untouched when no long-path
+  // spelling is needed. The Win32 search adds a separator, wildcard and NUL.
+  if (!Platform.isWindows || directory.absolute.path.length + 3 <= 260) {
+    yield* directory.list(followLinks: false);
+    return;
+  }
+  var listing = native;
+  if (Platform.isWindows) {
+    final path = directory.absolute.path.replaceAll('/', r'\');
+    final root = p.windows.rootPrefix(path);
+    final drive = RegExp(r'^[A-Za-z]:\\$').hasMatch(root);
+    final unc = RegExp(r'^\\\\[^\\?\.][^\\]*\\[^\\]+\\?$').hasMatch(root);
+    final parts = path.substring(root.length).split(r'\');
+    if ((drive || unc) &&
+        parts.every(
+          (part) =>
+              part.isNotEmpty && !part.endsWith('.') && !part.endsWith(' '),
+        )) {
+      listing = drive ? '\\\\?\\$path' : '\\\\?\\UNC\\${path.substring(2)}';
+    }
+  }
+  try {
+    await for (final entry in Directory(listing).list(followLinks: false)) {
+      if (listing == native) {
+        yield entry;
+      } else {
+        final path = p.join(native, p.basename(entry.path));
+        yield switch (entry) {
+          Directory() => Directory(path),
+          Link() => Link(path),
+          _ => File(path),
+        };
+      }
+    }
+  } on FileSystemException catch (error) {
+    if (listing == native) rethrow;
+    throw FileSystemException(error.message, native, error.osError);
+  }
 }
 
 final _windowsAttributes = Platform.isWindows

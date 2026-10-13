@@ -153,6 +153,7 @@ Future<Map<String, Object?>> executeSuite(
   Map<String, String> environment,
   Directory output, {
   Duration timeout = suiteTimeout,
+  void Function(Map<String, Object?> proof)? onProof,
 }) async {
   if (!RegExp(r'^[a-z][a-z0-9_-]*$').hasMatch(name) ||
       command.isEmpty ||
@@ -214,6 +215,7 @@ Future<Map<String, Object?>> executeSuite(
     '${const JsonEncoder.withIndent('  ').convert(proof)}\n',
     flush: true,
   );
+  onProof?.call(proof);
   if (failure != null) Error.throwWithStackTrace(failure, stack!);
   if (code != 0) throw SuiteExitFailure(proof);
   return proof;

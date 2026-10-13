@@ -193,7 +193,6 @@ void main() {
         throwsFormatException,
       );
     },
-    skip: Platform.isWindows ? 'Symlink permission differs on Windows' : false,
   );
   for (final corruption in [
     'fixture hash',

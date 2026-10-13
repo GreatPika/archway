@@ -32,6 +32,18 @@ void main() {
   });
   tearDown(() => base.deleteSync(recursive: true));
 
+  Directory moveDeep() {
+    final deep = Directory(
+      p.joinAll([
+        base.path,
+        for (var i = 0; i < 7; i++) 'long installation segment $i café',
+      ]),
+    )..createSync(recursive: true);
+    final moved = root.renameSync(p.join(deep.path, 'installation'));
+    expect(moved.path.length, greaterThan(260));
+    return moved;
+  }
+
   test(
     'accepts exactly the pinned files and their parent directories',
     () async {
@@ -42,15 +54,44 @@ void main() {
   test(
     'accepts a canonical installation beyond the Windows legacy path limit',
     () async {
-      final deep = Directory(
-        p.joinAll([
-          base.path,
-          for (var i = 0; i < 7; i++) 'long installation segment $i café',
-        ]),
-      )..createSync(recursive: true);
-      final moved = root.renameSync(p.join(deep.path, 'installation'));
-      expect(moved.path.length, greaterThan(260));
+      await verifyInstallationDirectory(
+        moveDeep(),
+        expected,
+        compareModes: false,
+      );
+    },
+  );
+  test(
+    'long traversal retains byte checks and refuses aliased descendants',
+    () async {
+      final moved = moveDeep();
+      final leaf = File(p.joinAll([moved.path, ..._name.split('/')]));
+      expect(leaf.readAsStringSync(), 'hello\n');
       await verifyInstallationDirectory(moved, expected, compareModes: false);
+      leaf.writeAsStringSync('world\n');
+      await expectLater(
+        verifyInstallationDirectory(moved, expected, compareModes: false),
+        throwsFormatException,
+      );
+      leaf.writeAsStringSync('hello\n');
+      final target = leaf.renameSync(p.join(base.path, 'outside target'));
+      if (Platform.isWindows) {
+        final name = leaf.path.startsWith(r'\\')
+            ? '\\\\?\\UNC\\${leaf.path.substring(2)}'
+            : '\\\\?\\${leaf.path}';
+        createWindowsRawLink(name, target.path);
+      } else {
+        Link(leaf.path).createSync(target.path);
+      }
+      expect(
+        FileSystemEntity.typeSync(leaf.path, followLinks: false),
+        FileSystemEntityType.link,
+      );
+      await expectLater(
+        verifyInstallationDirectory(moved, expected, compareModes: false),
+        throwsFormatException,
+      );
+      expect(target.readAsStringSync(), 'hello\n');
     },
   );
   test('rejects changed bytes even when the size is unchanged', () async {

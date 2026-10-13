@@ -8,6 +8,9 @@ import 'package:test/test.dart';
 
 import '../tool/installers/windows/casefold.dart';
 
+String fixtureMemberPath(String root, String member, {p.Context? paths}) =>
+    (paths ?? p.context).joinAll([root, ...member.split('/')]);
+
 Future<void> prepareWindowsInstaller(
   Directory payload,
   Directory output,
@@ -21,6 +24,27 @@ Future<void> prepareWindowsInstaller(
 }
 
 void main() {
+  test(
+    'fixture member paths use native separators for nested inventory keys',
+    () {
+      expect(
+        fixtureMemberPath(
+          r'C:\payload café',
+          'bin/windows-x64/archway.exe',
+          paths: p.Context(style: p.Style.windows),
+        ),
+        r'C:\payload café\bin\windows-x64\archway.exe',
+      );
+      expect(
+        fixtureMemberPath(
+          '/payload café',
+          'bin/windows-x64/archway.exe',
+          paths: p.Context(style: p.Style.posix),
+        ),
+        '/payload café/bin/windows-x64/archway.exe',
+      );
+    },
+  );
   test('pinned full-fold expands and preserves compatibility scalars', () {
     expect(installerCaseFold('Straße ﬀ İ ς'), 'strasse ff i\u0307 σ');
     expect(installerCaseFold('Ꭰꭰ'), 'ᎠᎠ');
@@ -45,7 +69,7 @@ void main() {
   ]) {
     final files = <String, Object?>{};
     for (final name in names) {
-      final file = File(p.join(payload.path, name));
+      final file = File(fixtureMemberPath(payload.path, name));
       file.parent.createSync(recursive: true);
       file.writeAsStringSync('fixture');
       files[name] = {
@@ -85,7 +109,7 @@ void main() {
       names
           .map(
             (name) =>
-                '${sha256.convert(before[p.join(payload.path, name)]!)}\t${name.replaceAll('/', r'\')}$newline',
+                '${sha256.convert(before[fixtureMemberPath(payload.path, name)]!)}\t${name.replaceAll('/', r'\')}$newline',
           )
           .join(),
     );
@@ -95,7 +119,7 @@ void main() {
         final directory = name.contains('/')
             ? r'{app}\bin\windows-x64'
             : '{app}';
-        return 'Source: "${p.join(payload.path, name)}"; DestDir: "$directory"; Flags: ignoreversion$newline';
+        return 'Source: "${fixtureMemberPath(payload.path, name)}"; DestDir: "$directory"; Flags: ignoreversion$newline';
       }).join(),
     );
     for (final name in ['archway.iss', 'lifecycle.iss']) {
@@ -169,7 +193,7 @@ void main() {
         throwsFormatException,
       );
       expect(Directory(p.join(payload.path, 'new')).existsSync(), isFalse);
-      if (!Platform.isWindows) {
+      {
         final alias = Link(p.join(root.path, 'alias'))
           ..createSync(payload.path);
         await expectLater(
@@ -212,7 +236,7 @@ void main() {
     test(
       'refuses installer member $member before output',
       () async {
-        // Windows itself refuses some of these names; Linux exercises converter policy.
+        // POSIX can create the invalid Windows names used by these controls.
         fixture(['bin/windows-x64/archway.exe', member]);
         await expectLater(
           prepareWindowsInstaller(payload, output),
@@ -220,8 +244,10 @@ void main() {
         );
         expect(output.existsSync(), isFalse);
       },
-      skip: Platform.isWindows
-          ? 'Real malformed-filename fixtures require POSIX; native Windows remains a separate gate.'
+      skip:
+          Platform.isWindows &&
+              {'CON.txt', 'trailing.', 'trailing ', 'bad*name'}.contains(member)
+          ? 'POSIX-only invalid Windows filename fixture.'
           : false,
     );
   }
@@ -236,69 +262,57 @@ void main() {
     'empty directory',
     'case directory',
   ]) {
-    test(
-      'refuses $variant before output',
-      () async {
-        fixture(
-          variant == 'missing command'
-              ? ['LICENSE']
-              : variant == 'case directory'
-              ? ['bin/windows-x64/archway.exe', 'Assets/a', 'assets/b']
-              : ['LICENSE', 'bin/windows-x64/archway.exe'],
-        );
-        final file = File(p.join(payload.path, 'manifest.json'));
-        final manifest =
-            jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
-        if (variant == 'target') manifest['target'] = 'linux-x64';
-        if (variant == 'mode missing')
-          (manifest['files']['LICENSE'] as Map).remove('mode');
-        if (variant == 'entry extra')
-          manifest['files']['LICENSE']['other'] = true;
-        file.writeAsStringSync(jsonEncode(manifest));
-        if (variant == 'bytes')
-          File(p.join(payload.path, 'LICENSE')).writeAsStringSync('changed');
-        if (variant == 'extra')
-          File(p.join(payload.path, 'extra')).writeAsStringSync('extra');
-        if (variant == 'missing')
-          File(p.join(payload.path, 'LICENSE')).deleteSync();
-        if (variant == 'empty directory')
-          Directory(p.join(payload.path, 'empty')).createSync();
-        await expectLater(
-          prepareWindowsInstaller(payload, output),
-          throwsFormatException,
-        );
-        expect(output.existsSync(), isFalse);
-      },
-      skip: variant == 'case directory' && Platform.isWindows
-          ? 'Case-sensitive source filesystem control.'
-          : false,
-    );
-  }
-  test(
-    'refuses linked input files and payload root',
-    () async {
-      fixture();
-      final original = File(p.join(payload.path, 'LICENSE'));
-      final elsewhere = original.renameSync(p.join(root.path, 'license'));
-      Link(original.path).createSync(elsewhere.path);
+    test('refuses $variant before output', () async {
+      fixture(
+        variant == 'missing command'
+            ? ['LICENSE']
+            : variant == 'case directory'
+            ? ['bin/windows-x64/archway.exe', 'Assets/a', 'assets/b']
+            : ['LICENSE', 'bin/windows-x64/archway.exe'],
+      );
+      final file = File(p.join(payload.path, 'manifest.json'));
+      final manifest =
+          jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+      if (variant == 'target') manifest['target'] = 'linux-x64';
+      if (variant == 'mode missing')
+        (manifest['files']['LICENSE'] as Map).remove('mode');
+      if (variant == 'entry extra')
+        manifest['files']['LICENSE']['other'] = true;
+      file.writeAsStringSync(jsonEncode(manifest));
+      if (variant == 'bytes')
+        File(p.join(payload.path, 'LICENSE')).writeAsStringSync('changed');
+      if (variant == 'extra')
+        File(p.join(payload.path, 'extra')).writeAsStringSync('extra');
+      if (variant == 'missing')
+        File(p.join(payload.path, 'LICENSE')).deleteSync();
+      if (variant == 'empty directory')
+        Directory(p.join(payload.path, 'empty')).createSync();
       await expectLater(
         prepareWindowsInstaller(payload, output),
         throwsFormatException,
       );
       expect(output.existsSync(), isFalse);
-      Link(original.path).deleteSync();
-      elsewhere.renameSync(original.path);
-      final alias = Link(p.join(root.path, 'alias'))..createSync(payload.path);
-      await expectLater(
-        prepareWindowsInstaller(Directory(alias.path), output),
-        throwsFormatException,
-      );
-      expect(output.existsSync(), isFalse);
-    },
-    skip: Platform.isWindows
-        ? 'Link privilege not assumed; native reparse controls belong to directory owner.'
-        : false,
-  );
+    });
+  }
+  test('refuses linked input files and payload root', () async {
+    fixture();
+    final original = File(p.join(payload.path, 'LICENSE'));
+    final elsewhere = original.renameSync(p.join(root.path, 'license'));
+    Link(original.path).createSync(elsewhere.path);
+    await expectLater(
+      prepareWindowsInstaller(payload, output),
+      throwsFormatException,
+    );
+    expect(output.existsSync(), isFalse);
+    Link(original.path).deleteSync();
+    elsewhere.renameSync(original.path);
+    final alias = Link(p.join(root.path, 'alias'))..createSync(payload.path);
+    await expectLater(
+      prepareWindowsInstaller(Directory(alias.path), output),
+      throwsFormatException,
+    );
+    expect(output.existsSync(), isFalse);
+  });
   test('preserves Python full-fold collision refusal for files and directory prefixes', () async {
     fixture(['bin/windows-x64/archway.exe', 'Straße/a', 'STRASSE/b']);
     await expectLater(

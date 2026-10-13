@@ -11,6 +11,63 @@ import '../tool/ci/native_acceptance.dart';
 import '../tool/ci/native_acceptance_capture.dart';
 
 void main() {
+  test(
+    'proof observer runs after durable receipt before original exit failure',
+    () async {
+      final output = Directory.systemTemp.createTempSync(
+        'acceptance-observer-',
+      );
+      addTearDown(() => output.deleteSync(recursive: true));
+      final child = File(p.join(output.path, 'child.dart'))
+        ..writeAsStringSync("import 'dart:io'; void main() { exit(7); }");
+      Map<String, Object?>? observed;
+      await expectLater(
+        executeSuite(
+          'observed',
+          [Platform.resolvedExecutable, child.path],
+          Directory.current.path,
+          Platform.environment,
+          output,
+          onProof: (proof) {
+            expect(
+              jsonDecode(
+                File(p.join(output.path, 'observed.json')).readAsStringSync(),
+              ),
+              proof,
+            );
+            observed = proof;
+          },
+        ),
+        throwsA(
+          isA<SuiteExitFailure>().having(
+            (error) => identical(error.proof, observed),
+            'original proof',
+            true,
+          ),
+        ),
+      );
+      expect(observed?['exit_code'], 7);
+      observed = null;
+      await expectLater(
+        executeSuite(
+          'observed',
+          [child.path],
+          Directory.current.path,
+          Platform.environment,
+          output,
+          onProof: (proof) {
+            observed = proof;
+          },
+        ),
+        throwsA(isA<FileSystemException>()),
+      );
+      expect(
+        observed,
+        isNull,
+        reason: 'Prior evidence is never observed as new proof',
+      );
+    },
+  );
   test('explicit aggregate budget is retained in the original receipt', () async {
     final temp = Directory.systemTemp.createTempSync('acceptance-budget-');
     addTearDown(() => temp.deleteSync(recursive: true));
