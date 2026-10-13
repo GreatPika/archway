@@ -235,7 +235,7 @@ class ReleaseBundles(unittest.TestCase):
         self.assertIn('Pub manifest differs from reviewed source/audited assets', rejected.stderr)
         license_path.write_bytes(original_license)
         manifest.write_bytes(original_manifest)
-        for relative in ('verify_contract.py', 'fixtures/policy-empty.json'):
+        for relative in ('validate_contract.dart', 'fixtures/policy-empty.json'):
             with self.subTest(relative=relative):
                 path = stage / 'schemas' / relative
                 path.parent.mkdir(parents=True, exist_ok=True)

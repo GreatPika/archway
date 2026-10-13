@@ -66,7 +66,7 @@ Public coverage requires file path, assignment status, all discovered project/co
 
 ## Verify this decision
 
-fixtures.json contains 26 adversarial decision fixtures; verify.py checks the pure cardinality/discovery function and corpus-preservation invariant. This is an executable reference for the assignment model, not Dart analyzer or TypeScript Compiler API. Release acceptance also requires real fixtures on pinned versions, packages, and operating systems.
+fixtures.json contains 26 adversarial decision fixtures. From the repository root, `dart test test/contracts/assignment_test.dart` checks assignment_reference.dart's pure cardinality/discovery function, corpus-preservation invariant, and context descriptor encoding. This is an executable reference for the assignment model, not Dart analyzer or TypeScript Compiler API. Release acceptance also requires real fixtures on pinned versions, packages, and operating systems.
 
 ### Private TS helper: single-phase operation
 

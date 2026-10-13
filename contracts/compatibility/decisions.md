@@ -57,7 +57,7 @@ Per TS project: 120 monotonic seconds from spawn to exit+EOF; request ≤8 MiB U
 
 ## Implementation acceptance
 
-Release acceptance requires real fixtures on all three target OS/architecture combinations and confirmation that incomplete analysis cannot report success and that inspection performs neither network access nor project-code execution. `adversarial-cases.json` defines expected-behavior scenarios; `test_lexical_reference.py` tests a finite lexical model, not the host filesystem.
+Release acceptance requires real fixtures on all three target OS/architecture combinations and confirmation that incomplete analysis cannot report success and that inspection performs neither network access nor project-code execution. `adversarial-cases.json` defines expected-behavior scenarios; `lexical_reference.dart` defines a finite lexical model, not the host filesystem.
 
 Compiler self-check: before creating Program, the helper compares the actually loaded ts.version with the shipped constant 5.9.3. A mismatch returns a valid failed response with a diagnostic in tool_errors and no usable compiler facts. The private schema is unchanged; public tool_versions.typescript remains null if the actual version failed verification. The manifest version alone does not confirm the loaded compiler.
 

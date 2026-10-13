@@ -25,7 +25,19 @@ typedef _CreateFile = Pointer<Void> Function(
   Pointer<Void>,
 );
 
-final _kernel = Platform.isWindows ? DynamicLibrary.open('kernel32.dll') : null;
+late final int Function() _lastError;
+final _kernel = _loadKernel();
+
+DynamicLibrary? _loadKernel() {
+  if (!Platform.isWindows) return null;
+  final kernel = DynamicLibrary.open('kernel32.dll');
+  // Resolve before any fallible call: symbol lookup can reset thread last-error.
+  _lastError = kernel.lookupFunction<Uint32 Function(), int Function()>(
+    'GetLastError',
+  );
+  return kernel;
+}
+
 final _createFile = _kernel?.lookupFunction<_CreateFileNative, _CreateFile>(
   'CreateFileW',
 );
@@ -34,14 +46,11 @@ final _closeHandle = _kernel
       Int32 Function(Pointer<Void>),
       int Function(Pointer<Void>)
     >('CloseHandle');
-final _lastError = _kernel?.lookupFunction<Uint32 Function(), int Function()>(
-  'GetLastError',
-);
 
 Never _windowsError(String operation, [int? code]) => throw FileSystemException(
   operation,
   '',
-  OSError('Win32', code ?? _lastError!()),
+  OSError('Win32', code ?? _lastError()),
 );
 
 void _close(Pointer<Void> handle) {
@@ -172,7 +181,7 @@ final class MalformedNativeFile {
     final path = _path.toNativeUtf16();
     try {
       if (attributes(path) != 0xffffffff) return true;
-      final error = _lastError!();
+      final error = _lastError();
       if (error == 2 || error == 3) return false;
       _windowsError('GetFileAttributesW malformed filename', error);
     } finally {

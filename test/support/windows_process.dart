@@ -30,10 +30,19 @@ String windowsCommandLine(List<String> arguments) {
       .join(' ');
 }
 
-final _kernel = Platform.isWindows ? DynamicLibrary.open('kernel32.dll') : null;
-final _error = _kernel?.lookupFunction<Uint32 Function(), int Function()>(
-  'GetLastError',
-);
+late final int Function() _error;
+final _kernel = _loadKernel();
+
+DynamicLibrary? _loadKernel() {
+  if (!Platform.isWindows) return null;
+  final kernel = DynamicLibrary.open('kernel32.dll');
+  // Resolve before any fallible call: symbol lookup can reset thread last-error.
+  _error = kernel.lookupFunction<Uint32 Function(), int Function()>(
+    'GetLastError',
+  );
+  return kernel;
+}
+
 final _close = _kernel
     ?.lookupFunction<
       Int32 Function(Pointer<Void>),
@@ -87,7 +96,7 @@ final _create = _kernel
       )
     >('CreateProcessW');
 
-Never _fail(String operation) => throw OSError(operation, _error!());
+Never _fail(String operation) => throw OSError(operation, _error());
 void _closeHandle(Pointer<Void> handle) {
   if (_close!(handle) == 0) _fail('CloseHandle');
 }
@@ -250,7 +259,7 @@ final class WindowsSuspendedProcess {
       if (exitCode == null) {
         _exitCode = confirmWindowsProcessTermination(
           terminate: () => _terminate!(process, 1) == 0
-              ? OSError('TerminateProcess', _error!())
+              ? OSError('TerminateProcess', _error())
               : null,
           wait: (milliseconds) {
             final state = _wait!(process, milliseconds);

@@ -11,7 +11,19 @@ final _kill = _libc
     ?.lookupFunction<Int32 Function(Int32, Int32), int Function(int, int)>(
       'kill',
     );
-final _kernel = Platform.isWindows ? DynamicLibrary.open('kernel32.dll') : null;
+late final int Function() _error;
+final _kernel = _loadKernel();
+
+DynamicLibrary? _loadKernel() {
+  if (!Platform.isWindows) return null;
+  final kernel = DynamicLibrary.open('kernel32.dll');
+  // Resolve before any fallible call: symbol lookup can reset thread last-error.
+  _error = kernel.lookupFunction<Uint32 Function(), int Function()>(
+    'GetLastError',
+  );
+  return kernel;
+}
+
 final _open = _kernel
     ?.lookupFunction<
       Pointer<Void> Function(Uint32, Int32, Uint32),
@@ -32,9 +44,6 @@ final _close = _kernel
       Int32 Function(Pointer<Void>),
       int Function(Pointer<Void>)
     >('CloseHandle');
-final _error = _kernel?.lookupFunction<Uint32 Function(), int Function()>(
-  'GetLastError',
-);
 
 void _validatePid(int pid) {
   // A fixture PID is never a POSIX process-group selector.
@@ -45,21 +54,21 @@ void _validatePid(int pid) {
 Pointer<Void>? _processHandle(int pid, int access) {
   final handle = _open!(access, 0, pid);
   if (handle != nullptr) return handle;
-  final code = _error!();
+  final code = _error();
   if (code == 87) return null; // ERROR_INVALID_PARAMETER: no such PID.
   throw OSError('OpenProcess', code);
 }
 
 int _state(Pointer<Void> handle, int milliseconds) {
   final state = _wait!(handle, milliseconds);
-  if (state == 0xffffffff) throw OSError('WaitForSingleObject', _error!());
+  if (state == 0xffffffff) throw OSError('WaitForSingleObject', _error());
   if (state != 0 && state != 258)
     throw StateError('Unexpected process wait: $state');
   return state;
 }
 
 void _closeOwned(Pointer<Void> handle) {
-  if (_close!(handle) == 0) throw OSError('CloseHandle', _error!());
+  if (_close!(handle) == 0) throw OSError('CloseHandle', _error());
 }
 
 /// POSIX signal zero; Windows uses only SYNCHRONIZE, never a kill API.
@@ -95,7 +104,7 @@ void terminateProcessId(int pid) {
   try {
     if (_state(handle, 0) == 258) {
       if (_terminate!(handle, 1) == 0)
-        throw OSError('TerminateProcess', _error!());
+        throw OSError('TerminateProcess', _error());
       if (_state(handle, 5000) != 0) {
         throw StateError('Fixture process $pid did not terminate');
       }
