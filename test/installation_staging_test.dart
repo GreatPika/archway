@@ -85,7 +85,7 @@ void main() {
 
   test('preserves raw, dangling and cyclic symbolic-link targets', () {
     final binary = fixture('bin/linux-x64/archway');
-    final assets = Directory(p.join(root.path, 'source/assets'));
+    final assets = Directory(p.join(root.path, 'source', 'assets'));
     final separator = Platform.pathSeparator;
     final targets = {
       'relative':
@@ -190,7 +190,7 @@ void main() {
         ..createSync();
       final original = File(p.join(outside.path, 'value'))
         ..writeAsStringSync('kept');
-      final junction = p.join(root.path, 'source/assets/junction');
+      final junction = p.join(root.path, 'source', 'assets', 'junction');
       final result = await _run(Platform.environment['ComSpec']!, [
         '/d',
         '/c',

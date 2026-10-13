@@ -75,8 +75,11 @@ void _closeOwned(Pointer<Void> handle) {
 bool isProcessAlive(int pid) {
   _validatePid(pid);
   if (!Platform.isWindows) {
+    // Resolve and obtain this thread's errno before the fallible native call.
+    // Lazy symbol lookup can overwrite the error reported by kill.
+    final errno = _errno!();
     if (_kill!(pid, 0) == 0) return true;
-    final code = _errno!().value;
+    final code = errno.value;
     if (code == 3) return false; // ESRCH on supported Linux/macOS hosts.
     throw OSError('kill(pid, 0)', code);
   }
@@ -94,8 +97,9 @@ bool isProcessAlive(int pid) {
 void terminateProcessId(int pid) {
   _validatePid(pid);
   if (!Platform.isWindows) {
+    final errno = _errno!();
     if (_kill!(pid, 9) == 0) return;
-    final code = _errno!().value;
+    final code = errno.value;
     if (code == 3) return;
     throw OSError('kill(pid, SIGKILL)', code);
   }
