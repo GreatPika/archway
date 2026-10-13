@@ -186,77 +186,99 @@ void main() {
     () {
       const cases = [
         (
+          'test/preparation_process_test.dart',
+          'stderr open failure closes the already opened stdout handle',
+          'Linux descriptor ownership observation',
+          {'macos-arm64', 'windows-x64'},
+        ),
+        (
+          'test/prepare_native_acceptance_test.dart',
+          'Git discovery skips a nonexecutable earlier PATH entry',
+          'POSIX executable permission regression',
+          {'windows-x64'},
+        ),
+        (
           'test/windows_assembly_assertions_test.dart',
           'Windows assembly guards reject execution on a non-Windows host',
           'Requires a non-Windows host.',
-          false,
+          {'windows-x64'},
         ),
         (
           'test/check_inventory_fixture_test.dart',
           'native junction launch preserves spaces, Unicode and apostrophes',
           'Requires native Windows junction creation.',
-          true,
+          {'linux-x64', 'macos-arm64'},
         ),
         (
           'test/flutter_sdk_copy_test.dart',
           'Windows deep source and destination remain real isolated hardlinks',
           'Requires native Windows hardlinks.',
-          true,
+          {'linux-x64', 'macos-arm64'},
         ),
         (
           'test/native_fixture_capability_test.dart',
           'WindowsOutputLockTest.test_real_sharing_conflict_prevents_truncation_and_releases',
           'Win32 sharing-mode fixture is Windows-specific',
-          true,
+          {'linux-x64', 'macos-arm64'},
         ),
         (
           'test/native_acceptance_windows_capture_test.dart',
           'Windows pipe sinks preserve default buffering and allow no-buffer capture',
           'Native Windows pipe control.',
-          true,
+          {'linux-x64', 'macos-arm64'},
+        ),
+        (
+          'test/installation_identity_test.dart',
+          'source identity times out and reaps its direct Git child',
+          'POSIX direct-child timeout fixture',
+          {'windows-x64'},
+        ),
+        (
+          'test/installation_identity_test.dart',
+          'source identity preserves selected PATH and replacement environment',
+          'POSIX controlled Git fixture',
+          {'windows-x64'},
         ),
         (
           'test/installation_identity_test.dart',
           'runtime identity uses assembler cwd for relative PATH',
           'Unix assembler PATH/cwd semantics',
-          false,
+          {'windows-x64'},
         ),
         (
           'test/installation_identity_test.dart',
           'runtime identity combines streams and rejects nonzero exits',
           'POSIX runtime script fixture',
-          false,
+          {'windows-x64'},
         ),
         (
           'test/installation_identity_test.dart',
           'runtime identity normalizes newlines in each stream before joining',
           'POSIX runtime script fixture',
-          false,
+          {'windows-x64'},
         ),
         (
           'test/installation_identity_test.dart',
           'runtime identity times out and reaps its direct child',
           'POSIX direct-child timeout fixture',
-          false,
+          {'windows-x64'},
         ),
         (
           'test/catalogue_export_test.dart',
           'overwrite rejects a FIFO with a live reader before sending content',
           'POSIX FIFO entries are unavailable on Windows; Win32 sharing faults have separate process coverage.',
-          false,
+          {'windows-x64'},
         ),
         (
           'test/catalogue_export_test.dart',
           'live FIFO reader observes bytes written after readiness',
           'POSIX FIFO entries are unavailable on Windows; Win32 sharing faults have separate process coverage.',
-          false,
+          {'windows-x64'},
         ),
       ];
-      for (final (path, name, reason, windowsOnly) in cases) {
+      for (final (path, name, reason, allowedTargets) in cases) {
         for (final target in sourceTargets) {
-          final accepts = windowsOnly
-              ? target != 'windows-x64'
-              : target == 'windows-x64';
+          final accepts = allowedTargets.contains(target);
           final call = () => summarizeTests(
             events(path, name: name, skipped: true, reason: reason),
             {path},

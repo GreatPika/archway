@@ -9,7 +9,26 @@ import 'support/check_inventory_fixture.dart';
 import 'support/native_process_support.dart';
 import 'support/windows_process.dart';
 
+Matcher containsInventoryEntry(String name, String kind) =>
+    contains(equals([name, kind]));
+
 void main() {
+  test('inventory entry matcher compares both nested row values', () {
+    final matcher = containsInventoryEntry('junction', 'symlink');
+    expect([
+      ['junction', 'symlink'],
+    ], matcher);
+    expect([
+      ['junction', 'directory'],
+    ], isNot(matcher));
+    expect([
+      ['other', 'symlink'],
+    ], isNot(matcher));
+    expect([
+      ['symlink', 'junction'],
+    ], isNot(matcher));
+  });
+
   test('junction launch encodes PowerShell literals as UTF-16LE argv', () {
     final arguments = windowsInventoryJunctionArguments(
       r"C:\fixture café 𐀀\owner's alias",
@@ -136,7 +155,7 @@ void main() {
           expect(windowsReparseMetadata(junction).tag, 0xa0000003);
           expect(
             await inventoryEntries(root.path, node),
-            contains(['junction', 'symlink']),
+            containsInventoryEntry('junction', 'symlink'),
           );
           Link(junction).deleteSync();
         }

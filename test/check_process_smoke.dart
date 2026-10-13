@@ -23,6 +23,11 @@ String fileUri(String path) => File(path).uri.toString();
 String wildcardTargetUri(Uri directory) =>
     directory.resolve('bad*.ts').toString().replaceAll('%2A', '*');
 
+// Inject one contradictory stat while retaining the real helper and all other I/O.
+// Compiler, observer and Dart fixture paths may use different Windows separators.
+String statMismatchHelper(String source, String directory) =>
+    "const fs=require('node:fs'),path=require('node:path'),original=fs.statSync;let first=true;fs.statSync=function(file,...args){if(first && path.resolve(String(file))===path.resolve(${jsonEncode(source)})){first=false;return original(${jsonEncode(directory)},...args);}return original(file,...args);};require('./real-helper.cjs');";
+
 String inventoryHash(List<dynamic> entries) =>
     sha256.convert(utf8.encode(jsonEncode(entries))).toString();
 
@@ -595,7 +600,7 @@ nodes:
     ).readAsBytesSync();
     realHelper.writeAsBytesSync(helperSource);
     helper.writeAsStringSync(
-      "const fs=require('node:fs'),original=fs.statSync;let first=true;fs.statSync=function(file,...args){if(first && String(file)===${jsonEncode(at('src/core/private.ts').path)}){first=false;return original(${jsonEncode(at('src/core').path)},...args);}return original(file,...args);};require('./real-helper.cjs');",
+      statMismatchHelper(at('src/core/private.ts').path, at('src/core').path),
     );
     result = await invoke(2);
     check(

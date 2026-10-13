@@ -9,24 +9,30 @@ import 'package:path/path.dart' as p;
 Future<Map<String, Object>> sourceIdentity(
   Directory repo, {
   Map<String, String>? environment,
+  Duration gitTimeout = const Duration(seconds: 30),
 }) async {
+  // Tooling tests may tighten this budget, but callers cannot extend it.
+  if (gitTimeout <= Duration.zero || gitTimeout > const Duration(seconds: 30)) {
+    throw ArgumentError.value(
+      gitTimeout,
+      'gitTimeout',
+      'must be > 0 and <= 30s',
+    );
+  }
+  // Git environment controls can redirect -C or replace repository config.
+  // Copy the selected environment rather than merging ambient variables back in.
+  final gitEnvironment = Map<String, String>.from(
+    environment ?? Platform.environment,
+  )..removeWhere((key, _) => key.toUpperCase().startsWith('GIT_'));
   Future<String> git(List<String> arguments) async {
     final command = ['-C', repo.path, ...arguments];
-    final result = await Process.run(
+    final (output, _) = await _capture(
       'git',
       command,
-      environment: environment,
-      includeParentEnvironment: environment == null,
+      environment: gitEnvironment,
+      timeout: gitTimeout,
     );
-    if (result.exitCode != 0) {
-      throw ProcessException(
-        'git',
-        command,
-        '${result.stderr}',
-        result.exitCode,
-      );
-    }
-    return (result.stdout as String).trim();
+    return utf8.decode(output).trim();
   }
 
   if ((await git(['status', '--porcelain', '--untracked-files=no']))
@@ -50,9 +56,30 @@ Future<Map<String, Object>> sourceIdentity(
 
 /// Observe --version from the same cwd used by the assembler, including PATH.
 Future<String> runtimeVersion(String executable, Directory cwd) async {
-  final child = await Process.start(executable, [
+  final (output, errors) = await _capture(executable, [
     '--version',
   ], workingDirectory: cwd.path);
+  // Python text-mode capture normalizes each stream before concatenation.
+  String text(List<int> bytes) =>
+      utf8.decode(bytes).replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+  return (text(output) + text(errors)).trim();
+}
+
+// Bounded capture and direct-child cleanup only, not process-tree termination.
+Future<(List<int>, List<int>)> _capture(
+  String executable,
+  List<String> arguments, {
+  String? workingDirectory,
+  Map<String, String>? environment,
+  Duration timeout = const Duration(seconds: 30),
+}) async {
+  final child = await Process.start(
+    executable,
+    arguments,
+    workingDirectory: workingDirectory,
+    environment: environment,
+    includeParentEnvironment: environment == null,
+  );
   final output = <int>[], errors = <int>[];
   final outputDone = Completer<void>(), errorsDone = Completer<void>();
   final out = child.stdout.listen(
@@ -76,29 +103,25 @@ Future<String> runtimeVersion(String executable, Directory cwd) async {
       child.stdin.close(),
       outputDone.future,
       errorsDone.future,
-    ]).timeout(const Duration(seconds: 30));
+    ]).timeout(timeout);
     final code = results.first as int;
     if (code != 0) {
       throw ProcessException(
         executable,
-        ['--version'],
+        arguments,
         utf8.decode(errors, allowMalformed: true),
         code,
       );
     }
-    // Python text-mode capture normalizes each stream before concatenation.
-    String text(List<int> bytes) =>
-        utf8.decode(bytes).replaceAll('\r\n', '\n').replaceAll('\r', '\n');
-    return (text(output) + text(errors)).trim();
+    return (output, errors);
   } finally {
     try {
-      if (!exited) {
-        child.kill(ProcessSignal.sigkill);
-        await exit.timeout(const Duration(seconds: 5));
-      }
+      if (!exited) child.kill(ProcessSignal.sigkill);
     } finally {
-      await out.cancel();
-      await err.cancel();
+      // Start pipe disposal even if direct-child exit never resolves. A timeout
+      // stops waiting; it does not cancel an async function suspended on exit.
+      await Future.wait([if (!exited) exit, out.cancel(), err.cancel()])
+          .timeout(const Duration(seconds: 5));
     }
   }
 }

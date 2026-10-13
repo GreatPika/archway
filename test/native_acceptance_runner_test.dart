@@ -31,7 +31,39 @@ const names = [
   'dart_flutter',
 ];
 
+// The Windows job launcher preserves Win32 errors; POSIX uses Process.start.
+Matcher missingExecutableError(String executable, {required bool windows}) =>
+    windows
+    ? isA<OSError>()
+          .having((e) => e.message, 'operation', 'CreateProcessW')
+          .having((e) => e.errorCode, 'errorCode', 2)
+    : isA<ProcessException>()
+          .having((e) => e.executable, 'executable', executable)
+          .having((e) => e.arguments, 'arguments', isEmpty)
+          .having((e) => e.errorCode, 'errorCode', 2);
+
 void main() {
+  test(
+    'missing executable matcher accepts only the native missing-file error',
+    () {
+      const executable = '/owned/absent';
+      final windows = missingExecutableError(executable, windows: true);
+      final posix = missingExecutableError(executable, windows: false);
+      expect(const OSError('CreateProcessW', 2), windows);
+      expect(const OSError('CreateProcessW', 5), isNot(windows));
+      expect(const OSError('CreateNamedPipeW', 2), isNot(windows));
+      expect(ProcessException(executable, [], 'missing', 2), posix);
+      expect(ProcessException(executable, [], 'denied', 13), isNot(posix));
+      expect(ProcessException('/other', [], 'missing', 2), isNot(posix));
+      expect(
+        ProcessException(executable, ['unexpected'], 'missing', 2),
+        isNot(posix),
+      );
+      expect(const OSError('CreateProcessW', 2), isNot(posix));
+      expect(ProcessException(executable, [], 'missing', 2), isNot(windows));
+    },
+  );
+
   late RunnerFixture f;
   setUp(() => f = RunnerFixture());
   tearDown(() => f.root.deleteSync(recursive: true));
@@ -403,7 +435,12 @@ void main() {
           );
         },
       ),
-      throwsA(isA<ProcessException>()),
+      throwsA(
+        missingExecutableError(
+          p.join(f.root.path, 'absent'),
+          windows: Platform.isWindows,
+        ),
+      ),
     );
     expect(f.events, ['verify', 'plan_query', 'verify']);
     final proof = jsonDecode(

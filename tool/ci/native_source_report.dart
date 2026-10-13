@@ -92,25 +92,37 @@ bool expectedSkip(String target, String path, String name, String? reason) {
     (
       'test/linux_unprivileged_cli_test.dart',
       'unprivileged CLI child replaces its PID and preserves transport',
-    ),
+    ): 'Requires Linux unprivileged exec and identity semantics.',
     (
       'test/linux_unprivileged_cli_test.dart',
       'unprivileged CLI child uses uid 65534 only for a root caller',
-    ),
+    ): 'Requires Linux unprivileged exec and identity semantics.',
     (
       'test/linux_unprivileged_cli_test.dart',
       'failed exec remains a visible child failure',
-    ),
+    ): 'Requires Linux unprivileged exec and identity semantics.',
+    (
+      'test/preparation_process_test.dart',
+      'stderr open failure closes the already opened stdout handle',
+    ): 'Linux descriptor ownership observation',
   };
-  if ((target == 'macos-arm64' || target == 'windows-x64') &&
-      linuxOnly.contains(entry) &&
-      reason == 'Requires Linux unprivileged exec and identity semantics.')
-    return true;
   const posixOnly = {
+    (
+      'test/prepare_native_acceptance_test.dart',
+      'Git discovery skips a nonexecutable earlier PATH entry',
+    ): 'POSIX executable permission regression',
     (
       'test/windows_assembly_assertions_test.dart',
       'Windows assembly guards reject execution on a non-Windows host',
     ): 'Requires a non-Windows host.',
+    (
+      'test/installation_identity_test.dart',
+      'source identity times out and reaps its direct Git child',
+    ): 'POSIX direct-child timeout fixture',
+    (
+      'test/installation_identity_test.dart',
+      'source identity preserves selected PATH and replacement environment',
+    ): 'POSIX controlled Git fixture',
     (
       'test/installation_identity_test.dart',
       'runtime identity uses assembler cwd for relative PATH',
@@ -131,6 +143,10 @@ bool expectedSkip(String target, String path, String name, String? reason) {
   if (target != 'windows-x64' &&
       windowsOnly.containsKey(entry) &&
       windowsOnly[entry] == reason)
+    return true;
+  if (target != 'linux-x64' &&
+      linuxOnly.containsKey(entry) &&
+      linuxOnly[entry] == reason)
     return true;
   if (target == 'windows-x64' &&
       posixOnly.containsKey(entry) &&
