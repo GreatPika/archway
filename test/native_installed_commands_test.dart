@@ -169,7 +169,10 @@ void main() {
             required timeout,
           }) async {
             suites.add(name);
-            expect(command[3], p.absolute('test/${name}_process_smoke.dart'));
+            expect(
+              command[3],
+              p.absolute('test', '${name}_process_smoke.dart'),
+            );
             expect(command[4], binary.path);
             expect(environment['ARCHWAY_FIXTURE'], 'prepared');
             expect(directory.path, p.join(output.path, 'suites'));
