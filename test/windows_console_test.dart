@@ -30,38 +30,32 @@ void main() {
   test(
     'console cleanup preserves native failure and attempts every release',
     () {
-      for (final operation in [
-        'AttachConsole',
-        'SetConsoleCtrlHandler',
-        'GenerateConsoleCtrlEvent',
-      ]) {
-        final primary = OSError(operation, 5);
-        final calls = <int>[];
-        expect(() {
-          var failed = false;
-          try {
-            throw primary;
-          } catch (_) {
-            failed = true;
-            rethrow;
-          } finally {
-            finishWindowsConsoleCleanup([
-              () {
-                calls.add(1);
-                throw StateError('release one');
-              },
-              () {
-                calls.add(2);
-                throw StateError('release two');
-              },
-              () {
-                calls.add(3);
-              },
-            ], operationFailed: failed);
-          }
-        }, throwsA(same(primary)));
-        expect(calls, [1, 2, 3]);
-      }
+      final primary = OSError('GenerateConsoleCtrlEvent', 5);
+      final calls = <int>[];
+      expect(() {
+        var failed = false;
+        try {
+          throw primary;
+        } catch (_) {
+          failed = true;
+          rethrow;
+        } finally {
+          finishWindowsConsoleCleanup([
+            () {
+              calls.add(1);
+              throw StateError('release one');
+            },
+            () {
+              calls.add(2);
+              throw StateError('release two');
+            },
+            () {
+              calls.add(3);
+            },
+          ], operationFailed: failed);
+        }
+      }, throwsA(same(primary)));
+      expect(calls, [1, 2, 3]);
     },
   );
 

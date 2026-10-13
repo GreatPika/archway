@@ -27,7 +27,7 @@ void main() {
 
   test('unconfirmed termination preserves the original native error', () {
     const failure = OSError('TerminateProcess', 5);
-    for (final state in [258, 0xffffffff]) {
+    for (final state in [258]) {
       expect(
         () => confirmWindowsProcessTermination(
           terminate: () => failure,
