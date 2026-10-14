@@ -98,7 +98,11 @@ Future<Map<String, Object?>> runWindowsInstallerProbe({
       ]);
     }
     final oldExe = File(
-      p.join(temp.path, 'old-artifact/archway-0.0.0-windows-x64-unsigned.exe'),
+      p.join(
+        temp.path,
+        'old-artifact',
+        'archway-0.0.0-windows-x64-unsigned.exe',
+      ),
     );
     final artifact = File(
       p.join(output.path, 'archway-0.1.0-windows-x64-unsigned.exe'),
