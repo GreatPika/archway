@@ -37,7 +37,7 @@ class RegistryWorkflow(unittest.TestCase):
             'tool/release_bundles.py', 'test/pub_package_process_smoke.py',
             'test/pub_stage_identity_test.py', 'tool/ci/pub_stage_transport.py write',
             'tool/ci/npm_local_install_probe.py', 'tool/ci/pub_snapshot_probe.py',
-            'tool/ci/finalize_release_evidence.py']
+            'tool/ci/finalize_release_evidence.dart']
         steps = [step for job in workflow['jobs'].values() for step in job.get('steps', [])]
         for owner in owners:
             matches = [step for step in steps if owner in step.get('run', '')]

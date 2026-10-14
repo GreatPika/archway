@@ -297,12 +297,12 @@ projects in an isolated cache. Windows uses embedded Dart directly. Reused Flutt
 archives still require byte and live official-index verification.
 
 Pass the resulting `acceptance-fixtures.json` to
-`release_native_smoke.py --acceptance-fixtures MANIFEST`. CI requires preparation;
+`dart --suppress-analytics run tool/ci/release_native_smoke.dart --acceptance-fixtures MANIFEST`. CI requires preparation;
 missing fixtures fail instead of silently skipping coverage. Logs and readiness
 hashes are retained. A development Linux preparation run is not three-host release
 acceptance.
 
-The release probe also runs [the complete Dart source suite](native_source_acceptance.py)
+The release probe also runs [the complete Dart source suite](native_source_acceptance.dart)
 from an exact tracked-source snapshot using the verified archive's bridge/vendor
 assets. It requires every tracked `test/*_test.dart` suite, complete successful
 terminal results and only the explicitly allowed host/filesystem fixture skips.
@@ -317,7 +317,7 @@ failures and suite timeouts stop immediately because shared bytes or descendant
 cleanup cannot be assumed safe. Source dependency preparation remains fail-fast.
 
 
-[Release finalization](finalize_release_evidence.py) validates those source/native
+[Release finalization](finalize_release_evidence.dart) validates those source/native
 receipts and every required npm/pub route against exact source, run/attempt,
 transport and archive identities. It appends accepted evidence and updates
 checksums without rebuilding the tested payloads; missing or mismatched receipts

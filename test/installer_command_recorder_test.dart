@@ -78,6 +78,16 @@ void main() {
       );
       expect(recorder.commands.map((value) => value['exit']), [7, 1, 0]);
       expect(recorder.commands.last['stdout'], 'linux-2.stdout.log');
+      // A lifecycle refusal checks its own nonzero predicate after raw capture.
+      final refusal = await recorder.capture([
+        '/bin/sh',
+        '-c',
+        r"printf '\377'; printf refusal >&2; exit 20",
+      ], expectedExit: null);
+      expect(refusal.exitCode, 20);
+      expect(refusal.stdout, [255]);
+      expect(refusal.stderr, 'refusal'.codeUnits);
+      expect(recorder.commands.last['exit'], 20);
     },
     skip: Platform.isWindows ? 'POSIX installer command capture.' : false,
   );
@@ -193,7 +203,7 @@ void main() {
     } else {
       expect(
         () => make('windows', const Duration(seconds: 180)),
-        throwsArgumentError,
+        throwsUnsupportedError,
       );
       expect(() => make('linux', Duration.zero), throwsArgumentError);
       expect(

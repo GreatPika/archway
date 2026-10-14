@@ -541,6 +541,8 @@ jobs:
           sdk = pathlib.Path(fixtures['dart_sdk']).resolve(strict=True)
           dart = sdk / 'bin' / ('dart.exe' if os.name == 'nt' else 'dart')
           assert dart.is_file(), dart
+          version = subprocess.check_output([str(dart), '--version'], stderr=subprocess.STDOUT, text=True, timeout=30)
+          assert version.split()[:4] == ['Dart', 'SDK', 'version:', '3.13.3'], version
           node = shutil.which('node')
           assert node, 'Pinned Node is unavailable'
           assert subprocess.check_output([node, '--version']).strip() == b'v24.21.0'
@@ -552,23 +554,25 @@ jobs:
                           'resource_type_fixture_test', 'long_path_fixture_test',
                           'node_package_fixture_support_test'],
                          env=environment, check=True)
+          # Preparation is explicit: fixture setup does not prepare this checkout.
+          subprocess.run([str(dart), '--suppress-analytics', 'pub', 'get', '--enforce-lockfile'],
+                         env=environment, check=True, timeout=180)
+          subprocess.run(['git', 'diff', '--exit-code', '--', 'pubspec.lock'], check=True)
           if os.name == 'nt':
               subprocess.run([sys.executable, '-m', 'unittest', 'windows_output_lock_test'],
                              env=environment, check=True)
-              # Preparation is explicit: fixture setup does not prepare this checkout.
-              subprocess.run([str(dart), '--suppress-analytics', 'pub', 'get', '--enforce-lockfile'],
-                             env=environment, check=True, timeout=180)
-              subprocess.run(['git', 'diff', '--exit-code', '--', 'pubspec.lock'], check=True)
               subprocess.run([str(dart), '--suppress-analytics', 'test',
                               'test/windows_console_test.dart'], env=environment, check=True, timeout=60)
               subprocess.run([str(dart), '--suppress-analytics', 'run',
                               'test/windows_console_capability.dart'], env=environment, check=True, timeout=180)
+          with pathlib.Path(os.environ['GITHUB_ENV']).open('a', encoding='utf-8') as stream:
+              stream.write(f'NATIVE_DART={dart.as_posix()}\n')
           PYTHON
       - name: Execute the final native archive on its actual host
         run: |
           set -euo pipefail
           mkdir -p build/release-native
-          python -u tool/ci/release_native_smoke.py --release-directory release-input \
+          "$NATIVE_DART" --suppress-analytics run tool/ci/release_native_smoke.dart --release-directory release-input \
             --expected-commit "$GITHUB_SHA" --target '${{ matrix.target }}' --ci-host --installer-checks \
             --acceptance-fixtures "$RUNNER_TEMP/archway-native-fixtures/acceptance-fixtures.json" \
             --report build/release-native/report.json 2>&1 | tee build/release-native/probe.log
@@ -596,8 +600,10 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.13.7'
-      - name: Install pinned original-output schema validator
-        run: python -m pip --isolated install --index-url https://pypi.org/simple 'jsonschema==4.26.0'
+      - name: Prepare checksum-verified Dart and locked finalizer dependencies
+        run: |
+          python -u tool/ci/setup_pub_dart.py --target linux-x64 --source "$GITHUB_WORKSPACE" \
+            --output "$RUNNER_TEMP/archway-finalizer-dart" --expected-commit "$GITHUB_SHA" --prepare-cache
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-bundles-${{ github.run_id }}-${{ github.run_attempt }}
@@ -627,7 +633,7 @@ jobs:
           EXPECTED_PUB_TRANSPORT: ${{ needs.audit.outputs.pub-transport }}
         run: |
           source tool/ci/registry_candidate_arguments.sh
-          python3 tool/ci/finalize_release_evidence.py --release-directory release-input \
+          PUB_CACHE="$PUB_PREPARED_CACHE" "$PUB_DART" --suppress-analytics run tool/ci/finalize_release_evidence.dart --release-directory release-input \
             --reports reports --expected-commit "$GITHUB_SHA" --installed-evidence installed-routes \
             --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
             --expected-pub-transport-json "$EXPECTED_PUB_TRANSPORT" --output release-final ${registry_args[@]+"${registry_args[@]}"}

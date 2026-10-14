@@ -6,20 +6,21 @@ import 'package:path/path.dart' as p;
 import 'native_acceptance.dart';
 import 'release_execution_receipts.dart';
 
-/// Sequential POSIX installer evidence; privilege prefixes belong to the caller.
+/// Sequential installer evidence with owned Windows job completion.
 final class InstallerCommandRecorder {
   InstallerCommandRecorder({
     required this.output,
     required this.prefix,
     required this.timeout,
   }) {
-    if (Platform.isWindows) {
-      throw UnsupportedError(
-        'POSIX installer capture does not cover Windows installer lifecycle',
-      );
+    if (Platform.isWindows != (prefix == 'windows')) {
+      throw UnsupportedError('Installer capture host and prefix differ');
     }
-    if (!['linux', 'macos'].contains(prefix) || timeout <= Duration.zero) {
-      throw ArgumentError('Expected linux/macos prefix and positive timeout');
+    if (!['linux', 'macos', 'windows'].contains(prefix) ||
+        timeout <= Duration.zero) {
+      throw ArgumentError(
+        'Expected native installer prefix and positive timeout',
+      );
     }
   }
 
@@ -36,6 +37,23 @@ final class InstallerCommandRecorder {
     String? workingDirectory,
     Map<String, String>? environment,
     int expectedExit = 0,
+  }) async => utf8.decode(
+    (await capture(
+      arguments,
+      workingDirectory: workingDirectory,
+      environment: environment,
+      expectedExit: expectedExit,
+    )).stdout,
+    allowMalformed: true,
+  );
+
+  Future<({int exitCode, List<int> stdout, List<int> stderr})> capture(
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+    int? expectedExit = 0,
+    Duration? timeout,
+    File? windowsStdinFile,
   }) async {
     if (_running) throw StateError('Installer commands must run sequentially');
     _running = true;
@@ -49,7 +67,9 @@ final class InstallerCommandRecorder {
           workingDirectory ?? Directory.current.path,
           environment ?? Platform.environment,
           output,
-          timeout: timeout,
+          timeout: timeout ?? this.timeout,
+          windowsStdinFile: windowsStdinFile,
+          waitForWindowsJobEmpty: Platform.isWindows,
           onProof: (value) {
             _commands.add(
               Map<String, Object?>.unmodifiable({
@@ -67,13 +87,20 @@ final class InstallerCommandRecorder {
           },
         );
       } on SuiteExitFailure catch (failure) {
-        if (failure.proof['exit_code'] != expectedExit) rethrow;
+        if (expectedExit != null && failure.proof['exit_code'] != expectedExit)
+          rethrow;
         proof = failure.proof;
       }
-      if (proof['exit_code'] != expectedExit) throw SuiteExitFailure(proof);
-      return utf8.decode(
-        readOrdinaryBytes(File(p.join(output.path, proof['stdout'] as String))),
-        allowMalformed: true,
+      if (expectedExit != null && proof['exit_code'] != expectedExit)
+        throw SuiteExitFailure(proof);
+      return (
+        exitCode: proof['exit_code'] as int,
+        stdout: readOrdinaryBytes(
+          File(p.join(output.path, proof['stdout'] as String)),
+        ),
+        stderr: readOrdinaryBytes(
+          File(p.join(output.path, proof['stderr'] as String)),
+        ),
       );
     } finally {
       _running = false;

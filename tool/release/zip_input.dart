@@ -38,6 +38,27 @@ Future<void> verifyZipInput(
   _decode(input, entries, (_) => true, null, inventory: inventory);
 }
 
+/// Collect bounded original evidence members after the same strict preflight/CRC checks.
+/// Unlike native manifests, evidence has no distinguished root manifest member.
+Future<Map<String, ({Uint8List bytes, int mode})>> readZipFiles(
+  ArchiveInput input,
+) async {
+  final entries = _preflight(input);
+  final buffers = {
+    for (final entry in entries) entry.name: BytesBuilder(copy: false),
+  };
+  _decode(
+    input,
+    entries,
+    (_) => true,
+    (entry, bytes) => buffers[entry.name]!.add(bytes),
+  );
+  return {
+    for (final entry in entries)
+      entry.name: (bytes: buffers[entry.name]!.takeBytes(), mode: entry.mode),
+  };
+}
+
 typedef _Entry = ({String name, int size, int mode, int crc});
 
 // No ZIP64, descriptors, comments, extras, encryption, directories, links, or

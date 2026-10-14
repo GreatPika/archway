@@ -51,7 +51,7 @@ Run [the package-delivery workflow](../../.github/workflows/package-delivery-pro
 with `workflow_dispatch` at the exact final source commit. Its `release-native`
 job extracts and executes the prepared native archives on Ubuntu 24.04 x64,
 macOS 15 arm64, and Windows Server 2025 x64 via
-[`release_native_smoke.py`](../ci/release_native_smoke.py). The `release-finalize`
+[`release_native_smoke.dart`](../ci/release_native_smoke.dart). The `release-finalize`
 job requires those jobs plus the npm and pub installed-route matrices, binds
 receipts to the source/run and tested artifacts, and retains `release-ready`
 files without rebuilding the tested native archives or publishing them.
