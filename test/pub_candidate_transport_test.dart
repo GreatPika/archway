@@ -4,9 +4,14 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
+import 'support/compiled_tool.dart';
 import 'support/pub_candidate_fixture.dart';
 
 void main() {
+  late File tool;
+  setUpAll(() async {
+    tool = await prepareCompiledTool('tool/ci/pub_stage_transport.dart');
+  });
   test('candidate transport preserves SDK bytes and requires explicit receive intent', () async {
     final prepared = await preparePubCandidateFixture();
     final fixture = prepared.fixture;
@@ -16,8 +21,7 @@ void main() {
       String output,
       List<String> options,
     ) => Process.run(Platform.resolvedExecutable, [
-      'run',
-      'tool/ci/pub_stage_transport.dart',
+      tool.path,
       operation,
       '--source',
       fixture.source.path,

@@ -5,9 +5,14 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
+import 'support/compiled_tool.dart';
 import 'support/pub_stage_fixture.dart';
 
 void main() {
+  late File tool;
+  setUpAll(() async {
+    tool = await prepareCompiledTool('tool/ci/pub_stage_transport.dart');
+  });
   late PubStageFixture fixture;
   late Directory stage;
   setUp(() async {
@@ -35,8 +40,7 @@ void main() {
     String run = '123',
     String attempt = '2',
   }) => Process.run(Platform.resolvedExecutable, [
-    'run',
-    'tool/ci/pub_stage_transport.dart',
+    tool.path,
     operation,
     '--source',
     fixture.source.path,

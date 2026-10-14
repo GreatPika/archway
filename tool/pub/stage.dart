@@ -168,9 +168,13 @@ Future<void> stagePub({
     }
 
     for (final name in pubStageSourceFiles) {
-      await withArchiveInput(File(p.join(source.path, name)), (input) async {
-        write(name, await input.file.readAsBytes());
-      }, maxBytes: maxArchiveJsonBytes);
+      await withArchiveInput(
+        File(p.joinAll([source.path, ...name.split('/')])),
+        (input) async {
+          write(name, await input.file.readAsBytes());
+        },
+        maxBytes: maxArchiveJsonBytes,
+      );
     }
     // JSON is YAML; exact dependency pins form the complete runtime closure.
     write(

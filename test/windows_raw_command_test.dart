@@ -131,7 +131,8 @@ void main() {
       addTearDown(() => output.deleteSync(recursive: true));
       final cmd = p.join(
         Platform.environment['SystemRoot']!,
-        'System32/cmd.exe',
+        'System32',
+        'cmd.exe',
       );
       final logical = [
         cmd,
@@ -158,7 +159,13 @@ void main() {
         workingDirectory: output.path,
         environment: Platform.environment,
       );
-      expect(utf8.decode(result.stdout), 'raw-stdout\r\n');
+      expect(
+        utf8.decode(result.stdout),
+        'raw-stdout\r\n',
+        reason:
+            'stderr=${utf8.decode(result.stderr)}; '
+            'receipt=${jsonEncode(recorder.commands.single)}',
+      );
       expect(utf8.decode(result.stderr), 'raw-stderr\r\n');
       expect(result.exitCode, 37);
       final proof = recorder.commands.single;

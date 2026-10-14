@@ -52,10 +52,10 @@ Future<Map<String, Object?>> pubDependencyIdentity(
       throw const FormatException('Invalid resolved dependency identity');
     }
     final directory = Directory(
-      p.join(cache.path, 'hosted/pub.dev', '$name-$version'),
+      p.join(cache.path, 'hosted', 'pub.dev', '$name-$version'),
     );
     final hash = File(
-      p.join(cache.path, 'hosted-hashes/pub.dev', '$name-$version.sha256'),
+      p.join(cache.path, 'hosted-hashes', 'pub.dev', '$name-$version.sha256'),
     );
     if (utf8.decode(readOrdinaryBytes(hash)).trim() != digest ||
         directory.resolveSymbolicLinksSync() != directory.absolute.path) {

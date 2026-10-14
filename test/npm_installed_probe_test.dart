@@ -105,7 +105,16 @@ console.log('0.0.0');
         ],
         timeout: const Duration(seconds: 90),
         environment: {
-          ...Platform.environment,
+          // Windows environment names are case-insensitive. Replace inherited
+          // variants so the deliberate mixed-case fixture reaches the probe.
+          for (final entry in Platform.environment.entries)
+            if (!const {
+              'home',
+              'userprofile',
+              'localappdata',
+              'xdg_cache_home',
+            }.contains(entry.key.toLowerCase()))
+              entry.key: entry.value,
           'hOmE': '/foreign-home',
           'uSeRpRoFiLe': '/foreign-profile',
           'lOcAlApPdAtA': '/foreign-cache',

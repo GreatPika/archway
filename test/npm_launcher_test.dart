@@ -141,13 +141,24 @@ void main() {
             ('original', p.join(home.path, 'AppData', 'Local')),
             ('shortened', p.join(base.path, 'probe ü')),
           ]) {
-            final probe = File(p.joinAll([parent, ...suffix]));
+            var probePath = p.joinAll([parent, ...suffix]);
+            if (label == 'original') {
+              // Keep this deliberate over-limit diagnostic above the pinned
+              // runtime's 260-byte self-snapshot boundary even when the source
+              // suite's temporary prefix is shorter than an installed gate's.
+              final bytes = utf8.encode(probePath).length;
+              if (bytes <= 260) {
+                probePath = p.joinAll([parent, 'p' * (261 - bytes), ...suffix]);
+              }
+            }
+            final probe = File(probePath);
             probe.parent.createSync(recursive: true);
             executable.copySync(probe.path);
             expect(probe.readAsBytesSync(), executable.readAsBytesSync());
             final pathBytes = utf8
                 .encode(probe.resolveSymbolicLinksSync())
                 .length;
+            if (label == 'original') expect(pathBytes, greaterThan(260));
             final result = await runNativeProcess(
               [probe.path, 'space argument', 'café'],
               timeout: const Duration(seconds: 30),
@@ -215,6 +226,12 @@ https.get=function(url,...args){if(url.href!==${jsonEncode(descriptor['targets']
                   'node_path',
                   'node_auth_token',
                   'npm_token',
+                  'home',
+                  'userprofile',
+                  'localappdata',
+                  'xdg_cache_home',
+                  'node_extra_ca_certs',
+                  'path',
                 ].contains(key.toLowerCase()),
           );
         environment.addAll({

@@ -42,7 +42,10 @@ DynamicLibrary? _loadKernel() {
   // Resolve before any fallible call: symbol lookup can reset thread last-error.
   _error = kernel.lookupFunction<Uint32 Function(), int Function()>(
     'GetLastError',
+    isLeaf: true,
   );
+  // Warm the leaf reader before a fallible call can set thread-local error.
+  _error();
   return kernel;
 }
 
@@ -206,7 +209,9 @@ final class WindowsSuspendedProcess {
             information.cast(),
           ) ==
           0) {
-        _fail('CreateProcessW');
+        // Capture before entering a cold Dart throw helper or allocating errors.
+        final error = _error();
+        throw OSError('CreateProcessW', error);
       }
       process = WindowsSuspendedProcess._(
         (information + 16).cast<Uint32>().value,

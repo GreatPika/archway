@@ -38,6 +38,17 @@ void main() {
     );
     file.parent.createSync(recursive: true);
     file.writeAsStringSync('original bytes');
+    final package = Directory(
+      p.join(cache.path, 'hosted', 'pub.dev', 'fixture-1.2.3'),
+    );
+    final moved = package.renameSync(p.join(root.path, 'moved-package'));
+    final alias = Link(package.path)..createSync(moved.path);
+    await expectLater(
+      pubDependencyIdentity(lock, source, cache),
+      throwsFormatException,
+    );
+    alias.deleteSync();
+    moved.renameSync(package.path);
     final before = await pubDependencyIdentity(lock, source, cache);
     file.writeAsStringSync('changed bytes!');
     final after = await pubDependencyIdentity(lock, source, cache);

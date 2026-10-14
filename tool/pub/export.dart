@@ -54,13 +54,15 @@ Future<void> exportPub({
   try {
     final working = Directory(p.join(temporary.path, 'working'))..createSync();
     for (final entry in checked.files.files.entries) {
-      await withArchiveInput(File(p.join(stage.path, 'package', entry.key)), (
-        input,
-      ) async {
-        final destination = File(p.join(working.path, entry.key));
-        destination.parent.createSync(recursive: true);
-        await input.file.copy(destination.path);
-      }, expected: (size: entry.value.size, sha256: entry.value.sha256));
+      await withArchiveInput(
+        File(p.joinAll([stage.path, 'package', ...entry.key.split('/')])),
+        (input) async {
+          final destination = File(p.join(working.path, entry.key));
+          destination.parent.createSync(recursive: true);
+          await input.file.copy(destination.path);
+        },
+        expected: (size: entry.value.size, sha256: entry.value.sha256),
+      );
     }
     final recorder = InstalledCommandRecorder(
       output: evidence,

@@ -114,7 +114,7 @@ void main() {
     () async {
       final wrapper = Directory(p.join(root.path, 'wrapper'))..createSync();
       final cache = Directory(p.join(root.path, 'cache'))..createSync();
-      final parent = Directory(p.join(cache.path, '0.2.0/linux-x64'))
+      final parent = Directory(p.join(cache.path, '0.2.0', 'linux-x64'))
         ..createSync(recursive: true);
       const leaf = '.archway-native-01234567-89ab-cdef-0123-456789abcdef';
       final payload = Directory(p.join(parent.path, leaf))..createSync();

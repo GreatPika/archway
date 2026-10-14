@@ -5,13 +5,17 @@ import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import '../tool/release/installation_identity.dart';
+import 'support/compiled_tool.dart';
 import 'support/native_release_fixture.dart';
 
 void main() {
+  late File tool;
+  setUpAll(() async {
+    tool = await prepareCompiledTool('tool/release/generate_descriptor.dart');
+  });
   late Directory root, source, native;
   late Map<String, Object> identity;
   late Map<String, Object?> receipt;
-  final script = p.absolute('tool/release/generate_descriptor.dart');
   const targets = ['linux-x64', 'macos-arm64', 'windows-x64'];
   void writeJson(File file, Object value) =>
       file.writeAsStringSync('${jsonEncode(value)}\n');
@@ -22,7 +26,7 @@ void main() {
 
   Future<ProcessResult> generate([String output = 'descriptor']) =>
       Process.run(Platform.resolvedExecutable, [
-        script,
+        tool.path,
         '--source',
         source.path,
         '--native',
@@ -145,7 +149,7 @@ void main() {
         );
       }
     },
-    // Eight real CLI invocations each compile the release tooling.
+    // Eight real CLI invocations retain separate processes and fresh inputs.
     timeout: const Timeout(Duration(minutes: 2)),
   );
 

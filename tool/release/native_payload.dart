@@ -62,7 +62,7 @@ Future<Map<String, String>> nativeVersions(
   );
   Version.parse(node);
   final lock = await readNativeJson(
-    File(p.join(source.path, 'assets/typescript/package-lock.json')),
+    File(p.join(source.path, 'assets', 'typescript', 'package-lock.json')),
   );
   final packages = lock['packages'] as Map;
   return {
@@ -111,7 +111,7 @@ Future<Map<String, ArchiveFileIdentity>> sourceNativeAssets(
         nativeSchemas.any((schema) => name == 'contracts/json/$schema');
     if (!owned) continue;
     files[name] = await withArchiveInput(
-      File(p.join(source.path, name)),
+      File(p.joinAll([source.path, ...name.split('/')])),
       (input) async => (size: input.size, mode: 0x1a4, sha256: input.sha256),
       maxBytes: maxArchiveFileBytes,
     );

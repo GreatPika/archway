@@ -188,7 +188,9 @@ Future<void> buildNativeArchives(
     final additionsRoot = Directory(p.join(stage.path, '.additions'))
       ..createSync();
     Future<void> add(String name, File file) async {
-      final destination = File(p.join(additionsRoot.path, name));
+      final destination = File(
+        p.joinAll([additionsRoot.path, ...name.split('/')]),
+      );
       destination.parent.createSync(recursive: true);
       await withArchiveInput(file, (input) async {
         await input.file.copy(destination.path);
@@ -203,7 +205,7 @@ Future<void> buildNativeArchives(
     )) {
       await add(
         name == 'LICENSE' ? name : 'schemas/${p.posix.basename(name)}',
-        File(p.join(source.path, name)),
+        File(p.joinAll([source.path, ...name.split('/')])),
       );
     }
     final bundles = <String, Object?>{};
@@ -276,7 +278,9 @@ Future<void> buildNativeArchives(
                   File(
                     p.join(
                       bundle.path,
-                      'assets/typescript/vendor',
+                      'assets',
+                      'typescript',
+                      'vendor',
                       package,
                       'package.json',
                     ),
