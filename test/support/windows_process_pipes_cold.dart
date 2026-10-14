@@ -1,4 +1,4 @@
-// Run directly in a fresh VM: no other helper may warm Win32 error capture.
+// Run directly in a fresh VM to exercise cold and warm attribute sizing.
 import 'dart:ffi';
 import 'dart:io';
 

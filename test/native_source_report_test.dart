@@ -287,7 +287,11 @@ void main() {
       );
     }
     for (final target in sourceTargets) {
-      for (final emptyPath in [path, 'test/linux_unprivileged_cli_test.dart']) {
+      for (final emptyPath in [
+        path,
+        'test/linux_unprivileged_cli_test.dart',
+        'test/posix_file_limit_test.dart',
+      ]) {
         final records = events(emptyPath);
         records[1]['test'].addAll({
           'name': 'loading $emptyPath',
@@ -314,6 +318,12 @@ void main() {
     'new platform guards require exact file name reason and inapplicable host',
     () {
       final cases = [
+        (
+          'test/posix_file_limit_test.dart',
+          'file-limit child keeps its PID and survives a real partial write',
+          'Requires POSIX file-size limits and exec semantics.',
+          {'windows-x64'},
+        ),
         for (final name in [
           'compiler discovery skips inert PATH files and rejects no executable',
           'synthetic upgrade inspects final bytes, preserves foreign files and receipts',

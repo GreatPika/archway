@@ -15,7 +15,7 @@ void main() {
   }
   for (var attempt = 1; attempt <= 5; attempt++) {
     test(
-      'native pipe startup preserves cold and warm size-probe errors ($attempt)',
+      'native pipe startup installs handles with cold and warm size probes ($attempt)',
       () async {
         final process = await Process.start(Platform.resolvedExecutable, [
           '--suppress-analytics',

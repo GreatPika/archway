@@ -4,8 +4,6 @@ import 'dart:io';
 import 'package:test/test.dart';
 
 void main() {
-  if (!Platform.isLinux && !Platform.isMacOS) return;
-
   test(
     'file-limit child keeps its PID and survives a real partial write',
     () async {
@@ -55,5 +53,8 @@ void main() {
         root.deleteSync(recursive: true);
       }
     },
+    skip: !Platform.isLinux && !Platform.isMacOS
+        ? 'Requires POSIX file-size limits and exec semantics.'
+        : false,
   );
 }

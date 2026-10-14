@@ -278,6 +278,10 @@ bool expectedSkip(String target, String path, String name, String? reason) {
   }
   const posixOnly = {
     (
+      'test/posix_file_limit_test.dart',
+      'file-limit child keeps its PID and survives a real partial write',
+    ): 'Requires POSIX file-size limits and exec semantics.',
+    (
       'test/installer_command_recorder_test.dart',
       'retains installer records and exact original log names',
     ): 'POSIX installer command capture.',

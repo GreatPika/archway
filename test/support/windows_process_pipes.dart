@@ -241,9 +241,17 @@ final class WindowsProcessPipes {
     try {
       final result = _init!(nullptr, 1, 0, size);
       final error = _error();
-      if (result != 0 || error != 122)
-        throw OSError('Attribute-list size', error);
-      _attributes = calloc<Uint8>(size.value).cast();
+      final requiredSize = size.value;
+      // The NULL query fails by design and returns the required byte count.
+      // Separate FFI calls cannot atomically preserve thread-local LastError.
+      // Admit the sizing contract, then require real initialization below.
+      if (result != 0 || requiredSize == 0) {
+        throw OSError(
+          'Attribute-list size (result=$result, bytes=$requiredSize)',
+          error,
+        );
+      }
+      _attributes = calloc<Uint8>(requiredSize).cast();
       if (_init!(_attributes, 1, 0, size) == 0)
         _fail('InitializeProcThreadAttributeList');
       _initialized = true;
