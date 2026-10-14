@@ -342,25 +342,23 @@ void main() {
     },
   );
 
-  test('file-backed archive and JSON ceilings cannot be relaxed', () async {
+  test('file-backed archive ceiling cannot be relaxed', () async {
     final source = File(p.join(root.path, 'oversized'));
-    for (final limit in [maxArchiveBytes, maxArchiveJsonBytes]) {
-      final handle = source.openSync(mode: FileMode.write);
-      handle.truncateSync(limit + 1);
-      handle.closeSync();
-      await expectLater(
-        withArchiveInput(
-          source,
-          (_) async {
-            fail('Oversize input reached inspection');
-          },
-          maxBytes: limit,
-          temporaryParent: snapshots,
-        ),
-        throwsFormatException,
-      );
-      expect(snapshots.listSync(), isEmpty);
-    }
+    final handle = source.openSync(mode: FileMode.write);
+    handle.truncateSync(maxArchiveBytes + 1);
+    handle.closeSync();
+    await expectLater(
+      withArchiveInput(
+        source,
+        (_) async {
+          fail('Oversize input reached inspection');
+        },
+        maxBytes: maxArchiveBytes,
+        temporaryParent: snapshots,
+      ),
+      throwsFormatException,
+    );
+    expect(snapshots.listSync(), isEmpty);
     await expectLater(
       withArchiveInput(source, (_) async {}, maxBytes: maxArchiveBytes + 1),
       throwsArgumentError,

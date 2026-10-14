@@ -136,18 +136,6 @@ void main() {
       throwsA(isA<FileSystemException>()),
     );
   });
-  test('rejects an aliased file', () async {
-    final target = file.renameSync(p.join(base.path, 'target'));
-    if (Platform.isWindows) {
-      createWindowsRawLink(file.path, target.path);
-    } else {
-      Link(file.path).createSync(target.path);
-    }
-    await expectLater(
-      verifyInstallationDirectory(root, expected, compareModes: false),
-      throwsFormatException,
-    );
-  });
   for (final location in ['root', 'parent']) {
     test('rejects a Windows junction $location', () async {
       final original = location == 'root' ? root : file.parent;

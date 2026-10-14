@@ -52,6 +52,10 @@ void main() {
     expect(p.join(copy.path, name).length, greaterThan(260));
     copyFlutterSdk(source, copy);
     final duplicate = File(p.join(copy.path, name));
+    expect(
+      FileSystemEntity.typeSync(duplicate.path, followLinks: false),
+      FileSystemEntityType.file,
+    );
     duplicate.writeAsStringSync('linked');
     expect(original.readAsStringSync(), 'linked');
     duplicate.deleteSync();
@@ -74,6 +78,10 @@ void main() {
       final copy = Directory(p.join(base.path, 'Flutter café SDK'));
       copyFlutterSdk(source, copy);
       final duplicate = File(p.join(copy.path, 'dart'));
+      expect(
+        FileSystemEntity.typeSync(duplicate.path, followLinks: false),
+        FileSystemEntityType.file,
+      );
       duplicate.writeAsStringSync('linked');
       expect(original.readAsStringSync(), 'linked');
       duplicate.deleteSync();
@@ -85,10 +93,12 @@ void main() {
         makeFlutterLauncherExecutable(duplicate);
         expect(duplicate.statSync().mode & 0x1ff, 0x1ed);
       }
+      final existing = Directory(p.join(base.path, 'existing'))..createSync();
       expect(
-        () => copyFlutterSdk(source, copy),
+        () => copyFlutterSdk(source, existing),
         throwsA(isA<FileSystemException>()),
       );
+      expect(existing.listSync(), isEmpty);
     },
   );
 }

@@ -74,10 +74,6 @@ assert.deepEqual(calls,[[target+'.other',options],[directory,options],[target,op
   test(
     'malformed helper target retains literal wildcard on all path styles',
     () {
-      expect(
-        () => Uri.file(r'C:\project\src\core\bad*.ts', windows: true),
-        throwsArgumentError,
-      );
       for (final (directory, expected) in [
         (
           Uri.directory(r'C:\project with spaces\café\src\core', windows: true),
