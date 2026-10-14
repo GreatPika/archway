@@ -9,6 +9,8 @@ import 'package:test/test.dart';
 
 import '../tool/release/archive_input.dart';
 import '../tool/release/native_archive.dart';
+import 'support/pub_native_fixture.dart';
+import 'support/pub_stage_fixture.dart';
 
 const abc = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
 final files = {
@@ -34,6 +36,36 @@ List<int> nativeTar(String manifest, {List<int> payload = const [97, 98, 99]}) {
 }
 
 void main() {
+  for (final target in ['linux-x64', 'macos-arm64', 'windows-x64']) {
+    test(
+      'pub native fixture passes strict $target archive verification',
+      () async {
+        final fixture = await preparePubStageFixture();
+        addTearDown(() => fixture.root.deleteSync(recursive: true));
+        final archive = preparePubNativeFixture(fixture, target: target);
+        final descriptor =
+            jsonDecode(fixture.descriptor.readAsStringSync()) as Map;
+        final pin = descriptor['targets'][target] as Map;
+        final verified = await verifyNativeArchive(
+          archive,
+          format: target == 'windows-x64'
+              ? NativeArchiveFormat.zip
+              : NativeArchiveFormat.tarGzip,
+          expected: (size: pin['size'] as int, sha256: pin['sha256'] as String),
+        );
+        expect(verified.manifest['target'], target);
+        expect(verified.manifestSha256, pin['manifest_sha256']);
+        final name =
+            'bin/$target/archway${target == 'windows-x64' ? '.exe' : ''}';
+        expect(verified.completeArchiveInventory.files[name]!.mode, 493);
+        expect(
+          verified.completeArchiveInventory.files['manifest.json']!.mode,
+          420,
+        );
+      },
+    );
+  }
+
   late Directory root;
   late Directory snapshots;
   setUp(() {

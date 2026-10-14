@@ -98,7 +98,7 @@ void main() {
     });
     final options = [
       '--archive',
-      p.join(fixture.root.path, 'transport/installation.tar'),
+      p.join(fixture.root.path, 'transport', 'installation.tar'),
       '--expected-json',
       jsonEncode(record),
     ];

@@ -72,7 +72,7 @@ void main() {
       expect(record['run_attempt'], '2');
       expect(record['registry_ready'], isFalse);
       final archive = File(
-        p.join(fixture.root.path, 'transport/installation.tar'),
+        p.join(fixture.root.path, 'transport', 'installation.tar'),
       );
       final received = await invoke('read', 'received', [
         '--archive',
@@ -155,7 +155,7 @@ void main() {
       );
       final record = jsonDecode(written.stdout as String) as Map;
       final archive = File(
-        p.join(fixture.root.path, 'transport/installation.tar'),
+        p.join(fixture.root.path, 'transport', 'installation.tar'),
       );
       final changed = archive.readAsBytesSync()..[0] ^= 1;
       archive.writeAsBytesSync(changed);

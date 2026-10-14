@@ -16,9 +16,13 @@ String get pubFixtureTarget => switch (Abi.current()) {
   _ => throw UnsupportedError('Unsupported test host'),
 };
 
-File preparePubNativeFixture(PubStageFixture fixture, {File? executable}) {
-  final target = pubFixtureTarget;
-  final name = 'bin/$target/archway${Platform.isWindows ? '.exe' : ''}';
+File preparePubNativeFixture(
+  PubStageFixture fixture, {
+  File? executable,
+  String? target,
+}) {
+  target ??= pubFixtureTarget;
+  final name = 'bin/$target/archway${target == 'windows-x64' ? '.exe' : ''}';
   final bytes =
       executable?.readAsBytesSync() ??
       utf8.encode('inert bytes, never executed');
@@ -36,9 +40,12 @@ File preparePubNativeFixture(PubStageFixture fixture, {File? executable}) {
       },
     }),
   );
+  // ZIP carries the regular-file type in its Unix external attributes; tar's
+  // encoder supplies its own type field and keeps only the permission bits.
+  final type = target == 'windows-x64' ? 0x8000 : 0;
   final archive = Archive()
-    ..add(ArchiveFile.bytes(name, bytes)..mode = 493)
-    ..add(ArchiveFile.bytes('manifest.json', manifest)..mode = 420);
+    ..add(ArchiveFile.bytes(name, bytes)..mode = type | 493)
+    ..add(ArchiveFile.bytes('manifest.json', manifest)..mode = type | 420);
   final packed = target == 'windows-x64'
       ? ZipEncoder().encodeBytes(archive)
       : gzip.encode(TarEncoder().encodeBytes(archive));
