@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
@@ -11,6 +12,7 @@ import '../tool/npm/installed_route.dart';
 import '../tool/ci/installed_command_recorder.dart';
 import '../tool/ci/native_acceptance_capture.dart';
 import 'support/npm_native_fixture.dart';
+import 'support/native_process_support.dart';
 
 void main() {
   late String node;
@@ -119,6 +121,66 @@ void main() {
         final home = Directory(p.join(base.path, 'user home ü'))..createSync();
         final foreign = Directory(p.join(base.path, 'other cwd'))..createSync();
         final cache = p.join(base.path, 'npm cache');
+        // Keep the fixture's Unicode/spaces without exceeding the pinned Dart
+        // Windows runtime's PATH_MAX-sized UTF-8 self-snapshot lookup buffer.
+        final localData = Platform.isWindows
+            ? p.join(base.path, 'c ü')
+            : p.join(home.path, 'AppData', 'Local');
+        if (Platform.isWindows && route == 'local') {
+          final suffix = [
+            'archway',
+            'npm',
+            '1.2.3',
+            target,
+            '.archway-native-00000000-0000-4000-8000-000000000000',
+            'bin',
+            target,
+            'archway.exe',
+          ];
+          for (final (label, parent) in [
+            ('original', p.join(home.path, 'AppData', 'Local')),
+            ('shortened', p.join(base.path, 'probe ü')),
+          ]) {
+            final probe = File(p.joinAll([parent, ...suffix]));
+            probe.parent.createSync(recursive: true);
+            executable.copySync(probe.path);
+            expect(probe.readAsBytesSync(), executable.readAsBytesSync());
+            final pathBytes = utf8
+                .encode(probe.resolveSymbolicLinksSync())
+                .length;
+            final result = await runNativeProcess(
+              [probe.path, 'space argument', 'café'],
+              timeout: const Duration(seconds: 30),
+              workingDirectory: foreign.path,
+            );
+            print(
+              jsonEncode({
+                'aot_path_probe': label,
+                'path': probe.path,
+                'utf8_bytes': pathBytes,
+                'sha256': sha256.convert(probe.readAsBytesSync()).toString(),
+                'exit': result.exitCode,
+                'stdout': utf8.decode(result.stdout),
+                'stderr': utf8.decode(result.stderr),
+              }),
+            );
+            if (label == 'original' && result.exitCode != 37) {
+              expect(pathBytes, greaterThan(260));
+              expect(result.exitCode, 255);
+              expect(
+                utf8.decode(result.stderr),
+                contains('space argument is not an AOT snapshot'),
+              );
+            } else {
+              expect(result.exitCode, 37, reason: utf8.decode(result.stderr));
+              expect(jsonDecode(utf8.decode(result.stdout)), {
+                'args': ['space argument', 'café'],
+                'stdin': '',
+              });
+              expect(utf8.decode(result.stderr), 'native stderr\n');
+            }
+          }
+        }
         final runtimeBin = Directory(p.join(base.path, 'runtime bin'))
           ..createSync();
         if (!Platform.isWindows) {
@@ -158,7 +220,7 @@ https.get=function(url,...args){if(url.href!==${jsonEncode(descriptor['targets']
         environment.addAll({
           'HOME': home.path,
           'USERPROFILE': home.path,
-          'LOCALAPPDATA': p.join(home.path, 'AppData', 'Local'),
+          'LOCALAPPDATA': localData,
           'XDG_CACHE_HOME': p.join(home.path, '.cache'),
           'NODE_EXTRA_CA_CERTS': tls.certificate.path,
           'NODE_OPTIONS': '--require ${jsonEncode(preload.path)}',
@@ -300,19 +362,14 @@ https.get=function(url,...args){if(url.href!==${jsonEncode(descriptor['targets']
           extra: {'ARCHWAY_FIXTURE_UNSUPPORTED': '1'},
         );
         final nativeCache = Directory(
-          p.joinAll([
-            home.path,
-            if (Platform.isWindows) ...[
-              'AppData',
-              'Local',
-            ] else if (Platform.isMacOS) ...[
-              'Library',
-              'Caches',
-            ] else
-              '.cache',
-            'archway',
-            'npm',
-          ]),
+          Platform.isWindows
+              ? p.join(localData, 'archway', 'npm')
+              : p.joinAll([
+                  home.path,
+                  if (Platform.isMacOS) ...['Library', 'Caches'] else '.cache',
+                  'archway',
+                  'npm',
+                ]),
         );
         final record = File(
           p.join(
