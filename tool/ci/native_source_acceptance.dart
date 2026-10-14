@@ -257,9 +257,10 @@ Future<Map<String, Object?>> runSourceTests(
         );
       }
     }
+    // Keep the same bounded suite parallelism on three- and four-core hosts.
     final execution = await execute(
       'source-tests',
-      [dart, 'test', '--reporter=json'],
+      [dart, 'test', '--reporter=json', '--concurrency=2'],
       source.path,
       env,
       output,

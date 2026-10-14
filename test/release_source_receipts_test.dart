@@ -226,6 +226,10 @@ void main() {
         f.source['preparation']['command'][4] = '--offline',
     'execution argv': (f) =>
         f.source['execution']['command'][2] = '--reporter=compact',
+    'execution implicit concurrency': (f) =>
+        (f.source['execution']['command'] as List).removeLast(),
+    'execution changed concurrency': (f) =>
+        f.source['execution']['command'][3] = '--concurrency=8',
     'execution inventory': (f) =>
         f.source['execution']['suite'] = 'source-pub-get',
     'preparation inventory': (f) =>

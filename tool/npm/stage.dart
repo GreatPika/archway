@@ -116,10 +116,10 @@ Future<void> stageNpm(
   );
   require(tracked.exitCode == 0, 'Npm runtime closure must be tracked source');
   final tooling = await readNativeJson(
-    File(p.join(source.path, 'tool/npm/package.json')),
+    File(p.join(source.path, 'tool', 'npm', 'package.json')),
   );
   final lock = await readNativeJson(
-    File(p.join(source.path, 'tool/npm/package-lock.json')),
+    File(p.join(source.path, 'tool', 'npm', 'package-lock.json')),
   );
   final packageValue = lock['packages'];
   require(packageValue is Map, 'Invalid wrapper lock package inventory');
@@ -163,7 +163,7 @@ Future<void> stageNpm(
     final preparation = Directory(p.join(temporary.path, 'prepare'))
       ..createSync();
     for (final name in ['package.json', 'package-lock.json'])
-      File(p.join(source.path, 'tool/npm', name))
+      File(p.join(source.path, 'tool', 'npm', name))
           .copySync(p.join(preparation.path, name));
     final environment = Map<String, String>.from(Platform.environment);
     final cache = environment['npm_config_cache'];
@@ -219,7 +219,7 @@ Future<void> stageNpm(
 
     Future<void> copy(String relative, String target, {int mode = 0x1a4}) =>
         withArchiveInput(
-          File(p.join(source.path, relative)),
+          File(p.joinAll([source.path, ...relative.split('/')])),
           (input) async =>
               write(target, await input.file.readAsBytes(), mode: mode),
         );
@@ -277,7 +277,9 @@ Future<void> stageNpm(
       'Prepared npm dependency set differs from lock',
     );
     for (final name in ownedPackages) {
-      final directory = Directory(p.join(preparation.path, name));
+      final directory = Directory(
+        p.joinAll([preparation.path, ...name.split('/')]),
+      );
       final actual = await readNativeJson(
         File(p.join(directory.path, 'package.json')),
       );

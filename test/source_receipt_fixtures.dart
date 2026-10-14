@@ -97,7 +97,7 @@ class Fixture {
       ], ''),
       'execution': execution(
         'source-tests',
-        [dart, 'test', '--reporter=json'],
+        [dart, 'test', '--reporter=json', '--concurrency=2'],
         eventLog(),
         timeout: 900,
       ),

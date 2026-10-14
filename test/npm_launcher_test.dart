@@ -93,7 +93,7 @@ void main() {
         p.join(root.path, 'packed'),
       ]);
       final packed = jsonDecode(
-        File(p.join(root.path, 'packed/npm-packed.json')).readAsStringSync(),
+        File(p.join(root.path, 'packed', 'npm-packed.json')).readAsStringSync(),
       ) as Map;
       final archive = p.join(root.path, 'packed', packed['filename'] as String);
       final npmCli = Platform.isWindows

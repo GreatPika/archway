@@ -442,6 +442,7 @@ final class SourceFixture {
               p.join(fixtures['dart_sdk']!, 'bin', 'dart'),
               'test',
               '--reporter=json',
+              '--concurrency=2',
             ],
     );
     expect(env['ARCHWAY_PUB_GIT_FIXTURE'], fixtures['git_fixture']);

@@ -179,7 +179,7 @@ Future<void> validateSource(
   );
   final logs = validateExecution(
     source['execution'],
-    [dart, 'test', '--reporter=json'],
+    [dart, 'test', '--reporter=json', '--concurrency=2'],
     directory,
     paths,
     suite: 'source-tests',

@@ -33,9 +33,9 @@ prepareNpmStageFixture() async {
     for (final name in ['archway', 'archive', 'cache', 'download', 'inventory'])
       'tool/npm/$name.cjs',
   ]) {
-    final output = File(p.join(source.path, name));
+    final output = File(p.joinAll([source.path, ...name.split('/')]));
     output.parent.createSync(recursive: true);
-    File(p.join(repository, name)).copySync(output.path);
+    File(p.joinAll([repository, ...name.split('/')])).copySync(output.path);
   }
   final pubspec = File(p.join(source.path, 'pubspec.yaml'));
   pubspec.writeAsStringSync(
