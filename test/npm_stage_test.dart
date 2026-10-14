@@ -25,20 +25,50 @@ void main() {
     String output, {
     bool ready = false,
     Map<String, String>? environment,
-  }) => Process.run(Platform.resolvedExecutable, [
-    p.join(repository, 'tool/npm/stage.dart'),
-    '--source',
-    source.path,
-    '--descriptor',
-    descriptor.path,
-    '--expected-commit',
-    identity['commit']! as String,
-    '--output',
-    p.join(root.path, output),
-    if (ready) '--registry-ready',
-  ], environment: environment);
+  }) => Process.run(
+    Platform.resolvedExecutable,
+    [
+      p.join(repository, 'tool/npm/stage.dart'),
+      '--source',
+      source.path,
+      '--descriptor',
+      descriptor.path,
+      '--expected-commit',
+      identity['commit']! as String,
+      '--output',
+      p.join(root.path, output),
+      if (ready) '--registry-ready',
+    ],
+    environment: environment,
+    includeParentEnvironment: environment == null,
+  );
   test('private thin stage binds canonical source and offline locked wrapper dependencies', () async {
-    final result = await stage('stage');
+    final environment = Map<String, String>.from(Platform.environment);
+    final configured = await Process.run('npm', [
+      '--offline',
+      '--no-update-notifier',
+      'config',
+      'get',
+      'cache',
+    ], runInShell: Platform.isWindows);
+    expect(configured.exitCode, 0, reason: '${configured.stderr}');
+    final preparedCache = (configured.stdout as String).trim();
+    environment.removeWhere(
+      (key, _) => key.toLowerCase() == 'npm_config_cache',
+    );
+    final isolatedHome = Directory(p.join(root.path, 'empty npm home'))
+      ..createSync();
+    environment.removeWhere(
+      (key, _) =>
+          ['home', 'userprofile', 'localappdata'].contains(key.toLowerCase()),
+    );
+    environment.addAll({
+      'HOME': isolatedHome.path,
+      'USERPROFILE': isolatedHome.path,
+      'LOCALAPPDATA': isolatedHome.path,
+      'NpM_CoNfIg_CaChE': preparedCache,
+    });
+    final result = await stage('stage', environment: environment);
     expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
     final package = Directory(p.join(root.path, 'stage/package'));
     final manifest = jsonDecode(
@@ -158,10 +188,10 @@ void main() {
       expect(Directory(p.join(root.path, 'rejected')).existsSync(), false);
     }
     descriptor.writeAsStringSync(original);
-    final result = await stage(
-      'rejected',
-      environment: {'npm_config_cache': p.join(root.path, 'empty-cache')},
-    );
+    final emptyCacheEnvironment = Map<String, String>.from(Platform.environment)
+      ..removeWhere((key, _) => key.toLowerCase() == 'npm_config_cache')
+      ..['npm_config_cache'] = p.join(root.path, 'empty-cache');
+    final result = await stage('rejected', environment: emptyCacheEnvironment);
     expect(result.exitCode, 1);
     expect(
       result.stderr,

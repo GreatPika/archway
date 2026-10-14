@@ -166,7 +166,15 @@ Future<void> stageNpm(
       File(p.join(source.path, 'tool', 'npm', name))
           .copySync(p.join(preparation.path, name));
     final environment = Map<String, String>.from(Platform.environment);
-    final cache = environment['npm_config_cache'];
+    // npm config names are case-insensitive; a copied Windows map is not.
+    final cache = environment.entries
+        .where(
+          (entry) =>
+              entry.key.toLowerCase() == 'npm_config_cache' &&
+              entry.value.isNotEmpty,
+        )
+        .map((entry) => entry.value)
+        .lastOrNull;
     environment.removeWhere(
       (key, _) =>
           key.toLowerCase().startsWith('npm_config_') ||
@@ -188,6 +196,7 @@ Future<void> stageNpm(
       [
         'ci',
         '--offline',
+        '--no-update-notifier',
         '--ignore-scripts',
         '--no-audit',
         '--no-fund',

@@ -46,6 +46,7 @@ Future<void> packNpm(Directory stage, Directory output) async {
       [
         'pack',
         '--offline',
+        '--no-update-notifier',
         '--ignore-scripts',
         '--json',
         '--pack-destination',
