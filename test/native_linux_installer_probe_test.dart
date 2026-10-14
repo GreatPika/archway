@@ -37,7 +37,7 @@ void main() {
         "import 'dart:io';\n"
         "import '${File('tool/ci/native_linux_installer_probe.dart').absolute.uri}';\n"
         "Future<void> main(List<String> args) async { try {\n"
-        "await runLinuxInstallerProbe(builderDart: File(Platform.resolvedExecutable), "
+        "await runLinuxInstallerProbe(version: '0.1.0', builderDart: File(Platform.resolvedExecutable), "
         "repository: Directory(args[0]), bundle: Directory(args[1]), output: Directory(args[2]), "
         "expectedCommit: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', privilege: [], inspect: (_, _) async => {});"
         "} catch (error) { stderr.write(error); exitCode = 17; } }",
@@ -81,6 +81,7 @@ void main() {
     var inspected = false;
     final output = Directory(p.join(base.path, 'evidence'));
     final proof = await runLinuxInstallerProbe(
+      version: '0.1.0',
       builderDart: File(Platform.resolvedExecutable),
       repository: Directory.current,
       bundle: bundle,
@@ -132,6 +133,7 @@ void main() {
     try {
       await expectLater(
         runLinuxInstallerProbe(
+          version: '0.1.0',
           builderDart: File(Platform.resolvedExecutable),
           repository: Directory.current,
           bundle: bundle,
@@ -211,6 +213,7 @@ void main() {
       final alias = Link(p.join(base.path, 'alias'))..createSync(bundle.path);
       await expectLater(
         runLinuxInstallerProbe(
+          version: '0.1.0',
           builderDart: File(Platform.resolvedExecutable),
           repository: Directory.current,
           bundle: bundle,

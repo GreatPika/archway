@@ -6,19 +6,22 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart' as archive;
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:path/path.dart' as p;
-import 'package:posix/posix.dart' as posix;
 import 'package:tar/tar.dart';
 
+import 'archive_extraction.dart';
 import 'archive_input.dart';
+
+enum TarDialect { native, pubUpload }
 
 /// Verifies an owned, bounded TAR snapshot; never extracts or publishes files.
 Future<void> verifyTarInput(
   ArchiveInput input,
-  ArchiveInventory inventory,
-) async {
-  final expectedMembers = _preflight(input, inventory);
+  ArchiveInventory inventory, {
+  TarDialect dialect = TarDialect.native,
+}) async {
+  final expectedMembers = _preflight(input, inventory, dialect: dialect);
   inventory.checkMembers(expectedMembers);
-  await _readTar(input, inventory, expectedMembers);
+  await _readTar(input, inventory, expectedMembers, dialect: dialect);
 }
 
 /// Reads only the bounded root manifest after the shared structural preflight.
@@ -45,38 +48,33 @@ Future<Uint8List> readTarManifest(ArchiveInput input) async {
   }
 }
 
-/// Provides verified extracted files only during [inspect], then removes them.
+/// Provides verified files during [inspect], then removes or publishes them.
+/// [publishTo] transfers the complete stage only after successful inspection.
 /// [setMode] is a private fixture seam; callers normally use native permissions.
 Future<T> withTarExtraction<T>(
   ArchiveInput input,
   ArchiveInventory inventory,
   Future<T> Function(Directory directory) inspect, {
   Directory? temporaryParent,
-  void Function(String path, int mode) setMode = _setMode,
+  Directory? publishTo,
+  TarDialect dialect = TarDialect.native,
+  void Function(String path, int mode) setMode = setArchiveMode,
 }) async {
-  final members = _preflight(input, inventory);
+  final members = _preflight(input, inventory, dialect: dialect);
   inventory.checkMembers(members);
-  final directory = await (temporaryParent ?? input.file.parent).createTemp(
-    '.archway-extract-',
-  );
-  try {
-    _setMode(directory.path, 0x1c0);
-    await _readTar(
+  return withArchiveExtraction(
+    temporaryParent ?? input.file.parent,
+    (directory) => _readTar(
       input,
       inventory,
       members,
       directory: directory,
       setMode: setMode,
-    );
-    return await inspect(Directory(await directory.resolveSymbolicLinks()));
-  } finally {
-    await directory.delete(recursive: true);
-  }
-}
-
-void _setMode(String path, int mode) {
-  // Windows checks archive-mode provenance but cannot reproduce Unix modes.
-  if (!Platform.isWindows) posix.chmod(path, mode.toRadixString(8));
+      dialect: dialect,
+    ),
+    inspect,
+    publishTo: publishTo,
+  );
 }
 
 Future<void> _readTar(
@@ -84,16 +82,29 @@ Future<void> _readTar(
   ArchiveInventory inventory,
   List<ArchiveMember> expectedMembers, {
   Directory? directory,
-  void Function(String path, int mode) setMode = _setMode,
+  TarDialect dialect = TarDialect.native,
+  void Function(String path, int mode) setMode = setArchiveMode,
 }) async {
   final reader = TarReader(
     input.file.openRead(),
     maxSpecialFileSize: 1024 * 1024,
   );
+  final directories = dialect == TarDialect.pubUpload
+      ? _parentDirectories(inventory)
+      : const <String>{};
   var index = 0;
   try {
     while (await reader.moveNext()) {
       final header = reader.current.header;
+      if (dialect == TarDialect.pubUpload && header.typeFlag == TypeFlag.dir) {
+        if (!directories.contains(header.name) ||
+            header.size != 0 ||
+            header.mode != 0x1ed ||
+            (header.linkName ?? '').isNotEmpty) {
+          throw const FormatException('Unexpected pub upload directory');
+        }
+        continue;
+      }
       final member = (name: header.name, size: header.size, mode: header.mode);
       if (index >= expectedMembers.length ||
           member != expectedMembers[index++] ||
@@ -150,6 +161,7 @@ List<ArchiveMember> _preflight(
   ArchiveInput input,
   ArchiveInventory? inventory, {
   void Function(ArchiveMember member, int offset)? onMember,
+  TarDialect dialect = TarDialect.native,
 }) {
   if (input.size > maxArchiveBytes || input.size % 512 != 0) {
     throw const FormatException('Unaligned or oversized TAR snapshot');
@@ -157,6 +169,9 @@ List<ArchiveMember> _preflight(
   final file = input.file.openSync();
   final members = <ArchiveMember>[];
   final seen = <String>{};
+  final directories = inventory != null && dialect == TarDialect.pubUpload
+      ? _parentDirectories(inventory)
+      : const <String>{};
   var total = 0;
   try {
     var offset = 0;
@@ -169,7 +184,7 @@ List<ArchiveMember> _preflight(
         _zero(file, offset, input.size);
         return members;
       }
-      final header = _header(bytes);
+      final header = _header(bytes, dialect);
       final size = header.fileSize;
       if (size > (header.typeFlag == 'x' ? 1024 * 1024 : maxArchiveFileBytes)) {
         throw const FormatException('TAR entry exceeds bound');
@@ -179,6 +194,11 @@ List<ArchiveMember> _preflight(
       if (next > input.size) throw const FormatException('Truncated TAR body');
       _zero(file, end, next);
       if (header.typeFlag == 'x') {
+        if (dialect == TarDialect.pubUpload) {
+          throw const FormatException(
+            'PAX is not part of the pub upload dialect',
+          );
+        }
         if (pax != null || size > 1024 * 1024)
           throw const FormatException('Invalid PAX sequence or size');
         pax = _pax(_read(file, offset + 512, size));
@@ -186,9 +206,19 @@ List<ArchiveMember> _preflight(
         final name = pax?['path'] ?? header.filename;
         total += size;
         if (!seen.add(name) ||
-            members.length >= maxArchiveEntries ||
+            seen.length > maxArchiveEntries ||
             total > maxArchiveBytes) {
           throw const FormatException('Duplicate or oversized TAR inventory');
+        }
+        if (header.typeFlag == '5') {
+          if (inventory == null ||
+              !directories.contains(name) ||
+              size != 0 ||
+              header.mode != 0x1ed) {
+            throw const FormatException('Unexpected pub upload directory');
+          }
+          offset = next;
+          continue;
         }
         if (inventory != null) {
           final expected = inventory.files[name];
@@ -271,8 +301,19 @@ Map<String, String> _pax(Uint8List bytes) {
 
 // TarFile parses numeric fields but tolerates malformed octal and trims names.
 // Constrain the owned header subset before parsing, then restore exact strings.
-archive.TarFile _header(Uint8List bytes) {
-  if (![0, 48, 120].contains(bytes[156]) ||
+Set<String> _parentDirectories(ArchiveInventory inventory) => {
+  for (final name in inventory.files.keys)
+    for (var i = 1; i < name.split('/').length; i++)
+      name.split('/').take(i).join('/'),
+};
+
+archive.TarFile _header(Uint8List bytes, TarDialect dialect) {
+  if (![
+        0,
+        48,
+        120,
+        if (dialect == TarDialect.pubUpload) 53,
+      ].contains(bytes[156]) ||
       bytes.sublist(157, 257).any((b) => b != 0)) {
     throw const FormatException('Unsupported TAR type or link target');
   }

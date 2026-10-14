@@ -7,6 +7,7 @@ import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 
 import 'native_acceptance_capture.dart';
+import '../../test/support/windows_command.dart';
 
 const fixtureKeys = [
   'dart_sdk',
@@ -160,7 +161,12 @@ Future<Map<String, Object?>> executeSuite(
   void Function(Map<String, Object?> proof)? onProof,
   File? windowsStdinFile,
   bool waitForWindowsJobEmpty = false,
+  WindowsRawCommandLine? windowsCommand,
 }) async {
+  windowsCommand?.validateFor(command);
+  if (windowsCommand != null && !Platform.isWindows) {
+    throw UnsupportedError('Raw Windows commands require native Windows');
+  }
   if (!RegExp(r'^[a-z][a-z0-9_-]*$').hasMatch(name) ||
       command.isEmpty ||
       timeout <= Duration.zero) {
@@ -190,6 +196,7 @@ Future<Map<String, Object?>> executeSuite(
       out,
       err,
       timeout,
+      windowsCommand: windowsCommand,
       windowsStdinFile: windowsStdinFile,
       waitForWindowsJobEmpty: waitForWindowsJobEmpty,
     );
@@ -207,6 +214,7 @@ Future<Map<String, Object?>> executeSuite(
   final proof = <String, Object?>{
     'suite': name,
     'command': command,
+    if (windowsCommand != null) 'windows_execution': windowsCommand.toJson(),
     'exit_code': code,
     'timed_out': timedOut,
     'elapsed_seconds': (elapsed.elapsedMicroseconds / 1000).round() / 1000,

@@ -94,7 +94,13 @@ A genuine private hosted Linux fixture with Dart 3.13.3 passes no-executables
 activation and explicit global run: exact argv/streams/exit 37, no execution-time
 HTTP, and offline operation with the server stopped. Poisoned still-present source
 continues to dispatch the prepared snapshot. This is bounded SDK-route evidence;
-actual Archway thin-wrapper runs on all three platforms remain required. Native uploads require
+the actual thin-wrapper fixture also measured a switch from Dart 3.13.3 to 3.13.5.
+The first switched invocation printed SDK dependency-resolution progress before
+native stdout; warm and offline invocations preserved native streams. No requests
+reached the live fixture registry during that switch, which is not a general
+no-network guarantee. After an SDK change, prewarm with
+`dart pub global run archway:archway --version` before capturing JSON.
+Actual Archway thin-wrapper runs on all three platforms remain required. Native uploads require
 separate authorization, then actual pinned hosted-URL cold fetch must pass before
 separately authorized registry publication. Local tests are not hosted download
 or registry certification. Windows Server evidence does not certify Windows 11,

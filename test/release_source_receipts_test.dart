@@ -4,10 +4,45 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
-
 import 'source_receipt_fixtures.dart';
 
 void main() {
+  for (final changed in [
+    'missing',
+    'command',
+    'original',
+    'stream',
+    'failure',
+    'timeout',
+  ]) {
+    test('rejects substituted source npm preparation $changed', () async {
+      final f = Fixture('linux-x64');
+      addTearDown(f.close);
+      final receipt = f.source['npm_preparation'] as Map<String, dynamic>;
+      switch (changed) {
+        case 'missing':
+          f.source.remove('npm_preparation');
+        case 'command':
+          receipt['command'][5] = '--prefer-offline';
+          File(p.join(f.evidence.path, 'source-npm-ci.json'))
+              .writeAsStringSync(jsonEncode(receipt));
+        case 'original':
+          File(p.join(f.evidence.path, 'source-npm-ci.json')).deleteSync();
+        case 'stream':
+          File(p.join(f.evidence.path, 'source-npm-ci.stdout.log'))
+              .writeAsStringSync('changed');
+        case 'failure':
+          receipt['exit_code'] = 37;
+          File(p.join(f.evidence.path, 'source-npm-ci.json'))
+              .writeAsStringSync(jsonEncode(receipt));
+        case 'timeout':
+          receipt['timed_out'] = true;
+          File(p.join(f.evidence.path, 'source-npm-ci.json'))
+              .writeAsStringSync(jsonEncode(receipt));
+      }
+      await expectLater(f.validate(), throwsA(isA<FormatException>()));
+    });
+  }
   for (final recorded in [
     '/fixtures/dart-sdk/child/../bin/dart',
     '//fixtures/dart-sdk/bin/dart',
@@ -37,6 +72,7 @@ void main() {
       final f = Fixture('linux-x64');
       addTearDown(f.close);
       f.source['snapshot_root'] = recorded;
+      f.bindNpmSnapshot();
       await f.validate();
     });
   }
@@ -98,6 +134,7 @@ void main() {
     final f = Fixture('windows-x64');
     addTearDown(f.close);
     f.source['snapshot_root'] = r'\\server\share\snapshot';
+    f.bindNpmSnapshot();
     await f.validate();
   });
   test('does not treat POSIX path spelling as case insensitive', () async {

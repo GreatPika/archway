@@ -1,11 +1,14 @@
-// Developer-only verification of release_bundles.py's files-only ZIP subset.
+// Bounded verification/extraction of the native producer's files-only ZIP subset.
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart' as archive;
 import 'package:crypto/crypto.dart' as crypto;
+import 'package:path/path.dart' as p;
 
+import 'archive_extraction.dart';
 import 'archive_input.dart';
 
 /// Returns CRC-checked root manifest bytes, not a verified bundle inventory.
@@ -36,6 +39,34 @@ Future<void> verifyZipInput(
     entries.map((e) => (name: e.name, size: e.size, mode: e.mode)),
   );
   _decode(input, entries, (_) => true, null, inventory: inventory);
+}
+
+/// Provides verified files during [inspect], then removes or publishes them.
+/// [publishTo] transfers the complete stage only after successful inspection.
+Future<T> withZipExtraction<T>(
+  ArchiveInput input,
+  ArchiveInventory inventory,
+  Future<T> Function(Directory directory) inspect, {
+  Directory? temporaryParent,
+  Directory? publishTo,
+}) async {
+  final entries = _preflight(input);
+  inventory.checkMembers(
+    entries.map((e) => (name: e.name, size: e.size, mode: e.mode)),
+  );
+  return withArchiveExtraction(
+    temporaryParent ?? input.file.parent,
+    (directory) async => _decode(
+      input,
+      entries,
+      (_) => true,
+      null,
+      inventory: inventory,
+      directory: directory,
+    ),
+    inspect,
+    publishTo: publishTo,
+  );
 }
 
 /// Collect bounded original evidence members after the same strict preflight/CRC checks.
@@ -180,6 +211,7 @@ void _decode(
   bool Function(_Entry) select,
   void Function(_Entry, Uint8List)? collect, {
   ArchiveInventory? inventory,
+  Directory? directory,
 }) {
   final stream = archive.InputFileStream(input.file.path);
   try {
@@ -196,26 +228,45 @@ void _decode(
         throw const FormatException('ZIP decoder disagrees with preflight');
       }
       if (!select(entry)) continue;
-      final output = _CheckedOutput(
-        entry.size,
-        collect == null ? null : (bytes) => collect(entry, bytes),
-      );
+      RandomAccessFile? target;
       try {
-        // Like Python zipfile, the native raw codec can accept unused deflate
-        // tails or a missing terminator after complete output. This verifies
-        // expanded identity, not canonical compressed framing; ArchiveInput's
-        // digest independently binds every original compressed byte.
-        file.decompress(output);
+        if (directory != null) {
+          final path = File(
+            p.joinAll([directory.path, ...entry.name.split('/')]),
+          );
+          path.parent.createSync(recursive: true);
+          path.createSync(exclusive: true);
+          target = path.openSync(mode: FileMode.write);
+        }
+        final output = _CheckedOutput(entry.size, (bytes) {
+          target?.writeFromSync(bytes);
+          collect?.call(entry, bytes);
+        });
+        try {
+          // Like Python zipfile, the native raw codec can accept unused deflate
+          // tails or a missing terminator after complete output. This verifies
+          // expanded identity, not canonical compressed framing; ArchiveInput's
+          // digest independently binds every original compressed byte.
+          file.decompress(output);
+        } finally {
+          output.hash.close();
+        }
+        if (output.length != entry.size ||
+            output.crc != entry.crc ||
+            (inventory != null &&
+                output.digest.value.toString() !=
+                    inventory.files[entry.name]!.sha256)) {
+          throw const FormatException(
+            'ZIP content differs from inventory or CRC',
+          );
+        }
       } finally {
-        output.hash.close();
+        target?.closeSync();
       }
-      if (output.length != entry.size ||
-          output.crc != entry.crc ||
-          (inventory != null &&
-              output.digest.value.toString() !=
-                  inventory.files[entry.name]!.sha256)) {
-        throw const FormatException(
-          'ZIP content differs from inventory or CRC',
+      if (directory != null) {
+        setArchiveMode(
+          p.joinAll([directory.path, ...entry.name.split('/')]),
+          entry.mode,
         );
       }
     }

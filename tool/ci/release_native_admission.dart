@@ -23,6 +23,7 @@ Future<AdmittedNativeReceipt> admitNativeReceipt({
   required Directory artifact,
   required File archive,
   required String target,
+  required String version,
   required String archiveSha256,
   required Map<String, Object?> source,
   required Directory repository,
@@ -38,7 +39,7 @@ Future<AdmittedNativeReceipt> admitNativeReceipt({
     throw const FormatException('Native TypeScript case inventory is invalid');
   }
   final filename =
-      'archway-0.1.0-$target${target == 'windows-x64' ? '.zip' : '.tar.gz'}';
+      'archway-$version-$target${target == 'windows-x64' ? '.zip' : '.tar.gz'}';
   if (!sameJson(proof['source'], source) ||
       proof['target'] != target ||
       proof['ci_host_verified'] != true ||
@@ -74,6 +75,9 @@ Future<AdmittedNativeReceipt> admitNativeReceipt({
         ? NativeArchiveFormat.zip
         : NativeArchiveFormat.tarGzip,
   );
+  if (verified.manifest['version'] != version) {
+    throw const FormatException('Native archive version differs from source');
+  }
   if (verified.archiveSha256 != archiveSha256) {
     throw const FormatException('Native archive checksum differs');
   }
@@ -89,6 +93,7 @@ Future<AdmittedNativeReceipt> admitNativeReceipt({
     report.parent,
     verified.manifestSha256,
     repository: repository,
+    version: version,
   );
   return AdmittedNativeReceipt._(
     report,

@@ -194,6 +194,7 @@ void main() {
           e.root,
           e.manifest,
           repository: Directory.current,
+          version: e.version,
         ).path,
         e.artifact.path,
       );
@@ -204,6 +205,7 @@ void main() {
           e.root,
           e.manifest,
           repository: Directory.current,
+          version: e.version,
         ),
         throwsFormatException,
       );
@@ -223,4 +225,5 @@ File validate(InstallerEvidence e) => validateInstaller(
   e.root,
   e.manifest,
   repository: Directory.current,
+  version: e.version,
 );

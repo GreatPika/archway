@@ -15,6 +15,7 @@ Future<Map<String, Object?>> inspectInstalledCommands(
   File binary,
   Directory installation, {
   required String target,
+  required String version,
   required Directory repository,
   required Directory base,
   required File node,
@@ -33,6 +34,7 @@ Future<Map<String, Object?>> inspectInstalledCommands(
     node,
     recorder,
     readOnly: true,
+    version: version,
   );
   final cases = <Map<String, Object?>>[];
   for (final name in ['missing-node', 'wrong-node']) {

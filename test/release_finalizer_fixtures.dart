@@ -19,8 +19,12 @@ class ReleaseFinalizerFixture {
   late final output = Directory(p.join(root.path, 'final'));
   late Map<String, Object> source;
   late Map<String, dynamic> transport;
-  Future<void> prepare({bool registryReady = false}) async {
+  Future<void> prepare({
+    bool registryReady = false,
+    String sourceVersion = '0.1.0',
+  }) async {
     final tracked = {
+      'pubspec.yaml': 'name: archway\nversion: $sourceVersion\n',
       'pubspec.lock': 'locked\n',
       'assets/typescript/package-lock.json': 'locked npm\n',
       'test/example_test.dart': 'synthetic source\n',

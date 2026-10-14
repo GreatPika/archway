@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:tar/tar.dart';
 
 import 'installed_receipt_fixtures.dart';
+import '../tool/ci/source_npm_preparation.dart';
 import 'native_acceptance_receipt_fixtures.dart' as native;
 import 'native_installer_receipt_fixtures.dart';
 import 'source_receipt_fixtures.dart' as source;
@@ -15,6 +16,8 @@ import 'source_receipt_fixtures.dart' as source;
 class FinalizerReceiptFixture {
   FinalizerReceiptFixture(
     this.target, {
+    String version = '0.1.0',
+    String? manifestVersion,
     Map<String, Object?>? identity,
     Map<String, String>? snapshot,
   }) {
@@ -25,7 +28,7 @@ class FinalizerReceiptFixture {
       sourceEvidence.source['source'] = identity;
     }
     if (snapshot != null) sourceEvidence.rewriteSnapshot(jsonEncode(snapshot));
-    installerEvidence = InstallerEvidence(target);
+    installerEvidence = InstallerEvidence(target, version: version);
     addInstalledReceipts(installerEvidence);
     nativeEvidence.source
       ..clear()
@@ -62,6 +65,15 @@ class FinalizerReceiptFixture {
       List() => value.map(rewrite).toList(),
       _ => value,
     };
+    sourceEvidence.source['npm_preparation'] = sourceEvidence.execution(
+      'source-npm-ci',
+      sourceNpmCommand(
+        acceptance['node_path'] as String,
+        sourceEvidence.source['snapshot_root'] as String,
+        nativeEvidence.paths,
+      ),
+      '',
+    );
     final sourceRecord = rewrite(sourceEvidence.source) as Map<String, dynamic>;
     acceptance['source_suite'] = sourceRecord;
     final installer =
@@ -123,6 +135,7 @@ class FinalizerReceiptFixture {
       'native/$target/library': utf8.encode('native'),
     };
     final manifest = {
+      'version': manifestVersion ?? version,
       'source': nativeEvidence.source,
       'target': target,
       'files': {
@@ -139,7 +152,7 @@ class FinalizerReceiptFixture {
     installer['installed']['manifest_sha256'] = hash(manifestBytes);
     payloads['manifest.json'] = manifestBytes;
     final filename =
-        'archway-0.1.0-$target${target == 'windows-x64' ? '.zip' : '.tar.gz'}';
+        'archway-$version-$target${target == 'windows-x64' ? '.zip' : '.tar.gz'}';
     final zip = archive.Archive();
     for (final entry in payloads.entries) {
       zip.addFile(

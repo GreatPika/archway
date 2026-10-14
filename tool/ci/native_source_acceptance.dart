@@ -7,6 +7,7 @@ import 'package:crypto/crypto.dart';
 import '../release/installation_identity.dart';
 import 'native_acceptance.dart';
 import 'native_source_report.dart';
+import 'source_npm_preparation.dart';
 
 import 'dart:io';
 
@@ -232,6 +233,30 @@ Future<Map<String, Object?>> runSourceTests(
         'Source dependency preparation changed the exact lock',
       );
     }
+    final node = env['ARCHWAY_TEST_NODE'];
+    if (node == null) {
+      throw const FormatException(
+        'Source npm preparation requires admitted Node',
+      );
+    }
+    final npmPreparation = await execute(
+      'source-npm-ci',
+      sourceNpmCommand(node, source.path, p.context),
+      source.path,
+      env,
+      output,
+      timeout: suiteTimeout,
+    );
+    for (final name in [
+      'tool/npm/package.json',
+      'tool/npm/package-lock.json',
+    ]) {
+      if (_sha(_ordinary(source, name)) != snapshot[name]) {
+        throw const FormatException(
+          'Source npm preparation changed tracked inputs',
+        );
+      }
+    }
     final execution = await execute(
       'source-tests',
       [dart, 'test', '--reporter=json'],
@@ -265,6 +290,7 @@ Future<Map<String, Object?>> runSourceTests(
       'snapshot_manifest_sha256': _sha(inventory),
       'assets': assets,
       'preparation': preparation,
+      'npm_preparation': npmPreparation,
       'execution': execution,
       'tests': summary,
     };

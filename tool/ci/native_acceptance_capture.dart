@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:io';
 
 import '../../test/support/windows_job.dart';
+import '../../test/support/windows_command.dart';
 import '../../test/support/windows_process.dart';
 import '../../test/support/windows_process_pipes.dart';
 
@@ -71,9 +72,13 @@ Future<int> captureAcceptanceProcess(
   Duration timeout, {
   File? windowsStdinFile,
   bool waitForWindowsJobEmpty = false,
+  WindowsRawCommandLine? windowsCommand,
 }) async {
+  windowsCommand?.validateFor(command);
   final windowsElapsed = waitForWindowsJobEmpty ? (Stopwatch()..start()) : null;
-  if ((windowsStdinFile != null || waitForWindowsJobEmpty) &&
+  if ((windowsStdinFile != null ||
+          waitForWindowsJobEmpty ||
+          windowsCommand != null) &&
       !Platform.isWindows) {
     throw UnsupportedError('Windows capture options require native Windows');
   }
@@ -97,6 +102,7 @@ Future<int> captureAcceptanceProcess(
         job = WindowsJob();
         child = job!.spawn(
           command,
+          windowsCommand: windowsCommand,
           output: pipes,
           workingDirectory: repository,
           environment: environment,

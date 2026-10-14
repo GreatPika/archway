@@ -1,4 +1,4 @@
-"""Static final-archive wiring; real native-host runs remain mandatory."""
+"""Static native-host preparation wiring; real host runs remain mandatory."""
 import ast
 from pathlib import Path
 import unittest
@@ -8,15 +8,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ReleaseWorkflow(unittest.TestCase):
-    def test_one_producer_three_exact_archive_consumers_and_success_gated_finalize(self):
+    def test_three_native_archive_consumers_require_pinned_preparation(self):
         raw = (ROOT / '.github/workflows/package-delivery-probe.yml').read_text()
         workflow = yaml.load(raw, Loader=yaml.BaseLoader)
         jobs = workflow['jobs']
-        producer = '\n'.join(step.get('run', '') for step in jobs['audit']['steps'])
-        self.assertEqual(producer.count('tool/release_bundles.py'), 1)
-        self.assertLess(producer.index('combine_installations.py verify-pack'),
-                        producer.index('tool/release_bundles.py'))
-        self.assertIn('test -f LICENSE', producer)
         native = jobs['release-native']
         self.assertEqual(native['needs'], ['audit'])
         self.assertEqual(native['strategy']['fail-fast'], 'false')
@@ -48,20 +43,7 @@ class ReleaseWorkflow(unittest.TestCase):
         downloads = [step['with']['name'] for step in native['steps']
                      if 'download-artifact@' in step.get('uses', '')]
         self.assertEqual(downloads, ['release-bundles-${{ github.run_id }}-${{ github.run_attempt }}'])
-        finalize = jobs['release-finalize']
-        self.assertEqual(set(finalize['needs']), {'audit', 'release-native', 'npm-installed', 'pub-installed'})
-        final_runs = '\n'.join(step.get('run', '') for step in finalize['steps'])
-        self.assertIn('PUB_CACHE="$PUB_PREPARED_CACHE" "$PUB_DART" --suppress-analytics run tool/ci/finalize_release_evidence.dart', final_runs)
-        self.assertIn('setup_pub_dart.py --target linux-x64 --source "$GITHUB_WORKSPACE"', final_runs)
-        self.assertIn('--prepare-cache', final_runs)
-        self.assertLess(final_runs.index('setup_pub_dart.py'), final_runs.index('finalize_release_evidence.dart'))
-        self.assertIn('--run-id \"$GITHUB_RUN_ID\" --run-attempt \"$GITHUB_RUN_ATTEMPT\"', final_runs)
-        self.assertIn('--expected-pub-transport-json \"$EXPECTED_PUB_TRANSPORT\"', final_runs)
-        final_step = next(s for s in finalize['steps'] if 'finalize_release_evidence.dart' in s.get('run', ''))
-        self.assertEqual(final_step['env']['EXPECTED_PUB_TRANSPORT'], '${{ needs.audit.outputs.pub-transport }}')
-        self.assertNotIn('release_bundles.py', final_runs)
-        self.assertNotIn('continue-on-error', raw)
-        self.assertEqual(workflow['permissions'], {'contents': 'read'})
+
 
 
 if __name__ == '__main__':

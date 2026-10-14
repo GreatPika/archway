@@ -156,8 +156,10 @@ can prevent complete analysis. Filesystem rechecks do not provide an atomic snap
 - The pub route uses `dart pub global activate --no-executables archway VERSION`
   then `dart pub global run archway:archway <args>`, without an alias or setup step.
   Offline use needs the prepared snapshot under the same SDK and verified native
-  cache. Linux SDK-route feasibility does not certify actual Archway packages on
-  all platforms or hosted public installation.
+  cache. After an SDK change, run `dart pub global run archway:archway --version`
+  once before capturing JSON: SDK snapshot preparation can print dependency
+  progress on the first invocation. Linux SDK-route feasibility does not certify
+  actual Archway packages on all platforms or hosted public installation.
 
 See the [installation guide](docs/implementation/installation-layout.md) for
 platform evidence and remaining package-route gates.

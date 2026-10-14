@@ -25,6 +25,7 @@ void main() {
         final output = Directory('${root.path}/untouched');
         await expectLater(
           runMacosInstaller(
+            version: '0.1.0',
             repository: root,
             builderDart: File(Platform.resolvedExecutable),
             bundle: Directory('${root.path}/missing'),
@@ -401,6 +402,7 @@ class Fixture {
   }
 
   Future<Map<String, Object?>> exercise() => exerciseMacosInstaller(
+    version: '0.1.0',
     repository: root,
     builderDart: dart,
     bundle: bundle,

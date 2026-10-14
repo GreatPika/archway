@@ -7,3 +7,5 @@ native/macos-arm64/
 native/windows-x64/
 __pycache__/
 *.pyc
+
+/tool/npm/node_modules/

@@ -26,6 +26,7 @@ Future<Map<String, Object?>> runMacosInstaller({
   required Directory repository,
   required File builderDart,
   required Directory bundle,
+  required String version,
   required Directory output,
   required Future<Map<String, Object?>> Function(File, Directory) inspect,
 }) async {
@@ -43,6 +44,7 @@ Future<Map<String, Object?>> runMacosInstaller({
     repository: repository,
     builderDart: builderDart,
     bundle: bundle,
+    version: version,
     output: output,
     installed: Directory('/usr/local/lib/archway'),
     command: File('/usr/local/bin/archway'),
@@ -60,6 +62,7 @@ Future<Map<String, Object?>> exerciseMacosInstaller({
   required Directory repository,
   required File builderDart,
   required Directory bundle,
+  required String version,
   required Directory output,
   required Directory installed,
   required File command,
@@ -105,7 +108,7 @@ Future<Map<String, Object?>> exerciseMacosInstaller({
         'Apple pkgbuild bundled with host (no compiler-version query):\n${await run(['/usr/bin/sw_vers'])}',
   };
   final artifact = File(
-    p.join(output.path, 'archway-0.1.0-macos-arm64-unsigned.pkg'),
+    p.join(output.path, 'archway-$version-macos-arm64-unsigned.pkg'),
   );
   final base = Directory(
     await (await temporaryParent.createTemp('archway pkg '))

@@ -6,7 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 
 class InstallerEvidence {
-  InstallerEvidence(this.target) {
+  InstallerEvidence(this.target, {this.version = '0.1.0'}) {
     root = Directory.systemTemp.createTempSync('installer-receipts-');
     directory = Directory(p.join(root.path, 'installer'))..createSync();
     paths = p.Context(
@@ -18,7 +18,7 @@ class InstallerEvidence {
       'windows-x64': 'exe',
     }[target];
     artifact = File(
-      p.join(directory.path, 'archway-0.1.0-$target-unsigned.$suffix'),
+      p.join(directory.path, 'archway-$version-$target-unsigned.$suffix'),
     )..writeAsStringSync('SYNTHETIC INSTALLER FIXTURE ONLY');
     final compiler = {
       'linux-x64': '/usr/bin/dpkg-deb',
@@ -100,7 +100,7 @@ class InstallerEvidence {
       add(['/usr/bin/sw_vers']);
       for (final pair in [
         (old, at('old-build'), '0.0.0', 'd' * 64),
-        (bundle, at('final-build'), '0.1.0', hash(artifact.readAsBytesSync())),
+        (bundle, at('final-build'), version, hash(artifact.readAsBytesSync())),
       ]) {
         add(
           [
@@ -135,7 +135,7 @@ class InstallerEvidence {
       add([compiler, '/?']);
       for (final item in [
         ('old', old, '0.0.0', at('old-artifact')),
-        ('final', bundle, '0.1.0', at('installer')),
+        ('final', bundle, version, at('installer')),
       ]) {
         final inputs = at('${item.$1}-input');
         add([
@@ -163,6 +163,7 @@ class InstallerEvidence {
     }
   }
   final String target;
+  final String version;
   late final Directory root, directory;
   late final File artifact;
   late final p.Context paths;

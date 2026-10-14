@@ -23,6 +23,9 @@ void main() {
         addTearDown(() => temporary.delete(recursive: true));
         final source = Directory(p.join(temporary.path, 'source'))
           ..createSync();
+        const version = '3.4.5';
+        File(p.join(source.path, 'pubspec.yaml'))
+            .writeAsStringSync('name: archway\nversion: $version\n');
         for (final name in [
           'pubspec.lock',
           'assets/typescript/package-lock.json',
@@ -63,10 +66,11 @@ void main() {
         final release = Directory(p.join(temporary.path, 'release'))
           ..createSync();
         final name =
-            'archway-0.1.0-$target${Platform.isWindows ? '.zip' : '.tar.gz'}';
+            'archway-$version-$target${Platform.isWindows ? '.zip' : '.tar.gz'}';
         final payload = utf8.encode('Never execute this payload');
         final manifest = utf8.encode(
           jsonEncode({
+            'version': version,
             'target': fault == 'target' ? 'unsupported' : target,
             'source': fault == 'source'
                 ? {'commit': 'incorrect'}
@@ -143,7 +147,7 @@ void main() {
           contains(
             fault == 'checksum'
                 ? 'SHA256SUMS mismatch'
-                : 'Final native manifest source/target mismatch',
+                : 'Final native manifest source/target/version mismatch',
           ),
         );
         expect(report.parent.existsSync(), isFalse);

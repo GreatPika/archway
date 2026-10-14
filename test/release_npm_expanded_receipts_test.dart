@@ -64,6 +64,22 @@ void main() {
           void validate(Map<String, dynamic> proof) =>
               validateNpmExpanded(proof, target, route, directory);
           validate(original);
+          if (route == 'local') {
+            final thin =
+                jsonDecode(jsonEncode(original)) as Map<String, dynamic>;
+            const selected =
+                'node_modules/archway-architecture-cli/bin/archway.cjs';
+            thin['corpus_control']['selected_path'] = selected;
+            expect(() => validate(thin), throwsFormatException);
+            validateNpmExpanded(
+              thin,
+              target,
+              route,
+              directory,
+              selectedInstalledPath: selected,
+            );
+          }
+
           for (final mutate in <void Function(Map)>[
             (p) => (p['asset_controls'] as List).removeLast(),
             (p) => p['asset_controls'][0]['exit'] = 0,

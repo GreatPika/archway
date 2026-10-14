@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:ffi/ffi.dart';
 
 import 'windows_process.dart';
+import 'windows_command.dart';
 import 'windows_process_pipes.dart';
 
 late final int Function() _error;
@@ -100,6 +101,7 @@ final class WindowsJob {
     Map<String, String>? environment,
     WindowsProcessPipes? output,
     bool newConsole = false,
+    WindowsRawCommandLine? windowsCommand,
   }) {
     final handle = _handle ?? (throw StateError('Job is closed'));
     WindowsSuspendedProcess? process;
@@ -110,6 +112,7 @@ final class WindowsJob {
         environment: environment,
         output: output,
         newConsole: newConsole,
+        windowsCommand: windowsCommand,
       );
       if (_assignProcess case final replacement?) {
         replacement(process);

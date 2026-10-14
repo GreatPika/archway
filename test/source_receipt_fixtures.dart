@@ -23,6 +23,19 @@ class Fixture {
     final paths = p.Context(style: windows ? p.Style.windows : p.Style.posix);
     final sdk = windows ? r'C:\fixtures\dart-sdk' : '/fixtures/dart-sdk';
     final dart = paths.join(sdk, 'bin', windows ? 'dart.exe' : 'dart');
+    final node = windows
+        ? r'C:\fixtures\node\node.exe'
+        : '/fixtures/node/bin/node';
+    final snapshotRoot = windows ? r'C:\temporary\source' : '/temporary/source';
+    final npm = windows
+        ? paths.join(
+            paths.dirname(node),
+            'node_modules',
+            'npm',
+            'bin',
+            'npm-cli.js',
+          )
+        : '/fixtures/node/lib/node_modules/npm/bin/npm-cli.js';
     final identity = {'commit': 'a' * 40, 'dirty': false};
     writeTracked('pubspec.lock', 'locked\n');
     writeTracked(testPath, 'test source\n');
@@ -59,7 +72,7 @@ class Fixture {
     source = {
       'source': identity,
       'target': target,
-      'snapshot_root': windows ? r'C:\temporary\source' : '/temporary/source',
+      'snapshot_root': snapshotRoot,
       'dart': dart,
       'snapshot_manifest': 'source-files.json',
       'snapshot_manifest_sha256': digest(snapshotFile.readAsBytesSync()),
@@ -70,6 +83,17 @@ class Fixture {
         'pub',
         'get',
         '--enforce-lockfile',
+      ], ''),
+      'npm_preparation': execution('source-npm-ci', [
+        node,
+        npm,
+        'ci',
+        '--prefix',
+        paths.join(snapshotRoot, 'tool', 'npm'),
+        '--offline',
+        '--ignore-scripts',
+        '--no-audit',
+        '--no-fund',
       ], ''),
       'execution': execution(
         'source-tests',
@@ -96,6 +120,7 @@ class Fixture {
       'target': target,
       'source_root': windows ? r'C:\checkout' : '/checkout',
       'acceptance': {
+        'node_path': node,
         'source_suite': source,
         'fixtures': {
           'manifest': {
@@ -161,6 +186,15 @@ class Fixture {
     File(p.join(evidence.path, '$suite.json'))
         .writeAsStringSync(jsonEncode(receipt));
     return receipt;
+  }
+
+  void bindNpmSnapshot() {
+    final command = List<String>.from(source['npm_preparation']['command']);
+    final paths = p.Context(
+      style: proof['target'] == 'windows-x64' ? p.Style.windows : p.Style.posix,
+    );
+    command[4] = paths.join(source['snapshot_root'] as String, 'tool', 'npm');
+    source['npm_preparation'] = execution('source-npm-ci', command, '');
   }
 
   void replaceEvents(String text) {

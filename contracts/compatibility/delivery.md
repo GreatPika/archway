@@ -28,7 +28,10 @@ amendment is recorded in [the public contract](../json/decision.md#safe-init-inc
   prewarm it. Offline pub use requires a prepared activated snapshot under the
   same SDK and a verified native cache. SDK switches or missing/stale snapshots
   can trigger SDK recompilation; their behavior requires measured acceptance,
-  not an unconditional no-network promise. No lifecycle/install
+  not an unconditional no-network promise. SDK preparation can print progress
+  before native stdout on the first switched invocation; prewarm with the explicit
+  pub `--version` invocation before capturing machine-readable output.
+  No lifecycle/install
   scripts, native-payload/analysis-compiler builds, project dependency installation,
   SDK downloads,
   automatic updater, cache garbage collection or separate setup command exists.

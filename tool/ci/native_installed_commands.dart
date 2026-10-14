@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 
 import '../validation/json_values.dart';
+import '../../test/support/native_process_support.dart';
 import 'aot_init_assertions.dart';
 import 'installed_command_recorder.dart';
 
@@ -49,67 +50,92 @@ Future<Map<String, Object?>> runInstalledCommands(
   File node,
   InstalledCommandRecorder recorder, {
   bool readOnly = false,
+  required String version,
+  Map<String, String>? environment,
+  List<String> Function(List<String>)? command,
+  Directory? projectRoot,
 }) async {
   _require(
     installation.resolveSymbolicLinksSync() == installation.path,
     'Installation must be canonical',
   );
-  final foreign = Directory(p.join(base.path, 'foreign'))..createSync();
-  final noRuntimes = installedRuntimeEnvironment(
-    Platform.environment,
-    p.join(base.path, 'no-runtime'),
+  Future<NativeProcessResult> capture(
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+    int expectedExit = 0,
+    Duration? timeout,
+  }) => recorder.capture(
+    command == null ? arguments : command(arguments),
+    workingDirectory: workingDirectory,
+    environment: environment,
+    expectedExit: expectedExit,
+    timeout: timeout,
   );
-  final help = await recorder.capture(
+  final foreign = Directory(p.join(base.path, 'foreign'))..createSync();
+  final policyEnvironment =
+      environment ??
+      installedRuntimeEnvironment(
+        Platform.environment,
+        p.join(base.path, 'no-runtime'),
+      );
+  final help = await capture(
     [binary.path, '--help'],
     workingDirectory: foreign.path,
-    environment: noRuntimes,
+    environment: policyEnvironment,
   );
-  final version = await recorder.capture(
+  final versionResult = await capture(
     [binary.path, '--version'],
     workingDirectory: foreign.path,
-    environment: noRuntimes,
+    environment: policyEnvironment,
   );
   _require(
     utf8.decode(help.stdout).startsWith('archway [--root ROOT]') &&
         help.stderr.isEmpty &&
-        version.stderr.isEmpty &&
+        versionResult.stderr.isEmpty &&
         [
-          'archway 0.1.0\n',
-          'archway 0.1.0\r\n',
-        ].contains(utf8.decode(version.stdout)),
+          'archway $version\n',
+          'archway $version\r\n',
+        ].contains(utf8.decode(versionResult.stdout)),
     'Unexpected native help/version',
   );
   final init = Directory(p.join(base.path, 'init'))..createSync();
   await assertAotInit(
     binary,
     init,
-    environment: noRuntimes,
+    environment: policyEnvironment,
     label: 'Native installation',
-    run: recorder.capture,
+    timeout: recorder.timeout,
+    run: capture,
   );
   final policy = p.join(init.path, 'empty project café');
-  final valid = await recorder.capture(
+  final valid = await capture(
     [binary.path, '--root', policy, 'validate'],
     workingDirectory: foreign.path,
-    environment: noRuntimes,
+    environment: policyEnvironment,
   );
   _require(
     jsonDecode(utf8.decode(valid.stdout))['exit_code'] == 0 &&
         valid.stderr.isEmpty,
     'Final native policy validation failed',
   );
-  final exported = await recorder.capture(
+  final exported = await capture(
     [binary.path, '--root', policy, 'export', '--format', 'mermaid'],
     workingDirectory: foreign.path,
-    environment: noRuntimes,
+    environment: policyEnvironment,
   );
   _require(
     utf8.decode(exported.stdout).endsWith('flowchart LR\n') &&
         jsonDecode(utf8.decode(exported.stderr))['exit_code'] == 0,
     'Final native Mermaid export failed',
   );
-  final project = Directory(p.join(base.path, 'prepared project'))
-    ..createSync();
+  final project =
+      projectRoot ??
+      (Directory(p.join(base.path, 'prepared project'))..createSync());
+  _require(
+    project.resolveSymbolicLinksSync() == project.path,
+    'Inspected project must be canonical',
+  );
   final source = File(p.join(project.path, 'src/app/main.ts'));
   final core = File(p.join(project.path, 'src/core/private.ts'));
   const clean = 'export const value = 1;\n';
@@ -150,13 +176,12 @@ nodes:
     final before = _snapshot(project),
         cwd = _snapshot(foreign),
         owned = _snapshot(installation);
-    final result = await recorder.capture(
+    final result = await capture(
       [binary.path, '--root', project.path, 'check', ...extra],
       workingDirectory: foreign.path,
-      environment: installedRuntimeEnvironment(
-        Platform.environment,
-        node.parent.path,
-      ),
+      environment:
+          environment ??
+          installedRuntimeEnvironment(Platform.environment, node.parent.path),
       expectedExit: code,
     );
     _require(!marker.existsSync(), 'Project decoy executed');

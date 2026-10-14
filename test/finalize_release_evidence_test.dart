@@ -11,6 +11,32 @@ import '../tool/release/zip_input.dart';
 import 'release_finalizer_fixtures.dart';
 
 void main() {
+  test(
+    'legacy aggregate derives native receipt version from canonical source',
+    () async {
+      final f = ReleaseFinalizerFixture();
+      addTearDown(f.close);
+      // Receipts remain valid legacy 0.1 artifacts, but their canonical source declares 3.4.5.
+      await f.prepare(sourceVersion: '3.4.5');
+      await expectLater(
+        finalizeRelease(
+          release: f.release,
+          reports: f.reports,
+          output: f.output,
+          expectedCommit: f.source['commit'] as String,
+          repository: f.repository,
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'canonical version admission',
+            'Native receipt does not establish required archive checks',
+          ),
+        ),
+      );
+      expect(f.output.existsSync(), isFalse);
+    },
+  );
   test('combined evidence rejects portable collisions and aggregate entry overflow', () async {
     final f = ReleaseFinalizerFixture();
     addTearDown(f.close);

@@ -6,6 +6,7 @@ import 'package:ffi/ffi.dart';
 import 'package:path/path.dart' as p;
 
 import 'windows_process_pipes.dart';
+import 'windows_command.dart';
 
 /// Microsoft C runtime argv quoting, with every argument quoted explicitly.
 String windowsCommandLine(List<String> arguments) {
@@ -136,12 +137,17 @@ final class WindowsSuspendedProcess {
     Map<String, String>? environment,
     WindowsProcessPipes? output,
     bool newConsole = false,
+    WindowsRawCommandLine? windowsCommand,
   }) {
     if (!Platform.isWindows || Abi.current() != Abi.windowsX64) {
       throw UnsupportedError('Suspended fixture requires native Windows x64');
     }
-    final command = windowsCommandLine(arguments);
-    if (!p.windows.isAbsolute(arguments.first) ||
+    if (arguments.isEmpty) throw ArgumentError('Expected nonempty argv');
+    windowsCommand?.validateFor(arguments);
+    final applicationName = windowsCommand?.applicationName ?? arguments.first;
+    final command =
+        windowsCommand?.commandLine ?? windowsCommandLine(arguments);
+    if (!p.windows.isAbsolute(applicationName) ||
         (workingDirectory != null &&
             (!p.windows.isAbsolute(workingDirectory) ||
                 workingDirectory.contains('\u0000')))) {
@@ -168,7 +174,7 @@ final class WindowsSuspendedProcess {
       environmentBlock =
           '${keys.map((key) => '$key=${environment[key]}').join('\u0000')}\u0000';
     }
-    final application = arguments.first.toNativeUtf16();
+    final application = applicationName.toNativeUtf16();
     final commandLine = command
         .toNativeUtf16(); // CreateProcessW may mutate it.
     final directory = workingDirectory?.toNativeUtf16() ?? nullptr;

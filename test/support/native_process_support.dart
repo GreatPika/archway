@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import 'windows_job.dart';
+import 'windows_command.dart';
 import 'windows_process.dart';
 import 'windows_process_pipes.dart';
 
@@ -43,7 +44,11 @@ Future<NativeProcessResult> runNativeProcess(
   required Duration timeout,
   String? workingDirectory,
   Map<String, String>? environment,
+  WindowsRawCommandLine? windowsCommand,
 }) async {
+  windowsCommand?.validateFor(command);
+  if (windowsCommand != null && !Platform.isWindows)
+    throw UnsupportedError('Raw Windows commands require native Windows');
   if (Platform.isWindows) {
     WindowsProcessPipes? pipes;
     WindowsJob? job;
@@ -53,6 +58,7 @@ Future<NativeProcessResult> runNativeProcess(
       job = WindowsJob();
       child = job.spawn(
         command,
+        windowsCommand: windowsCommand,
         output: pipes,
         workingDirectory: workingDirectory,
         environment: environment,

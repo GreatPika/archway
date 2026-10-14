@@ -11,8 +11,9 @@ import 'release_execution_receipts.dart';
 void validateInstallerPhases(
   Map<String, dynamic> proof,
   Directory directory,
-  p.Context paths,
-) {
+  p.Context paths, {
+  required String version,
+}) {
   final receipt = proof['installer'] as Map;
   final records = receipt['commands'] as List;
   final acceptance = proof['acceptance'] as Map;
@@ -154,7 +155,7 @@ void validateInstallerPhases(
     digestLine(
       built,
       receipt['artifact']['sha256'] as String,
-      package(built, '0.1.0'),
+      package(built, version),
     );
     bool installer(List<String> a, String package) =>
         a.length == 7 &&
@@ -213,7 +214,7 @@ void validateInstallerPhases(
     final oldBuilt = find((a) => inno(a, '0.0.0', args(old)[3]), old);
     final preparedFinal = find((a) => prepared(a, true), oldBuilt);
     final built = find(
-      (a) => inno(a, '0.1.0', args(preparedFinal)[3]),
+      (a) => inno(a, version, args(preparedFinal)[3]),
       preparedFinal,
     );
     if (!path(args(built)[2].substring(12), paths.dirname(artifact))) {

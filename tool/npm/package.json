@@ -1,0 +1,8 @@
+{
+  "name": "archway-npm-wrapper-tooling",
+  "private": true,
+  "dependencies": {
+    "tar": "7.5.22",
+    "yauzl": "3.4.0"
+  }
+}

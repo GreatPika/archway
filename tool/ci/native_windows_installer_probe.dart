@@ -18,6 +18,7 @@ Future<Map<String, Object?>> runWindowsInstallerProbe({
   required File builderDart,
   required Directory repository,
   required Directory bundle,
+  required String version,
   required Directory output,
   required bool disposableAccount,
   required Future<Map<String, Object?>> Function(File, Directory) inspect,
@@ -48,9 +49,9 @@ Future<Map<String, Object?>> runWindowsInstallerProbe({
   final manifest = jsonDecode(
     File(p.join(bundle.path, 'manifest.json')).readAsStringSync(),
   ) as Map;
-  if (manifest['version'] != '0.1.0') {
+  if (manifest['version'] != version) {
     throw const FormatException(
-      'Final installer requires verified 0.1.0 bundle',
+      'Final installer requires canonical release version',
     );
   }
   await output.create(recursive: true);
@@ -82,7 +83,7 @@ Future<Map<String, Object?>> runWindowsInstallerProbe({
     };
     final old = Directory(p.join(temp.path, 'test-only-old-bundle'));
     await prepareWindowsInstallerOldFixture(bundle, old);
-    for (final pair in [(old, 'old', '0.0.0'), (bundle, 'final', '0.1.0')]) {
+    for (final pair in [(old, 'old', '0.0.0'), (bundle, 'final', version)]) {
       final inputs = p.join(temp.path, '${pair.$2}-input');
       await recorder.run([
         builderDart.path,
@@ -105,7 +106,7 @@ Future<Map<String, Object?>> runWindowsInstallerProbe({
       ),
     );
     final artifact = File(
-      p.join(output.path, 'archway-0.1.0-windows-x64-unsigned.exe'),
+      p.join(output.path, 'archway-$version-windows-x64-unsigned.exe'),
     );
     final oldIdentity = {
       'version': '0.0.0',

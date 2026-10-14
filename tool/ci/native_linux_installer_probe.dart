@@ -16,6 +16,7 @@ Future<Map<String, Object?>> runLinuxInstallerProbe({
   required File builderDart,
   required Directory repository,
   required Directory bundle,
+  required String version,
   required Directory output,
   required String expectedCommit,
   required List<String> privilege,
@@ -57,7 +58,7 @@ Future<Map<String, Object?>> runLinuxInstallerProbe({
     'version': await recorder.run([compiler.path, '--version']),
   };
   final artifact = File(
-    p.join(output.path, 'archway-0.1.0-linux-x64-unsigned.deb'),
+    p.join(output.path, 'archway-$version-linux-x64-unsigned.deb'),
   );
   final manifestFile = File(p.join(bundle.path, 'manifest.json'));
   final before = await _hash(manifestFile);

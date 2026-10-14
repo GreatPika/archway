@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import '../validation/json_values.dart';
 import 'native_source_report.dart';
 import 'release_execution_receipts.dart';
+import 'source_npm_preparation.dart';
 
 Map<String, dynamic> _object(Object? value) {
   if (value is! Map<String, dynamic>) {
@@ -168,6 +169,13 @@ Future<void> validateSource(
     directory,
     paths,
     suite: 'source-pub-get',
+  );
+  validateExecution(
+    source['npm_preparation'],
+    sourceNpmCommand(_string(acceptance['node_path']), snapshot, paths),
+    directory,
+    paths,
+    suite: 'source-npm-ci',
   );
   final logs = validateExecution(
     source['execution'],

@@ -3,11 +3,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
+import 'package:pub_semver/pub_semver.dart';
 
 import '../release/archive_input.dart';
 import '../release/installation_artifact.dart';
 import '../release/installation_identity.dart';
 import '../release/native_archive.dart';
+import '../release/native_payload.dart';
 import '../validation/json_values.dart';
 import 'installed_command_recorder.dart';
 import 'native_acceptance.dart';
@@ -93,10 +95,12 @@ Future<void> probeNativeRelease({
   final identity = await sourceIdentity(repository);
   if (identity['commit'] != expectedCommit)
     throw StateError('Source checkout differs from expected commit');
+  final version = (await nativePubspec(repository))['version'] as String;
+  Version.parse(version);
   final host = await nativeReleaseHost(target, ciHost: ciHost);
   final node = await nativeReleaseNode(target);
   final windows = target == 'windows-x64';
-  final filename = 'archway-0.1.0-$target${windows ? '.zip' : '.tar.gz'}';
+  final filename = 'archway-$version-$target${windows ? '.zip' : '.tar.gz'}';
   final archive = File(p.join(release.path, filename));
   final sums = <String, String>{};
   final checksumBytes = readOrdinaryBytes(
@@ -122,8 +126,9 @@ Future<void> probeNativeRelease({
       format: windows ? NativeArchiveFormat.zip : NativeArchiveFormat.tarGzip,
     );
     if (!sameJson(verified.manifest['source'], identity) ||
-        verified.manifest['target'] != target) {
-      throw StateError('Final native manifest source/target mismatch');
+        verified.manifest['target'] != target ||
+        verified.manifest['version'] != version) {
+      throw StateError('Final native manifest source/target/version mismatch');
     }
     final base = Directory(
       await (await Directory.systemTemp.createTemp('archway release '))
@@ -195,6 +200,7 @@ Future<void> probeNativeRelease({
         base,
         node.executable,
         recorder,
+        version: version,
       );
       Map<String, Object?>? installer;
       if (installerChecks) {
@@ -219,6 +225,7 @@ Future<void> probeNativeRelease({
             command,
             root,
             target: target,
+            version: version,
             repository: repository,
             base: projectBase,
             node: node.executable,
@@ -232,6 +239,7 @@ Future<void> probeNativeRelease({
             builderDart: builderDart,
             repository: repository,
             bundle: bundle,
+            version: version,
             output: output,
             expectedCommit: expectedCommit,
             privilege: ['sudo', '-n'],
@@ -241,6 +249,7 @@ Future<void> probeNativeRelease({
             repository: repository,
             builderDart: builderDart,
             bundle: bundle,
+            version: version,
             output: output,
             inspect: inspect,
           ),
@@ -248,6 +257,7 @@ Future<void> probeNativeRelease({
             builderDart: builderDart,
             repository: repository,
             bundle: bundle,
+            version: version,
             output: output,
             disposableAccount: ciHost,
             inspect: inspect,

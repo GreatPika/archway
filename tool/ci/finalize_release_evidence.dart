@@ -2,16 +2,16 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:archive/archive.dart' as archive;
 import 'package:args/args.dart';
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 
 import '../release/archive_input.dart';
 import '../release/installation_identity.dart';
-import '../release/publish_directory.dart';
+import '../release/native_payload.dart' show nativePubspec;
 import '../release/zip_input.dart';
 import 'release_execution_receipts.dart';
+import 'release_final_assembly.dart';
 import 'release_installed_admission.dart';
 import 'release_native_admission.dart';
 import 'release_receipt_values.dart';
@@ -49,6 +49,7 @@ Future<void> finalizeRelease({
     source['commit'] == expectedCommit,
     'Source differs from expected commit',
   );
+  final version = (await nativePubspec(repository))['version'] as String;
   final expected = {
     for (final target in _targets)
       'archway-0.1.0-$target${target == 'windows-x64' ? '.zip' : '.tar.gz'}',
@@ -119,6 +120,7 @@ Future<void> finalizeRelease({
       ),
       archive: File(p.join(release.path, name)),
       target: target,
+      version: version,
       archiveSha256: sums[name]!,
       source: source,
       repository: repository,
@@ -148,144 +150,21 @@ Future<void> finalizeRelease({
     ),
     'Producer evidence source differs',
   );
-  output.parent.createSync(recursive: true);
-  final stage = output.parent.createTempSync('.archway-final-');
-  try {
-    for (final name in [...expected, 'SHA256SUMS']) {
-      File(p.join(release.path, name)).copySync(p.join(stage.path, name));
-    }
-    final archiveEntries = archive.Archive();
-    final names = <String>{};
-    final combined = <String, ArchiveFileIdentity>{};
-    var combinedBytes = 0;
-    void append(String name, List<int> bytes, [int mode = 0x1a4]) {
-      requireReceipt(names.add(name), 'Duplicate finalized evidence member');
-      combinedBytes += bytes.length;
-      requireReceipt(
-        combinedBytes <= maxArchiveBytes && names.length <= maxArchiveEntries,
-        'Combined evidence exceeds byte or entry bound',
-      );
-      combined[name] = (size: bytes.length, mode: mode, sha256: _hash(bytes));
-      archiveEntries.addFile(
-        archive.ArchiveFile.bytes(name, bytes)..mode = 0x8000 | mode,
-      );
-    }
-
-    for (final original in originals.entries)
-      append(original.key, original.value.bytes, original.value.mode);
-    void appendFiles(Directory directory, String prefix, {File? installer}) {
-      final inventory = <String, ArchiveFileIdentity>{};
-      var totalBytes = 0;
-      final entries = directory.listSync(recursive: true, followLinks: false)
-        ..sort((a, b) => a.path.compareTo(b.path));
-      for (final entity in entries) {
-        if (entity is Directory) continue;
-        if (installer != null && entity.path == installer.path) continue;
-        if (installer != null &&
-            [
-              '.deb',
-              '.pkg',
-              '.exe',
-            ].contains(p.extension(entity.path).toLowerCase())) {
-          throw FormatException(
-            'Unexpected installer binary in native evidence: ${p.basename(entity.path)}',
-          );
-        }
-        final file = File(entity.path);
-        final bytes = readOrdinaryBytes(file);
-        totalBytes += bytes.length;
-        requireReceipt(
-          totalBytes <= maxArchiveBytes && inventory.length < maxArchiveEntries,
-          'Original evidence inventory exceeds bound',
-        );
-        final name = p
-            .split(p.relative(file.path, from: directory.path))
-            .join('/');
-        inventory[name] = (
-          size: bytes.length,
-          mode: 0x1a4,
-          sha256: _hash(bytes),
-        );
-        // Complete portable-name checks finish before the archive is encoded.
-        append('$prefix/$name', bytes);
-      }
-      ArchiveInventory(inventory);
-    }
-
-    if (installedEvidence != null)
-      appendFiles(installedEvidence.absolute, 'installed-routes');
-    for (final entry in accepted.entries) {
-      final installer = entry.value.installer;
-      final destination = File(p.join(stage.path, p.basename(installer.path)));
-      requireReceipt(
-        !_exists(destination.path),
-        'Installer name collides with producer payload',
-      );
-      installer.copySync(destination.path);
-      requireReceipt(
-        _hash(readOrdinaryBytes(destination, limit: maxArchiveBytes)) ==
-            entry.value.installerSha256,
-        'Tested installer changed during finalization',
-      );
-      append(
-        'native-smoke/${entry.key}.json',
-        readOrdinaryBytes(entry.value.report),
-      );
-      appendFiles(
-        Directory(p.join(reports.path, entry.key)),
-        'native-smoke/${entry.key}',
-        installer: installer,
-      );
-    }
-    append(
-      'native-smoke/acceptance.json',
-      utf8.encode(
-        '${const JsonEncoder.withIndent('  ').convert({
-          'source': source,
-          'original_producer_sha256': sums,
-          'scope': 'Matching three-host native archive receipts; payload archives unchanged',
-          'workflow': {
-            for (final name in ['GITHUB_REPOSITORY', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT']) name: Platform.environment[name],
-          },
-        })}\n',
-      ),
-    );
-    ArchiveInventory(combined);
-    File(p.join(stage.path, _evidenceName))
-        .writeAsBytesSync(archive.ZipEncoder().encode(archiveEntries));
-    for (final entry in sums.entries) {
-      if (entry.key == _evidenceName) continue;
-      requireReceipt(
-        _hash(
-              readOrdinaryBytes(
-                File(p.join(stage.path, entry.key)),
-                limit: maxArchiveBytes,
-              ),
-            ) ==
-            entry.value,
-        'Tested release payload changed during finalization',
-      );
-    }
-    final payloads = [
-      ...expected,
-      for (final receipt in accepted.values) p.basename(receipt.installer.path),
-    ]..sort();
-    File(p.join(stage.path, 'SHA256SUMS')).writeAsStringSync(
-      payloads
-          .map(
-            (name) =>
-                '${_hash(File(p.join(stage.path, name)).readAsBytesSync())}  $name\n',
-          )
-          .join(),
-    );
-    requireReceipt(
-      exactReceipt(await sourceIdentity(repository), source),
-      'Source changed during finalization',
-    );
-    publishDirectory(stage, output);
-  } finally {
-    if (stage.existsSync()) stage.deleteSync(recursive: true);
-  }
+  await assembleFinalRelease(
+    output: output,
+    reports: reports,
+    repository: repository,
+    source: source,
+    assets: {
+      for (final name in expected)
+        if (name != _evidenceName) name: File(p.join(release.path, name)),
+    },
+    sums: sums,
+    evidenceName: _evidenceName,
+    originals: originals,
+    accepted: accepted,
+    installedEvidence: installedEvidence,
+  );
 }
 
 Future<void> main(List<String> arguments) async {

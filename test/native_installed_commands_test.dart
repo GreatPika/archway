@@ -58,6 +58,7 @@ void main() {
       work,
       File(Platform.resolvedExecutable),
       recorder,
+      version: '0.1.0',
       readOnly: true,
     );
     expect(result['native_commands'], [
@@ -88,6 +89,60 @@ void main() {
       'owned fixture helper',
     );
   });
+  test('installed command caller binds route arguments environment and release version', () async {
+    final work = Directory(p.join(base.path, 'wrapped'))..createSync();
+    final output = Directory(p.join(base.path, 'wrapped-logs'))..createSync();
+    final recorder = InstalledCommandRecorder(
+      output: output,
+      timeout: const Duration(seconds: 120),
+    );
+    final logical = File(p.join(base.path, 'logical npm or pub command'));
+    final project = Directory(p.join(work.path, 'caller project café'))
+      ..createSync();
+    final routed = <List<String>>[];
+    await runInstalledCommands(
+      logical,
+      installation,
+      work,
+      File(Platform.resolvedExecutable),
+      recorder,
+      readOnly: true,
+      version: '2.3.4',
+      projectRoot: project,
+      environment: {
+        ...Platform.environment,
+        'ARCHWAY_FIXTURE_VERSION': '2.3.4',
+      },
+      command: (arguments) {
+        expect(arguments.first, logical.path);
+        routed.add(arguments);
+        return [binary.path, '--fixture-route', ...arguments.skip(1)];
+      },
+    );
+    expect(File(p.join(project.path, 'src/app/main.ts')).existsSync(), true);
+    expect(routed, hasLength(8));
+    final originalInit = jsonDecode(
+      File(p.join(output.path, 'installed-2.json')).readAsStringSync(),
+    );
+    expect(originalInit['timeout_seconds'], 120);
+    expect(
+      routed.map((args) => args.skip(1).toList()),
+      recorder.commands.map(
+        (record) => (record['arguments'] as List).skip(2).toList(),
+      ),
+    );
+    expect(
+      recorder.commands.every(
+        (record) => (record['arguments'] as List).first == binary.path,
+      ),
+      true,
+    );
+    expect(
+      File(p.join(output.path, recorder.commands[1]['stdout'] as String))
+          .readAsStringSync(),
+      'archway 2.3.4\n',
+    );
+  });
   test(
     'relocated archive controls remove and restore only the owned helper',
     () async {
@@ -103,6 +158,7 @@ void main() {
         work,
         File(Platform.resolvedExecutable),
         recorder,
+        version: '0.1.0',
       );
       expect((result['typescript'] as List).map((v) => v['case']), [
         'clean',
@@ -165,6 +221,7 @@ void main() {
     }
     final suites = <String>[];
     final result = await inspectInstalledCommands(
+      version: '0.1.0',
       selectedCommand,
       installation,
       target: nativeTarget().target,
@@ -266,6 +323,7 @@ void main() {
             work,
             File(Platform.resolvedExecutable),
             recorder,
+            version: '0.1.0',
           ),
           throwsStateError,
         );

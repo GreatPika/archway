@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../../test/support/native_process_support.dart';
+import '../../test/support/windows_command.dart';
 import 'native_acceptance.dart';
 import 'release_execution_receipts.dart';
 
@@ -11,10 +12,12 @@ final class InstalledCommandRecorder {
   InstalledCommandRecorder({
     required this.output,
     this.timeout = const Duration(seconds: 30),
+    this.windowsCommandFor,
   });
 
   final Directory output;
   final Duration timeout;
+  final WindowsRawCommandLine? Function(List<String>)? windowsCommandFor;
   final _commands = <Map<String, Object?>>[];
   bool _running = false;
   List<Map<String, Object?>> get commands => List.unmodifiable(_commands);
@@ -25,6 +28,7 @@ final class InstalledCommandRecorder {
     Map<String, String>? environment,
     int expectedExit = 0,
     Duration? timeout,
+    WindowsRawCommandLine? windowsCommand,
   }) async {
     if (_running) throw StateError('Installed commands must run sequentially');
     _running = true;
@@ -39,9 +43,12 @@ final class InstalledCommandRecorder {
           environment ?? Platform.environment,
           output,
           timeout: timeout ?? this.timeout,
+          windowsCommand: windowsCommand ?? windowsCommandFor?.call(command),
           onProof: (value) => _commands.add(
             Map<String, Object?>.unmodifiable({
               'arguments': command,
+              if (value.containsKey('windows_execution'))
+                'windows_execution': value['windows_execution'],
               'exit': value['exit_code'],
               for (final key in [
                 'stdout',

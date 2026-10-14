@@ -5,6 +5,14 @@ import 'dart:io';
 import 'aot_init_oracle_child.dart' as init;
 
 void main(List<String> args) {
+  if (args.first == '--fixture-route') {
+    if (Platform.environment['ARCHWAY_FIXTURE_VERSION'] != '2.3.4') {
+      stderr.writeln('fixture route environment was not forwarded');
+      exitCode = 78;
+      return;
+    }
+    args = args.sublist(1);
+  }
   final installation = File(Platform.resolvedExecutable).parent.parent.parent;
   final control = File('${installation.path}/probe-control');
   final fault = control.existsSync() ? control.readAsStringSync() : '';
@@ -17,7 +25,9 @@ void main(List<String> args) {
     return;
   }
   if (args.first == '--version') {
-    stdout.write('archway 0.1.0\n');
+    stdout.write(
+      'archway ${Platform.environment['ARCHWAY_FIXTURE_VERSION'] ?? '0.1.0'}\n',
+    );
     return;
   }
   final root = args[1], command = args[2];

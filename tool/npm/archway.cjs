@@ -1,55 +1,51 @@
 #!/usr/bin/env node
 'use strict';
-// Only transport belongs here. The native core owns CLI parsing and results.
+// Transport only. The native core owns arguments, results and analysis policy.
 const fs = require('node:fs');
 const path = require('node:path');
-const {createHash} = require('node:crypto');
+const os = require('node:os');
 const {spawn} = require('node:child_process');
-const targets = {
-  'linux/x64': ['linux-x64', 'archway'],
-  'darwin/arm64': ['macos-arm64', 'archway'],
-  'win32/x64': ['windows-x64', 'archway.exe'],
-};
-function fail(message) {
-  process.stderr.write(`archway launcher: ${message}\n`);
+function fail(error) {
+  process.stderr.write(`archway launcher: ${error.message}\n`);
   process.exitCode = 126;
 }
-const target = targets[`${process.platform}/${process.arch}`];
-if (!target) {
-  fail(`unsupported target ${process.platform}/${process.arch}`);
-} else {
+async function main() {
+  const target = {'linux/x64': 'linux-x64', 'darwin/arm64': 'macos-arm64',
+    'win32/x64': 'windows-x64'}[`${process.platform}/${process.arch}`];
+  if (!target) throw new Error(`unsupported target ${process.platform}/${process.arch}`);
   const root = path.dirname(path.dirname(__filename));
-  const executable = path.join(root, 'bin', ...target);
-  try {
-    if (!fs.lstatSync(executable).isFile() || fs.realpathSync(executable) !== executable) {
-      throw new Error('payload is aliased or is not an ordinary file');
-    }
-    // Detect corruption against the generated manifest, not installation authenticity.
-    // This also prevents Node's ENOEXEC text-file shell fallback for changed payloads.
-    const manifest = path.join(root, 'manifest.json');
-    if (!fs.lstatSync(manifest).isFile() || fs.realpathSync(manifest) !== manifest) {
-      throw new Error('payload manifest is missing or aliased');
-    }
-    const expected = JSON.parse(fs.readFileSync(manifest, 'utf8')).sha256[
-      `bin/${target[0]}/${target[1]}`];
-    const actual = createHash('sha256').update(fs.readFileSync(executable)).digest('hex');
-    if (!/^[a-f0-9]{64}$/.test(expected) || actual !== expected) {
-      throw new Error('payload integrity check failed');
-    }
-    const child = spawn(executable, process.argv.slice(2), {stdio: 'inherit', shell: false});
-    child.once('error', error => fail(`cannot start ${target[0]} payload: ${error.message}`));
-    child.once('exit', (code, signal) => {
-      if (signal) {
-        process.removeAllListeners(signal);
-        process.kill(process.pid, signal);
-      } else {
-        process.exitCode = code;
-      }
-    });
-    for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
-      process.on(signal, () => child.kill(signal));
-    }
-  } catch (error) {
-    fail(`cannot start ${target[0]} payload: ${error.message}`);
+  function metadata(name) {
+    const file = path.join(root, name), stat = fs.lstatSync(file);
+    if (!stat.isFile() || fs.realpathSync(file) !== file || stat.size > 2 * 1024 * 1024)
+      throw new Error('package metadata is missing, oversized or aliased');
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
   }
+  const descriptor = metadata('acquisition.json'), packageInfo = metadata('package.json');
+  if (packageInfo.name !== 'archway-architecture-cli' || packageInfo.version !== descriptor.version)
+    throw new Error('package and native release identities differ');
+  const home = os.homedir();
+  const userCache = process.platform === 'win32'
+    ? process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local')
+    : process.platform === 'darwin' ? path.join(home, 'Library', 'Caches')
+      : process.env.XDG_CACHE_HOME || path.join(home, '.cache');
+  if (!path.isAbsolute(userCache)) throw new Error('user cache location must be absolute');
+  const executable = await require('./cache.cjs').acquireNative(
+    descriptor, target, path.join(userCache, 'archway', 'npm'));
+  const child = spawn(executable, process.argv.slice(2), {stdio: 'inherit', shell: false});
+  const forwarders = new Map();
+  for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+    const forward = () => child.kill(signal);
+    forwarders.set(signal, forward);
+    process.on(signal, forward);
+  }
+  function removeForwarders() {
+    for (const [signal, forward] of forwarders) process.removeListener(signal, forward);
+  }
+  child.once('error', error => { removeForwarders(); fail(error); });
+  child.once('exit', (code, signal) => {
+    removeForwarders();
+    if (signal) process.kill(process.pid, signal);
+    else process.exitCode = code;
+  });
 }
+main().catch(fail);

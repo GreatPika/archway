@@ -37,6 +37,77 @@ void main() {
     });
   }
 
+  if (!Platform.isWindows) {
+    test(
+      'owned POSIX session keeps the executable PID and group signal exit',
+      () async {
+        final process = await startPosixSession(
+          ['/bin/sh', '-c', r'printf "%s\n" "$$"; exec /bin/sleep 60'],
+          workingDirectory: Directory.current.path,
+          environment: Platform.environment,
+        );
+        final errors = process.stderr.drain<void>();
+        try {
+          final firstLine = await process.stdout
+              .transform(utf8.decoder)
+              .transform(const LineSplitter())
+              .first
+              .timeout(const Duration(seconds: 15));
+          expect(int.parse(firstLine), process.pid);
+          signalPosixSession(process.pid, ProcessSignal.sigterm);
+          expect(
+            await process.exitCode.timeout(const Duration(seconds: 5)),
+            -15,
+          );
+          expect(isProcessAlive(process.pid), isFalse);
+        } finally {
+          process.kill(ProcessSignal.sigkill);
+          try {
+            await process.exitCode.timeout(const Duration(seconds: 5));
+          } finally {
+            await errors.timeout(const Duration(seconds: 5));
+          }
+        }
+      },
+    );
+  }
+
+  test(
+    'owned Windows handle preserves exit 23 after direct-child reap',
+    () async {
+      final child = await Process.start(Platform.resolvedExecutable, [
+        '--suppress-analytics',
+        'run',
+        'test/support/process_fixture_child.dart',
+      ]);
+      final output = child.stdout.drain<void>(),
+          errors = child.stderr.drain<void>();
+      WindowsOwnedProcess? owned;
+      try {
+        owned = WindowsOwnedProcess(child.pid);
+        expect(owned.exited, isFalse);
+        owned.terminate(23);
+        expect(await child.exitCode.timeout(const Duration(seconds: 5)), 23);
+        expect(owned.exited, isTrue);
+      } finally {
+        try {
+          owned?.close();
+        } finally {
+          child.kill();
+          try {
+            await child.exitCode.timeout(const Duration(seconds: 5));
+          } finally {
+            await Future.wait([output, errors])
+                .timeout(const Duration(seconds: 5));
+          }
+        }
+      }
+    },
+    skip: !Platform.isWindows
+        ? 'Requires native Windows owned process handles.'
+        : false,
+  );
+
   // Windows real console delivery is covered by windows_console_capability.dart.
   if (!Platform.isWindows) {
     test('LifecycleSupportTest.test_real_ctrl_c_reports_and_exits', () async {

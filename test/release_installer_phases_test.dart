@@ -17,7 +17,7 @@ void main() {
         '${e.receipt['artifact']['sha256']}  ${e.paths.join(argv[5], 'archway-0.1.0-macos-arm64-unsigned.pkg')}\n';
     final record = e.record(argv, 'byte-digest', stdout: line);
     e.commands[3] = record;
-    validateInstallerPhases(e.proof, e.directory, e.paths);
+    validateInstallerPhases(e.proof, e.directory, e.paths, version: e.version);
     final bytes = utf8.encode(line).toList();
     final index = bytes.indexOf(0xef);
     bytes.replaceRange(index, index + 3, [0xff]);
@@ -25,7 +25,12 @@ void main() {
         .writeAsBytesSync(bytes);
     record['stdout_sha256'] = InstallerEvidence.hash(bytes);
     expect(
-      () => validateInstallerPhases(e.proof, e.directory, e.paths),
+      () => validateInstallerPhases(
+        e.proof,
+        e.directory,
+        e.paths,
+        version: e.version,
+      ),
       throwsFormatException,
     );
   });
@@ -75,7 +80,12 @@ void main() {
             records[indices[0]]['arguments'][0] = e.at('python');
         }
         expect(
-          () => validateInstallerPhases(e.proof, e.directory, e.paths),
+          () => validateInstallerPhases(
+            e.proof,
+            e.directory,
+            e.paths,
+            version: e.version,
+          ),
           throwsFormatException,
         );
       });
@@ -98,7 +108,12 @@ void main() {
           final original = argv[operand];
           argv[operand] = '$original-changed';
           expect(
-            () => validateInstallerPhases(e.proof, e.directory, e.paths),
+            () => validateInstallerPhases(
+              e.proof,
+              e.directory,
+              e.paths,
+              version: e.version,
+            ),
             throwsFormatException,
             reason: '$target phase $index operand $operand',
           );
@@ -114,11 +129,16 @@ void main() {
       ..[4] = '--log=/elsewhere.log';
     e.commands.insert(4, e.record(argv, 'reset'));
     expect(
-      () => validateInstallerPhases(e.proof, e.directory, e.paths),
+      () => validateInstallerPhases(
+        e.proof,
+        e.directory,
+        e.paths,
+        version: e.version,
+      ),
       throwsFormatException,
     );
     argv[3] = '--root=/fixture/other-system';
-    validateInstallerPhases(e.proof, e.directory, e.paths);
+    validateInstallerPhases(e.proof, e.directory, e.paths, version: e.version);
   });
   for (final change in [
     'missing-initial',
@@ -158,7 +178,12 @@ void main() {
           e.commands.last['exit'] = 2;
       }
       expect(
-        () => validateInstallerPhases(e.proof, e.directory, e.paths),
+        () => validateInstallerPhases(
+          e.proof,
+          e.directory,
+          e.paths,
+          version: e.version,
+        ),
         throwsFormatException,
       );
     });
@@ -167,30 +192,45 @@ void main() {
   test('Windows binds Dart preparation to ordered compiler and lifecycle', () {
     final e = InstallerEvidence('windows-x64');
     addTearDown(() => e.root.deleteSync(recursive: true));
-    validateInstallerPhases(e.proof, e.directory, e.paths);
+    validateInstallerPhases(e.proof, e.directory, e.paths, version: e.version);
     e.commands[4]['arguments'][2] = '/DOutputDir=C:\\different';
     expect(
-      () => validateInstallerPhases(e.proof, e.directory, e.paths),
+      () => validateInstallerPhases(
+        e.proof,
+        e.directory,
+        e.paths,
+        version: e.version,
+      ),
       throwsFormatException,
     );
   });
   test('macOS binds two truthful absence checks around its lifecycle', () {
     final e = InstallerEvidence('macos-arm64');
     addTearDown(() => e.root.deleteSync(recursive: true));
-    validateInstallerPhases(e.proof, e.directory, e.paths);
+    validateInstallerPhases(e.proof, e.directory, e.paths, version: e.version);
     e.commands.first['exit'] = 0;
     expect(
-      () => validateInstallerPhases(e.proof, e.directory, e.paths),
+      () => validateInstallerPhases(
+        e.proof,
+        e.directory,
+        e.paths,
+        version: e.version,
+      ),
       throwsFormatException,
     );
   });
   test('binds Debian Dart builds and ordered install upgrade remove', () {
     final e = InstallerEvidence('linux-x64');
     addTearDown(() => e.root.deleteSync(recursive: true));
-    validateInstallerPhases(e.proof, e.directory, e.paths);
+    validateInstallerPhases(e.proof, e.directory, e.paths, version: e.version);
     e.commands[1]['arguments'][0] = '/unproven/dart';
     expect(
-      () => validateInstallerPhases(e.proof, e.directory, e.paths),
+      () => validateInstallerPhases(
+        e.proof,
+        e.directory,
+        e.paths,
+        version: e.version,
+      ),
       throwsFormatException,
     );
   });

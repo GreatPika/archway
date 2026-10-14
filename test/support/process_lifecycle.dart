@@ -1,6 +1,7 @@
 // Native lifecycle controls for developer acceptance fixtures only.
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:isolate';
 
 final _libc = Platform.isWindows ? null : DynamicLibrary.process();
 final _errno = _libc
@@ -11,6 +12,62 @@ final _kill = _libc
     ?.lookupFunction<Int32 Function(Int32, Int32), int Function(int, int)>(
       'kill',
     );
+final _getsid = _libc?.lookupFunction<Int32 Function(Int32), int Function(int)>(
+  'getsid',
+);
+
+/// The bootstrap execs in place: callers retain the real command's PID/streams.
+Future<Process> startPosixSession(
+  List<String> command, {
+  required String workingDirectory,
+  required Map<String, String> environment,
+}) async {
+  if (Platform.isWindows) throw UnsupportedError('POSIX session required');
+  final source = await Isolate.resolvePackageUri(
+    Uri.parse('package:archway/src/installation_layout.dart'),
+  );
+  final packages = await Isolate.packageConfig;
+  if (source == null || packages == null)
+    throw StateError('Prepared Archway source package required');
+  final bootstrap = source.resolve(
+    '../../test/support/posix_session_exec.dart',
+  );
+  return Process.start(
+    Platform.resolvedExecutable,
+    [
+      '--suppress-analytics',
+      'run',
+      '--packages=$packages',
+      bootstrap.toFilePath(),
+      ...command,
+    ],
+    workingDirectory: workingDirectory,
+    environment: environment,
+    includeParentEnvironment: false,
+  );
+}
+
+/// Only a live isolated session leader may establish group signal ownership.
+void signalPosixSession(int leader, ProcessSignal signal) {
+  _validatePid(leader);
+  if (Platform.isWindows) throw UnsupportedError('POSIX session required');
+  final errno = _errno!();
+  final session = _getsid!(leader);
+  if (session < 0 && errno.value == 3) return;
+  if (session != leader) throw StateError('Fixture is not an isolated session');
+  signalPosixGroup(leader, signal);
+}
+
+/// For a group whose isolated leader was already observed before it exited.
+void signalPosixGroup(int leader, ProcessSignal signal) {
+  _validatePid(leader);
+  if (Platform.isWindows) throw UnsupportedError('POSIX group required');
+  final errno = _errno!();
+  if (_kill!(-leader, signal.signalNumber) == 0) return;
+  final code = errno.value;
+  if (code != 3) throw OSError('kill(owned group)', code);
+}
+
 late final int Function() _error;
 final _kernel = _loadKernel();
 
@@ -115,5 +172,38 @@ void terminateProcessId(int pid) {
     }
   } finally {
     _closeOwned(handle);
+  }
+}
+
+/// Retains identity from the helper-ready barrier through termination/cleanup.
+final class WindowsOwnedProcess {
+  WindowsOwnedProcess(int pid) {
+    if (!Platform.isWindows) throw UnsupportedError('Windows handle required');
+    _validatePid(pid);
+    _handle = _processHandle(pid, 0x00100001);
+    if (_handle == null) throw StateError('Fixture process $pid already gone');
+  }
+
+  Pointer<Void>? _handle;
+  bool get exited => _state(_handle!, 0) == 0;
+
+  void terminate(int code) {
+    final handle = _handle ?? (throw StateError('Fixture handle closed'));
+    final failure = _terminate!(handle, code) == 0
+        ? OSError('TerminateProcess', _error())
+        : null;
+    if (_state(handle, 3000) != 0)
+      throw failure ?? StateError('Owned Windows fixture cleanup unconfirmed');
+  }
+
+  void close() {
+    final handle = _handle;
+    if (handle == null) return;
+    try {
+      if (!exited) terminate(1);
+    } finally {
+      _handle = null;
+      _closeOwned(handle);
+    }
   }
 }

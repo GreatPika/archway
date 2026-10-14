@@ -17,7 +17,11 @@ void main() {
       addTearDown(fixture.close);
       SourceFixture.write(fixture.repo, 'untracked.txt', 'excluded');
       final proof = await fixture.run();
-      expect(fixture.calls, ['source-pub-get', 'source-tests']);
+      expect(fixture.calls, [
+        'source-pub-get',
+        'source-npm-ci',
+        'source-tests',
+      ]);
       expect(proof.keys.toSet(), {
         'source',
         'snapshot_root',
@@ -27,6 +31,7 @@ void main() {
         'snapshot_manifest_sha256',
         'assets',
         'preparation',
+        'npm_preparation',
         'execution',
         'tests',
       });
@@ -79,7 +84,14 @@ void main() {
       await expectLater(
         fixture.run(
           execute: (name, command, cwd, env, logs, {required timeout}) async {
-            final proof = await fixture.execute(name, command, cwd, env, logs, timeout: timeout);
+            final proof = await fixture.execute(
+              name,
+              command,
+              cwd,
+              env,
+              logs,
+              timeout: timeout,
+            );
             if (name == 'source-tests')
               File(p.join(cwd, changed)).writeAsStringSync('mutated');
             return proof;
@@ -96,7 +108,14 @@ void main() {
     await expectLater(
       fixture.run(
         execute: (name, command, cwd, env, logs, {required timeout}) async {
-          final proof = await fixture.execute(name, command, cwd, env, logs, timeout: timeout);
+          final proof = await fixture.execute(
+            name,
+            command,
+            cwd,
+            env,
+            logs,
+            timeout: timeout,
+          );
           File(p.join(cwd, 'pubspec.lock')).writeAsStringSync('mutated');
           return proof;
         },
@@ -105,13 +124,73 @@ void main() {
     );
     expect(fixture.calls, ['source-pub-get']);
   });
+  for (final name in ['tool/npm/package.json', 'tool/npm/package-lock.json']) {
+    test('npm preparation mutation stops before source tests: $name', () async {
+      final fixture = SourceFixture();
+      addTearDown(fixture.close);
+      await expectLater(
+        fixture.run(
+          execute: (stage, command, cwd, env, logs, {required timeout}) async {
+            final receipt = await fixture.execute(
+              stage,
+              command,
+              cwd,
+              env,
+              logs,
+              timeout: timeout,
+            );
+            if (stage == 'source-npm-ci')
+              File(p.join(cwd, name)).writeAsStringSync('changed');
+            return receipt;
+          },
+        ),
+        throwsFormatException,
+      );
+      expect(fixture.calls, ['source-pub-get', 'source-npm-ci']);
+      expect(Directory(fixture.snapshot!).existsSync(), isFalse);
+    });
+  }
+  test(
+    'npm preparation failure stops before source tests and removes snapshot',
+    () async {
+      final fixture = SourceFixture();
+      addTearDown(fixture.close);
+      await expectLater(
+        fixture.run(
+          execute: (stage, command, cwd, env, logs, {required timeout}) async {
+            final receipt = await fixture.execute(
+              stage,
+              command,
+              cwd,
+              env,
+              logs,
+              timeout: timeout,
+            );
+            if (stage == 'source-npm-ci')
+              throw StateError('offline cache missing');
+            return receipt;
+          },
+        ),
+        throwsStateError,
+      );
+      expect(fixture.calls, ['source-pub-get', 'source-npm-ci']);
+      expect(Directory(fixture.snapshot!).existsSync(), isFalse);
+    },
+  );
   test('original tracked sources must remain unchanged', () async {
     final fixture = SourceFixture();
     addTearDown(fixture.close);
     await expectLater(
       fixture.run(
         execute: (name, command, cwd, env, logs, {required timeout}) async {
-          final proof = await fixture.execute(name, command, cwd, env, logs, timeout: timeout);
+          final proof = await fixture.execute(
+            name,
+            command,
+            cwd,
+            env,
+            logs,
+            timeout: timeout,
+          );
           if (name == 'source-tests')
             SourceFixture.write(fixture.repo, 'lib/code.dart', 'mutated');
           return proof;
@@ -160,7 +239,14 @@ void main() {
       await expectLater(
         fixture.run(
           execute: (name, command, cwd, env, logs, {required timeout}) async {
-            final proof = await fixture.execute(name, command, cwd, env, logs, timeout: timeout);
+            final proof = await fixture.execute(
+              name,
+              command,
+              cwd,
+              env,
+              logs,
+              timeout: timeout,
+            );
             if (name == 'source-tests') {
               final file = File(p.join(cwd, 'lib/code.dart'));
               file.deleteSync();
@@ -181,7 +267,14 @@ void main() {
       await expectLater(
         fixture.run(
           execute: (name, command, cwd, env, logs, {required timeout}) async {
-            final proof = await fixture.execute(name, command, cwd, env, logs, timeout: timeout);
+            final proof = await fixture.execute(
+              name,
+              command,
+              cwd,
+              env,
+              logs,
+              timeout: timeout,
+            );
             if (name == 'source-tests') {
               File(p.join(logs.path, proof['stdout'] as String))
                   .writeAsStringSync('{"type":"done","success":true}\n');
@@ -201,7 +294,14 @@ void main() {
       await expectLater(
         fixture.run(
           execute: (name, command, cwd, env, logs, {required timeout}) async {
-            await fixture.execute(name, command, cwd, env, logs, timeout: timeout);
+            await fixture.execute(
+              name,
+              command,
+              cwd,
+              env,
+              logs,
+              timeout: timeout,
+            );
             throw StateError('runner failed');
           },
         ),
@@ -232,6 +332,8 @@ final class SourceFixture {
     bundle = Directory(p.join(root.path, 'archive'))..createSync();
     for (final entry in {
       'pubspec.lock': 'locked',
+      'tool/npm/package.json': '{}',
+      'tool/npm/package-lock.json': 'npm locked',
       'assets/typescript/package-lock.json': '{}',
       'test/example_test.dart': 'void main() {}',
       'test/other_test.dart': 'void main() {}',
@@ -306,6 +408,36 @@ final class SourceFixture {
               'get',
               '--enforce-lockfile',
             ]
+          : name == 'source-npm-ci'
+          ? [
+              p.join(root.path, 'node', 'bin', 'node'),
+              Platform.isWindows
+                  ? p.join(
+                      root.path,
+                      'node',
+                      'bin',
+                      'node_modules',
+                      'npm',
+                      'bin',
+                      'npm-cli.js',
+                    )
+                  : p.join(
+                      root.path,
+                      'node',
+                      'lib',
+                      'node_modules',
+                      'npm',
+                      'bin',
+                      'npm-cli.js',
+                    ),
+              'ci',
+              '--prefix',
+              p.join(cwd, 'tool', 'npm'),
+              '--offline',
+              '--ignore-scripts',
+              '--no-audit',
+              '--no-fund',
+            ]
           : [
               p.join(fixtures['dart_sdk']!, 'bin', 'dart'),
               'test',
@@ -315,6 +447,7 @@ final class SourceFixture {
     expect(env['ARCHWAY_PUB_GIT_FIXTURE'], fixtures['git_fixture']);
     expect(env['ARCHWAY_FLUTTER_FIXTURE'], fixtures['flutter_fixture']);
     expect(env.containsKey('ARCHWAY_TEST_PYTHON'), isFalse);
+    expect(env['npm_config_cache'], p.join(root.path, 'npm-cache'));
     expect(
       File(p.join(cwd, 'native/linux-x64/libarchway_io.so')).readAsStringSync(),
       'archive bridge',
@@ -365,7 +498,11 @@ final class SourceFixture {
     repo,
     executable,
     fixtures,
-    {'ARCHWAY_TEST_PYTHON': 'legacy'},
+    {
+      'ARCHWAY_TEST_PYTHON': 'legacy',
+      'ARCHWAY_TEST_NODE': p.join(root.path, 'node', 'bin', 'node'),
+      'npm_config_cache': p.join(root.path, 'npm-cache'),
+    },
     output,
     execute: execute ?? this.execute,
   );

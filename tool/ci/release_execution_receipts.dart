@@ -85,6 +85,7 @@ Map<String, List<int>> validateExecution(
   p.Context paths, {
   required String suite,
   int expectedTimeout = 600,
+  int expectedExit = 0,
 }) {
   const fields = {
     'suite',
@@ -108,7 +109,7 @@ Map<String, List<int>> validateExecution(
   final elapsed = receipt['elapsed_seconds'];
   final argv = receipt['command'];
   if (receipt['exit_code'] is! int ||
-      receipt['exit_code'] != 0 ||
+      receipt['exit_code'] != expectedExit ||
       receipt['timed_out'] != false ||
       receipt['timeout_seconds'] is! int ||
       receipt['timeout_seconds'] != expectedTimeout ||

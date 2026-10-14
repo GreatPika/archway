@@ -175,6 +175,18 @@ bool expectedSkip(String target, String path, String name, String? reason) {
   // matches its owning test's Platform guard; dependencies never qualify.
   const windowsOnly = {
     (
+      'test/npm_windows_shim_native_test.dart',
+      'actual npm local global and exec Windows shims preserve literal argv under owned capture',
+    ): 'Requires genuine Windows npm shims and owned raw-command execution.',
+    (
+      'test/windows_raw_command_test.dart',
+      'native raw cmd preserves builtin streams exit and execution metadata',
+    ): 'Requires native Windows cmd and Job ownership.',
+    (
+      'test/process_lifecycle_test.dart',
+      'owned Windows handle preserves exit 23 after direct-child reap',
+    ): 'Requires native Windows owned process handles.',
+    (
       'test/native_windows_installer_probe_test.dart',
       'native installer admits slash-spelled relative report output before builder checks',
     ): 'Requires genuine Windows path admission',
@@ -214,6 +226,10 @@ bool expectedSkip(String target, String path, String name, String? reason) {
     ): 'Native Windows pipe control.',
   };
   const linuxOnly = {
+    (
+      'test/npm_archive_test.dart',
+      'ZIP output creation failure releases the open member input',
+    ): 'Linux descriptor observation; other hosts retain extraction controls',
     (
       'test/linux_unprivileged_cli_test.dart',
       'unprivileged CLI child replaces its PID and preserves transport',
@@ -277,6 +293,30 @@ bool expectedSkip(String target, String path, String name, String? reason) {
     return true;
   }
   const posixOnly = {
+    (
+      'test/npm_stage_test.dart',
+      'packer rejects altered npm-produced payload and removes its owned temporary output',
+    ): 'Packaging owner runs on POSIX; fixture executable uses a shebang.',
+    (
+      'test/windows_raw_command_test.dart',
+      'raw Windows capture rejects unsupported host before reserving evidence',
+    ): 'Non-Windows admission control.',
+    (
+      'test/pub_dart_bootstrap_test.dart',
+      'bootstrap refuses wrong official SDK bytes before extraction or executable dispatch',
+    ): 'POSIX shell admission control; native Windows bootstrap is a CI gate',
+    (
+      'test/package_delivery_dispatch_test.dart',
+      'npm workflow forwards closed arguments and preserves CLI failure through tee',
+    ): 'POSIX shell dispatch; native Windows workflow remains required',
+    (
+      'test/package_delivery_dispatch_test.dart',
+      'pub workflow forwards closed arguments and preserves CLI failure through tee',
+    ): 'POSIX shell dispatch; native Windows workflow remains required',
+    (
+      'test/package_delivery_workflow_test.dart',
+      'malformed transport cannot publish a successful workflow output',
+    ): 'POSIX shell output guard; native host workflow remains required',
     (
       'test/posix_file_limit_test.dart',
       'file-limit child keeps its PID and survives a real partial write',

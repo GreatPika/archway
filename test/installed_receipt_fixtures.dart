@@ -41,7 +41,7 @@ void addInstalledReceipts(InstallerEvidence e) {
     if (i == 0) {
       stdout = 'archway [--root ROOT] SYNTHETIC\n';
     } else if (i == 1) {
-      stdout = 'archway 0.1.0\n';
+      stdout = 'archway ${e.version}\n';
     } else {
       final value = jsonDecode(
         File('contracts/json/fixtures/${examples[i]}.json').readAsStringSync(),

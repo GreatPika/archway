@@ -78,7 +78,14 @@ void main() {
         await expectLater(
           f.run(
             execute: (name, cmd, cwd, env, logs, {required timeout}) async {
-              final proof = await f.execute(name, cmd, cwd, env, logs, timeout: timeout);
+              final proof = await f.execute(
+                name,
+                cmd,
+                cwd,
+                env,
+                logs,
+                timeout: timeout,
+              );
               if (name == failed) {
                 final failure = {...proof, 'exit_code': 7};
                 RunnerFixture.write(logs, '$name.json', jsonEncode(failure));
@@ -293,7 +300,14 @@ void main() {
       await expectLater(
         f.run(
           execute: (name, cmd, cwd, env, logs, {required timeout}) async {
-            final stub = await f.execute(name, cmd, cwd, env, logs, timeout: timeout);
+            final stub = await f.execute(
+              name,
+              cmd,
+              cwd,
+              env,
+              logs,
+              timeout: timeout,
+            );
             if (name != 'plan_query') return stub;
             return executeSuite(
               name,
@@ -325,6 +339,8 @@ void main() {
     'default source gate uses same execute seam and preserves its report',
     () async {
       RunnerFixture.write(f.repo, 'test/example_test.dart', 'void main() {}');
+      RunnerFixture.write(f.repo, 'tool/npm/package.json', '{}');
+      RunnerFixture.write(f.repo, 'tool/npm/package-lock.json', '{}');
       f.git(['add', '.']);
       f.git(['commit', '-qm', 'source suite']);
       final bundle = Directory(p.join(f.root.path, 'bundle'));
@@ -356,7 +372,12 @@ void main() {
             return f.execute(name, cmd, cwd, env, logs, timeout: timeout);
           expect(timeout.inSeconds, name == 'source-tests' ? 900 : 600);
           f.calls.add(name);
-          expect(cmd.first, p.join(f.paths['dart_sdk']!, 'bin', 'dart'));
+          expect(
+            cmd.first,
+            name == 'source-npm-ci'
+                ? File(f.node).resolveSymbolicLinksSync()
+                : p.join(f.paths['dart_sdk']!, 'bin', 'dart'),
+          );
           expect(cwd, isNot(f.repo.path));
           if (name == 'source-tests') {
             final observer = RunnerFixture.write(
@@ -409,7 +430,12 @@ void main() {
           return {'suite': name, 'stdout': '$name.stdout.log'};
         },
       );
-      expect(f.calls, [...names, 'source-pub-get', 'source-tests']);
+      expect(f.calls, [
+        ...names,
+        'source-pub-get',
+        'source-npm-ci',
+        'source-tests',
+      ]);
       final report = result['source_suite'] as Map;
       expect(report['tests'], {
         'suites': ['test/example_test.dart'],

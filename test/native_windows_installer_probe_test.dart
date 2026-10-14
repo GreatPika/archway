@@ -18,6 +18,7 @@ void main() {
       final output = Directory('${temp.path}/missing/output');
       await expectLater(
         runWindowsInstallerProbe(
+          version: '0.1.0',
           builderDart: File(Platform.resolvedExecutable),
           repository: temp,
           bundle: temp,
@@ -46,6 +47,7 @@ void main() {
       final output = Directory(p.join(report.parent.path, 'installer'));
       await expectLater(
         runWindowsInstallerProbe(
+          version: '0.1.0',
           builderDart: File(p.join(temp.path, 'absent-dart.exe')),
           repository: temp,
           bundle: bundle,
@@ -87,6 +89,7 @@ void main() {
     for (final output in [existing, nested, aliased, dotted]) {
       final operation = Platform.isWindows
           ? runWindowsInstallerProbe(
+              version: '0.1.0',
               builderDart: File(Platform.resolvedExecutable),
               repository: temp,
               bundle: bundle,

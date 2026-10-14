@@ -18,6 +18,7 @@ File validateInstaller(
   Directory directory,
   String manifestSha256, {
   required Directory repository,
+  required String version,
 }) {
   final receipt = _object(proof['installer']);
   final target = proof['target'];
@@ -36,7 +37,7 @@ File validateInstaller(
       paths.isAbsolute(value) &&
       (!windows || paths.rootPrefix(value).length > 1);
   final root = Directory(p.join(directory.path, 'installer'));
-  final expected = 'archway-0.1.0-$target-unsigned.$suffix';
+  final expected = 'archway-$version-$target-unsigned.$suffix';
   final artifact = _object(receipt['artifact']);
   final file = File(p.join(root.path, expected));
   final bytes = readOrdinaryBytes(file, limit: maxArchiveBytes);
@@ -138,7 +139,7 @@ File validateInstaller(
   if (windows && !absolute(installed['installation_root'])) {
     _fail('Native installed Windows root is missing or invalid');
   }
-  validateInstallerPhases(proof, root, paths);
+  validateInstallerPhases(proof, root, paths, version: version);
   if (installed['manifest_sha256'] != manifestSha256 ||
       !sameJson(installed['native_commands'], [
         'help',
@@ -209,7 +210,7 @@ File validateInstaller(
       valid = stdout.startsWith('archway [--root ROOT]') && stderr.isEmpty;
     } else if (index == 1) {
       valid =
-          ['archway 0.1.0\n', 'archway 0.1.0\r\n'].contains(stdout) &&
+          ['archway $version\n', 'archway $version\r\n'].contains(stdout) &&
           stderr.isEmpty;
     } else {
       final value = _object(decodeEvidenceJson(index == 4 ? stderr : stdout));
