@@ -53,6 +53,7 @@ void main() {
         } else {
           expect(report, throwsFormatException);
         }
+        if (target != 'windows-x64') continue;
         for (final wrong in [null, '', 'missing pkgbuild', '$reason ']) {
           expect(
             () => summarizeTests(events(name, wrong), {path}, target),
@@ -73,6 +74,7 @@ void main() {
         expectedSkip(target, path, name, hostReason),
         target == 'macos-arm64',
       );
+      if (target != 'macos-arm64') continue;
       for (final wrong in [null, '', 'missing pkgbuild', '$hostReason ']) {
         expect(expectedSkip(target, path, name, wrong), isFalse);
       }

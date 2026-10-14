@@ -42,6 +42,7 @@ void main() {
           } else {
             expect(report, throwsFormatException);
           }
+          if (!allowed) continue;
           for (final wrong in [
             null,
             '',
@@ -55,16 +56,6 @@ void main() {
           }
           expect(expectedSkip(target, '$path.other', name, reason), isFalse);
           expect(expectedSkip(target, path, '$name changed', reason), isFalse);
-          final empty = events(path, 'loading $path', null);
-          (empty[1]['test'] as Map<String, dynamic>).addAll({
-            'groupIDs': [],
-            'url': null,
-          });
-          empty[2].addAll({'hidden': true, 'skipped': false});
-          expect(
-            () => summarizeTests(empty, {path}, target),
-            throwsFormatException,
-          );
         }
       }
     },

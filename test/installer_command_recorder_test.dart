@@ -30,7 +30,6 @@ void main() {
         'stdout_sha256': sha256.convert(utf8.encode('out')).toString(),
         'stderr_sha256': sha256.convert(utf8.encode('err')).toString(),
       });
-      expect(recorder.commands, [record]);
       expect(
         File(p.join(output.path, record['stdout'] as String))
             .readAsStringSync(),

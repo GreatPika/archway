@@ -177,6 +177,8 @@ void main() {
       final root = Directory(p.join(base.path, 'archway installer owned'))
         ..createSync();
       final outside = Directory(p.join(base.path, 'outside'))..createSync();
+      final sentinel = File(p.join(outside.path, 'keep'))
+        ..writeAsStringSync('foreign bytes');
       final token = 'b' * 64;
       File(p.join(root.path, '.archway-installer-owner'))
           .writeAsStringSync(token);
@@ -192,9 +194,11 @@ void main() {
       Link(p.join(root.path, 'system/usr/lib/archway'))
           .createSync(outside.path);
       expect((await invoke(root.path, 'foreign')).exitCode, 1);
-      expect(outside.listSync(), isEmpty);
+      expect(outside.listSync().map((entry) => entry.path), [sentinel.path]);
+      expect(sentinel.readAsStringSync(), 'foreign bytes');
       expect((await invoke(root.path, 'cleanup')).exitCode, 0);
-      expect(outside.existsSync(), isTrue);
+      expect(root.existsSync(), isFalse);
+      expect(sentinel.readAsStringSync(), 'foreign bytes');
     },
   );
 

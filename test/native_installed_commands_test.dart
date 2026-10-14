@@ -73,6 +73,11 @@ void main() {
       'unsupported-option',
     ]);
     expect(recorder.commands.map((c) => c['exit']), [0, 0, 0, 0, 0, 0, 1, 64]);
+    final init = jsonDecode(
+      File(p.join(output.path, recorder.commands[2]['stdout'] as String))
+          .readAsStringSync(),
+    );
+    expect(init['payload']['outcome'], 'created');
     expect(
       recorder.commands.map((c) => c['stdout']),
       List.generate(8, (i) => 'installed-$i.stdout.log'),

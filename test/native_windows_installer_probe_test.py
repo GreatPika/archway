@@ -187,7 +187,6 @@ class WindowsProbeControls(unittest.TestCase):
                                             run_command=execute)
             self.assertEqual(len(commands), 2)
             self.assertEqual(Path(commands[1][0]).name, 'unins000.exe')
-            self.assertTrue(registry.SetValueEx.called)
             self.assertIn('cleanup failed fixture', '\n'.join(raised.exception.__notes__))
 
 

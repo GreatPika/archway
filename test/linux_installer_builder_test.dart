@@ -142,19 +142,6 @@ void main() {
       ...(manifest['files'] as Map).keys.cast<String>(),
       'manifest.json',
     ]..sort();
-    expect(
-      preinst.readAsStringSync(),
-      File('tool/installers/linux/preinst').readAsStringSync() +
-          '\n' +
-          expectedPreflight +
-          names.map((name) => '/usr/lib/archway/$name\n').join() +
-          'ARCHWAY_FILES\n',
-    );
-    // Python appends a leading newline after the template's final newline.
-    expect(
-      preinst.readAsStringSync(),
-      contains('configuration.\n\nwhile IFS= read -r path; do\n'),
-    );
     expect(preinst.statSync().mode & 0xfff, 493);
     // Run only the read-only preflight against a temporary synthetic root.
     final system = Directory(p.join(base.path, 'system'))..createSync();
@@ -167,7 +154,7 @@ void main() {
       'install',
     ], environment: environment);
     expect(clean.exitCode, 0, reason: clean.stderr.toString());
-    final foreign = File(p.join(system.path, 'usr/lib/archway/README.txt'))
+    final foreign = File(p.join(system.path, 'usr/lib/archway/unrelated.txt'))
       ..parent.createSync(recursive: true)
       ..writeAsStringSync('unrelated');
     final refused = await Process.run('sh', [
@@ -175,9 +162,98 @@ void main() {
       'upgrade',
     ], environment: environment);
     expect(refused.exitCode, 1);
-    expect(refused.stderr, contains('Archway conflict:'));
+    expect(
+      refused.stderr,
+      'Archway conflict: /usr/lib/archway is not owned by this package\n',
+    );
     expect(foreign.readAsStringSync(), 'unrelated');
     expect(File(p.join(system.path, 'usr/bin/archway')).existsSync(), isFalse);
+    foreign.deleteSync();
+    // Real dpkg-query reads only this disposable ownership database. Owning the
+    // root lets the generated incoming-file and ancestor checks run themselves.
+    final database = Directory(environment['DPKG_ADMINDIR']!)
+      ..createSync(recursive: true);
+    File(p.join(database.path, 'status')).writeAsStringSync(
+      'Package: archway\nStatus: install ok installed\n'
+      'Architecture: amd64\nVersion: 0.1.0\n'
+      'Maintainer: Archway fixture <fixture@example.invalid>\n'
+      'Description: Temporary preflight ownership fixture\n\n',
+    );
+    final ownership = File(p.join(database.path, 'info/archway.list'))
+      ..parent.createSync();
+    Future<ProcessResult> preflight() =>
+        Process.run('sh', [preinst.path, 'upgrade'], environment: environment);
+    for (final name in names) {
+      final ownedPath = '/usr/lib/archway/$name';
+      ownership.writeAsStringSync('/usr/lib/archway\n');
+      final candidate = File(p.join(system.path, 'usr/lib/archway', name))
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('unowned incoming collision');
+      final refused = await preflight();
+      expect(refused.exitCode, 1, reason: name);
+      expect(
+        refused.stderr,
+        'Archway conflict: $ownedPath is not owned by this package\n',
+        reason: name,
+      );
+      expect(candidate.readAsStringSync(), 'unowned incoming collision');
+      ownership.writeAsStringSync('/usr/lib/archway\n$ownedPath\n');
+      final accepted = await preflight();
+      expect(accepted.exitCode, 0, reason: '$name: ${accepted.stderr}');
+      expect(candidate.readAsStringSync(), 'unowned incoming collision');
+      candidate.deleteSync();
+    }
+    ownership.writeAsStringSync('/usr/lib/archway\n/usr/lib/archway/LICENSE\n');
+    final leafPath = p.join(system.path, 'usr/lib/archway/LICENSE');
+    final outside = File(p.join(base.path, 'foreign-preflight-target'))
+      ..writeAsStringSync('foreign target');
+    for (final linked in [false, true]) {
+      if (linked) {
+        Link(leafPath).createSync(outside.path);
+      } else {
+        Directory(leafPath).createSync();
+      }
+      final refused = await preflight();
+      expect(refused.exitCode, 1);
+      expect(
+        refused.stderr,
+        'Archway conflict: /usr/lib/archway/LICENSE is not an ordinary file\n',
+      );
+      expect(outside.readAsStringSync(), 'foreign target');
+      if (linked) {
+        expect(Link(leafPath).targetSync(), outside.path);
+        Link(leafPath).deleteSync();
+      } else {
+        expect(Directory(leafPath).listSync(), isEmpty);
+        Directory(leafPath).deleteSync();
+      }
+    }
+    final parentPath = p.join(system.path, 'usr/lib/archway/assets');
+    Directory(parentPath).deleteSync(recursive: true);
+    final outsideDirectory = Directory(
+      p.join(base.path, 'foreign-preflight-directory'),
+    )..createSync();
+    for (final linked in [false, true]) {
+      if (linked) {
+        Link(parentPath).createSync(outsideDirectory.path);
+      } else {
+        File(parentPath).writeAsStringSync('foreign parent');
+      }
+      final refused = await preflight();
+      expect(refused.exitCode, 1);
+      expect(
+        refused.stderr,
+        'Archway conflict: /usr/lib/archway/assets is not an ordinary directory\n',
+      );
+      expect(outsideDirectory.listSync(), isEmpty);
+      if (linked) {
+        expect(Link(parentPath).targetSync(), outsideDirectory.path);
+        Link(parentPath).deleteSync();
+      } else {
+        expect(File(parentPath).readAsStringSync(), 'foreign parent');
+        File(parentPath).deleteSync();
+      }
+    }
     expect(
       result.stdout.toString(),
       contains('${sha256.convert(output.readAsBytesSync())}  archway.deb'),
@@ -311,20 +387,3 @@ void main() {
     });
   }
 }
-
-// Literal appended lifecycle text from the original Python builder.
-const expectedPreflight = r'''
-while IFS= read -r path; do
-    if exists "$root$path"; then
-        [ ! -L "$root$path" ] && [ -f "$root$path" ] || conflict "$path is not an ordinary file"
-        owned "$path" || conflict "$path is not owned by this package"
-    fi
-    parent=${path%/*}
-    while [ "$parent" != /usr/lib ]; do
-        if exists "$root$parent"; then
-            [ ! -L "$root$parent" ] && [ -d "$root$parent" ] || conflict "$parent is not an ordinary directory"
-        fi
-        parent=${parent%/*}
-    done
-done <<'ARCHWAY_FILES'
-''';

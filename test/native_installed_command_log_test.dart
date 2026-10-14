@@ -7,7 +7,6 @@ import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import '../tool/ci/installed_command_recorder.dart';
-import '../tool/ci/aot_init_assertions.dart';
 import '../tool/ci/native_acceptance.dart';
 
 Directory canonicalTemporary(String prefix) => Directory(
@@ -47,33 +46,6 @@ void main() {
       expect(accepted.exitCode, 17);
       expect(accepted.stdout, [255, 10]);
       expect(accepted.stderr, utf8.encode('fault'));
-    },
-  );
-  test(
-    'init oracle records its original process through the installed recorder',
-    () async {
-      final base = canonicalTemporary('installed-init-');
-      addTearDown(() => base.deleteSync(recursive: true));
-      final recorder = InstalledCommandRecorder(
-        output: base,
-        timeout: const Duration(seconds: 30),
-      );
-      await assertAotInit(
-        File('unused'),
-        base,
-        command: (args) => [
-          Platform.resolvedExecutable,
-          p.absolute('test/support/aot_init_oracle_child.dart'),
-          'valid',
-          ...args,
-        ],
-        run: recorder.capture,
-      );
-      expect(recorder.commands.single['exit'], 0);
-      final value = jsonDecode(
-        File(p.join(base.path, 'installed-0.stdout.log')).readAsStringSync(),
-      );
-      expect(value['payload']['outcome'], 'created');
     },
   );
   test(

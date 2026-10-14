@@ -116,13 +116,25 @@ void main() {
   posixTest(
     'rejects each caller policy violation without creating output',
     () async {
+      final license = File(p.join(bundle.path, 'LICENSE'));
+      final originalLicense = license.readAsBytesSync();
+      final executable = File(p.join(bundle.path, 'bin/macos-arm64/archway'));
       for (final update in <void Function()>[
         () => manifest['target'] = 'linux-x64',
         () => manifest['schema_version'] = 2,
         () => manifest['version'] = '0.1.0-preview',
-        () => files.remove('LICENSE'),
-        () => (files['bin/macos-arm64/archway'] as Map)['mode'] = 0x1a4,
-        () => (files['LICENSE'] as Map)['mode'] = 0x1b6,
+        () {
+          files.remove('LICENSE');
+          license.deleteSync();
+        },
+        () {
+          (files['bin/macos-arm64/archway'] as Map)['mode'] = 0x1a4;
+          posix.chmod(executable.path, '644');
+        },
+        () {
+          (files['LICENSE'] as Map)['mode'] = 0x1b6;
+          posix.chmod(license.path, '666');
+        },
       ]) {
         final saved = jsonEncode(manifest);
         update();
@@ -131,6 +143,9 @@ void main() {
         expect(output.existsSync(), isFalse);
         manifest = jsonDecode(saved) as Map<String, Object?>;
         files = manifest['files'] as Map<String, Object?>;
+        license.writeAsBytesSync(originalLicense);
+        posix.chmod(license.path, '644');
+        posix.chmod(executable.path, '755');
       }
     },
   );
@@ -244,21 +259,22 @@ void main() {
       Directory('tool/installers/macos'),
       (command, args) async {
         expect(command, '/usr/bin/pkgbuild');
-        expect(args, [
-          '--root',
-          p.join(output.path, 'root'),
-          '--scripts',
-          p.join(output.path, 'scripts'),
-          '--identifier',
-          'org.archway.cli',
-          '--version',
-          '0.1.0',
-          '--install-location',
-          '/',
-          '--ownership',
-          'recommended',
+        expect(args.length, 13);
+        expect(
+          args.last,
           p.join(output.path, 'archway-0.1.0-macos-arm64-unsigned.pkg'),
-        ]);
+        );
+        expect(
+          {for (var i = 0; i < args.length - 1; i += 2) args[i]: args[i + 1]},
+          {
+            '--root': p.join(output.path, 'root'),
+            '--scripts': p.join(output.path, 'scripts'),
+            '--identifier': 'org.archway.cli',
+            '--version': '0.1.0',
+            '--install-location': '/',
+            '--ownership': 'recommended',
+          },
+        );
         File(args.last).writeAsStringSync('command fixture, not a pkg');
         return ProcessResult(0, 0, '', '');
       },
@@ -267,10 +283,14 @@ void main() {
       File(p.join(output.path, 'installer-evidence.json')).readAsStringSync(),
     ) as Map;
     expect(evidence['bundle_manifest_sha256'], parsed.manifestSha256);
-    expect((evidence['installer_inputs_sha256'] as Map).keys, [
-      'build.dart',
-      'lifecycle.sh',
-    ]);
+    expect(evidence['installer_inputs_sha256'], {
+      for (final name in ['build.dart', 'lifecycle.sh'])
+        name: sha256
+            .convert(
+              File(p.join('tool/installers/macos', name)).readAsBytesSync(),
+            )
+            .toString(),
+    });
     expect(
       (evidence['host'] as Map)['system'],
       Platform.isMacOS ? 'Darwin' : Platform.operatingSystem,
