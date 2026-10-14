@@ -15,7 +15,7 @@ class PubDartSetupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary) / 'setup'
             result = subprocess.run([sys.executable, str(ROOT / 'tool/ci/setup_pub_dart.py'),
-                '--target', wrong, '--source', str(ROOT), '--output', str(output)],
+                '--expected-commit', '0' * 40, '--target', wrong, '--source', str(ROOT), '--output', str(output)],
                 capture_output=True, text=True, timeout=15)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('Wrong actual host', result.stderr)

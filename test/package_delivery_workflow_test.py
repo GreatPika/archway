@@ -173,8 +173,10 @@ class DeliveryWorkflowTests(unittest.TestCase):
         steps = linux['steps']
         self.assertIn('core.autocrlf false', steps[0]['run'])
         self.assertEqual(steps[1]['with']['ref'], '${{ github.sha }}')
-        self.assertIn('verify_export_sources.py "$GITHUB_SHA"', steps[2]['run'])
         runs = '\n'.join(step.get('run', '') for step in steps)
+        self.assertLess(runs.index('unzip'), runs.index('verify_export_sources.dart'))
+        self.assertLess(runs.index('verify_export_sources.dart'), runs.index('pub get --enforce-lockfile'))
+        self.assertIn('tool/ci/verify_export_sources.dart "$GITHUB_SHA"', runs)
         for required in ['pub get --enforce-lockfile', 'bash tool/prepare_typescript.sh',
                          'native_assembly_init_probe.dart', '--dart-sdk', '--node',
                          '--artifact-directory', 'sha256sum -c -']:

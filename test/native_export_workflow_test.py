@@ -3,7 +3,6 @@ from pathlib import Path
 import unittest
 import os
 import subprocess
-import sys
 import tempfile
 import yaml
 
@@ -39,12 +38,19 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(evidence['if'], 'always()')
         self.assertNotIn('archway-native-export', evidence['with']['path'])
         checkout = next(i for i, step in enumerate(steps) if 'checkout@' in step.get('uses', ''))
-        preparation, verification = steps[checkout - 1], steps[checkout + 1]
-        for step in (preparation, verification):
-            self.assertEqual(step['if'], '${{ inputs.export-installation }}')
+        preparation = next(s for s in steps[:checkout] if 'core.autocrlf false' in s.get('run', ''))
+        self.assertEqual(preparation['if'], '${{ inputs.export-installation }}')
         self.assertIn('git config --global core.autocrlf false', preparation['run'])
-        self.assertIn('verify_export_sources.py', verification['run'])
-        self.assertIn('GITHUB_SHA', verification['run'])
+        setup = next(s for s in steps if 'pub get --enforce-lockfile' in s.get('run', '')
+                     or '-Phase setup' in s.get('run', ''))
+        self.assertGreater(steps.index(setup), checkout)
+        self.assertEqual(setup['env']['EXPORT_INSTALLATION'], '${{ inputs.export-installation }}')
+        command = setup['run'] if target == 'macos-arm64' else (
+            ROOT / 'tool/ci/windows-native-probe.ps1').read_text()
+        self.assertLess(command.index('verify_export_sources.dart'), command.index('pub get --enforce-lockfile'))
+        self.assertLess(command.index('unzip' if target == 'macos-arm64' else 'Expand-Archive'),
+                        command.index('verify_export_sources.dart'))
+        self.assertIn('GITHUB_SHA', command)
         assembly = steps[steps.index(artifact) - 1]
         self.assertNotIn('if', assembly)  # Ordinary failure gating remains in force.
         self.assertNotIn('continue-on-error', assembly)
@@ -94,38 +100,6 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn("$arguments = @('--suppress-analytics', 'run', 'tool/ci/native_assembly_init_probe.dart', '--init-only', '--dart', $dart)", wrapper)
         self.assertIn("if ($LASTEXITCODE -ne 0) { throw 'Maintainer assembly/init assertion failed;", wrapper)
         self.assertLess(wrapper.index("throw 'ArtifactDirectory"), wrapper.index('Start-Transcript'))
-
-
-class SourceBytesTests(unittest.TestCase):
-    def test_export_verifier_accepts_exact_git_bytes(self):
-        with tempfile.TemporaryDirectory() as directory:
-            repo = Path(directory)
-            def git(*args):
-                return subprocess.check_output(['git', '-C', directory, *args])
-            git('init', '-q')
-            git('config', 'core.autocrlf', 'true')
-            git('config', 'user.name', 'Test')
-            git('config', 'user.email', 'test@example.invalid')
-            for name in ('pubspec.lock', 'assets/typescript/helper.cjs',
-                         'assets/typescript/package-lock.json'):
-                file = repo / name
-                file.parent.mkdir(parents=True, exist_ok=True)
-                file.write_bytes(b'exact\nbytes\n')
-            git('add', '.')
-            git('commit', '-qm', 'Fixture')
-            sha = git('rev-parse', 'HEAD').decode().strip()
-            command = [sys.executable, str(ROOT / 'tool/ci/verify_export_sources.py'), sha]
-            result = subprocess.run(command, cwd=repo, capture_output=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            (repo / 'assets/typescript/helper.cjs').unlink()
-            git('checkout', '--', 'assets/typescript/helper.cjs')
-            self.assertEqual((repo / 'assets/typescript/helper.cjs').read_bytes(), b'exact\r\nbytes\r\n')
-            self.assertEqual(git('status', '--porcelain'), b'')
-            result = subprocess.run(command, cwd=repo, capture_output=True)
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn(b'Export source bytes differ from Git', result.stderr)
-            result = subprocess.run(command[:-1] + ['0' * 40], cwd=repo, capture_output=True)
-            self.assertIn(b'Checkout commit differs', result.stderr)
 
 
 if __name__ == '__main__':

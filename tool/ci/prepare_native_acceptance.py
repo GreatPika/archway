@@ -170,6 +170,8 @@ def prepare(args):
     sdk_meta = json.loads((flutter / 'bin/cache/flutter.version.json').read_text())
     if (sdk_meta['frameworkVersion'], sdk_meta['dartSdkVersion']) != (FLUTTER_VERSION, DART_VERSION):
         raise ValueError('Extracted Flutter SDK metadata differs from pins')
+    run([dart, source / 'tool/ci/verify_export_sources.dart',
+         args.expected_commit], env, logs / 'export-source-verification.log', source)
     node_name = 'node-v24.19.0-' + NODE[args.target][0]
     node_base = 'https://nodejs.org/dist/v24.19.0/'
     download(node_base + 'SHASUMS256.txt', root / 'node-shasums.txt')
@@ -237,6 +239,7 @@ def prepare(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--target', required=True, choices=FLUTTER)
+    parser.add_argument('--expected-commit', required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--flutter-archive', type=Path, help='Reuse an official archive; verify its pinned checksum')
     args = parser.parse_args()

@@ -51,6 +51,10 @@ try {
       throw "Unexpected Dart runtime: $version"
     }
     Write-Output $version
+    if ($env:EXPORT_INSTALLATION -eq 'true') {
+      & $dart tool/ci/verify_export_sources.dart $env:GITHUB_SHA
+      if ($LASTEXITCODE -ne 0) { throw 'Export source-byte verification failed.' }
+    }
     & $dart --suppress-analytics pub get --enforce-lockfile
     if ($LASTEXITCODE -ne 0) { throw 'Dependency preparation failed; NOT a semantic red.' }
     git diff --exit-code -- pubspec.lock

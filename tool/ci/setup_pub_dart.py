@@ -89,6 +89,8 @@ def setup(args):
     (root / 'dart-version.log').write_text(version, encoding='utf-8')
     if not re.match(r'Dart SDK version: 3\.13\.3(?:\s|$)', version):
         raise ValueError('Unexpected Dart runtime')
+    subprocess.run([str(dart), str(args.source / 'tool/ci/verify_export_sources.dart'), args.expected_commit],
+                   cwd=args.source, env=env, check=True, timeout=60)
     if args.prepare_cache:
         with (root / 'pub-get.log').open('wb') as log:
             subprocess.run([str(dart), '--suppress-analytics', 'pub', 'get', '--enforce-lockfile'],
@@ -106,6 +108,7 @@ def main():
     parser.add_argument('--target', choices=['linux-x64', 'macos-arm64', 'windows-x64'], required=True)
     parser.add_argument('--source', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--expected-commit', required=True)
     parser.add_argument('--prepare-cache', action='store_true')
     args = parser.parse_args()
     try:

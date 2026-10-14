@@ -59,7 +59,6 @@ jobs:
         run: |
           mkdir -p build/delivery-probe
           {
-            python3 tool/ci/verify_export_sources.py "$GITHUB_SHA"
             source /etc/os-release
             test "$ID:$VERSION_ID:$(uname -m)" = ubuntu:24.04:x86_64
             cat /etc/os-release
@@ -81,6 +80,7 @@ jobs:
             # Official sibling dartsdk-linux-x64-release.zip.sha256sum
             (cd "$sdk" && echo '549c182cffbdc6864df7509c16fec646c73fe6cb8a18c2cb572db1292f300cd7  sdk.zip' | sha256sum -c -)
             unzip -q "$sdk/sdk.zip" -d "$sdk"
+            "$sdk/dart-sdk/bin/dart" tool/ci/verify_export_sources.dart "$GITHUB_SHA"
             curl --fail --show-error --silent --location --retry 2 --max-time 180 \
               https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-x64.tar.gz \
               -o "$node_root/node.tar.gz"
@@ -122,7 +122,7 @@ jobs:
           dart --suppress-analytics test -r expanded test/linux_unprivileged_cli_test.dart \
             test/posix_file_limit_test.dart \
             test/installation_staging_test.dart \
-            test/installation_transport_audit_test.dart \
+            test/installation_transport_audit_test.dart test/export_source_verifier_test.dart \
             2>&1 | tee build/delivery-probe/dart-cli-child.log
           installation="$RUNNER_TEMP/archway-dart-cli-linux-x64"
           mkdir "$installation"
@@ -194,12 +194,12 @@ jobs:
             -o "$sdk/sdk.zip"
           (cd "$sdk" && echo '549c182cffbdc6864df7509c16fec646c73fe6cb8a18c2cb572db1292f300cd7  sdk.zip' | sha256sum -c -)
           unzip -q "$sdk/sdk.zip" -d "$sdk"
+          "$sdk/dart-sdk/bin/dart" tool/ci/verify_export_sources.dart "$GITHUB_SHA"
           echo "$sdk/dart-sdk/bin" >> "$GITHUB_PATH"
           "$sdk/dart-sdk/bin/dart" --suppress-analytics pub get --enforce-lockfile
           git diff --exit-code -- pubspec.lock
       - name: Audit opaque transports without extracting or executing their contents
         run: |
-          python3 tool/ci/verify_export_sources.py "$GITHUB_SHA"
           dart --suppress-analytics run tool/ci/audit_installation_transports.dart --expected-commit "$GITHUB_SHA" \
             --report transport-audit.json transports/linux-x64 transports/macos-arm64 transports/windows-x64
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -233,7 +233,7 @@ jobs:
           npm --version > packed/npm-version.txt
           (cd package && npm pack --ignore-scripts --offline --json --pack-destination ../packed) > packed/npm-pack.json
           python3 tool/ci/combine_installations.py verify-pack --package package --packed-directory packed ${registry_args[@]+"${registry_args[@]}"}
-          python3 tool/ci/verify_export_sources.py "$GITHUB_SHA"
+          dart tool/ci/verify_export_sources.dart "$GITHUB_SHA"
       - name: Wrap exact verified payloads into final portable preview archives
         shell: bash
         run: |
@@ -268,7 +268,7 @@ jobs:
           if [[ "$ARCHWAY_REGISTRY_READY" == true ]]; then
             setup_args+=(--prepare-cache)
           fi
-          python -u tool/ci/setup_pub_dart.py --target linux-x64 --source "$GITHUB_WORKSPACE" \
+          python -u tool/ci/setup_pub_dart.py --target linux-x64 --source "$GITHUB_WORKSPACE" --expected-commit "$GITHUB_SHA" \
             --output "$RUNNER_TEMP/archway-pub-setup" ${setup_args[@]+"${setup_args[@]}"} 2>&1 | tee build/pub-producer/dart-setup.log
       - name: Produce exact-source pub dry-run stage and authenticated transport once
         id: pub-transport
@@ -447,9 +447,8 @@ jobs:
           set -euo pipefail
           mkdir -p build/pub-installed
           python -m pip --isolated install --index-url https://pypi.org/simple 'PyYAML==6.0.3' 'jsonschema==4.26.0' 2>&1 | tee build/pub-installed/python-setup.log
-          python tool/ci/verify_export_sources.py "$GITHUB_SHA"
           python -u tool/ci/setup_pub_dart.py --target '${{ matrix.target }}' --source "$GITHUB_WORKSPACE" \
-            --output "$RUNNER_TEMP/archway-pub-setup" --prepare-cache 2>&1 | tee build/pub-installed/dart-setup.log
+            --output "$RUNNER_TEMP/archway-pub-setup" --expected-commit "$GITHUB_SHA" --prepare-cache 2>&1 | tee build/pub-installed/dart-setup.log
       - name: Check disposable source cleanup on native host
         run: python test/pub_snapshot_cleanup_test.py
       - name: Check explicit pub launcher setup on native host
@@ -530,7 +529,7 @@ jobs:
           python -m pip --isolated install --index-url https://pypi.org/simple 'jsonschema==4.26.0' \
             2>&1 | tee build/release-native/python-setup.log
           python -u tool/ci/prepare_native_acceptance.py --target '${{ matrix.target }}' \
-            --output "$RUNNER_TEMP/archway-native-fixtures" \
+            --output "$RUNNER_TEMP/archway-native-fixtures" --expected-commit "$GITHUB_SHA" \
             2>&1 | tee build/release-native/fixture-preparation.log
       - name: Verify native acceptance fixture controls without skips
         run: |
@@ -569,7 +568,6 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/release-native
-          python tool/ci/verify_export_sources.py "$GITHUB_SHA"
           python -u tool/ci/release_native_smoke.py --release-directory release-input \
             --expected-commit "$GITHUB_SHA" --target '${{ matrix.target }}' --ci-host --installer-checks \
             --acceptance-fixtures "$RUNNER_TEMP/archway-native-fixtures/acceptance-fixtures.json" \
