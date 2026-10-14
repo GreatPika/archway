@@ -8,84 +8,37 @@ import 'package:test/test.dart';
 
 void main() {
   test(
-    'Plan catalogue is complete, sorted and counts normalized owns',
-    () async {
-      final root = await graphRoot();
-      final loaded = await Plan.load(RepositorySelection(root.path));
-      expect(loaded.status, 'ok');
-      expect(loaded.plan!.catalogue(), {
-        'mode': 'catalogue',
-        'nodes': [
-          {'id': 'app', 'responsibility': 'App', 'owns_count': 1},
-          {'id': 'core', 'responsibility': 'Core', 'owns_count': 1},
-          {'id': 'leaf', 'responsibility': 'Leaf', 'owns_count': 0},
-        ],
-        'total': 3,
-        'omitted': 0,
-        'offset': 0,
-        'limit': null,
-      });
-    },
-  );
-  test(
-    'catalogue windows explicitly count entries omitted on both sides',
-    () async {
-      final root = await graphRoot();
-      final plan = (await Plan.load(RepositorySelection(root.path))).plan!;
-      expect(plan.catalogue(offset: 1, limit: 1), {
-        'mode': 'catalogue',
-        'nodes': [
-          {'id': 'core', 'responsibility': 'Core', 'owns_count': 1},
-        ],
-        'total': 3,
-        'omitted': 2,
-        'offset': 1,
-        'limit': 1,
-      });
-      expect(plan.catalogue(offset: 99), {
-        'mode': 'catalogue',
-        'nodes': [],
-        'total': 3,
-        'omitted': 3,
-        'offset': 99,
-        'limit': null,
-      });
-      expect(() => plan.catalogue(offset: -1), throwsArgumentError);
-      expect(() => plan.catalogue(limit: 0), throwsArgumentError);
-    },
-  );
-  test(
-    'maximum integer pagination is bounded by the actual catalogue',
-    () async {
-      final root = await graphRoot();
-      final plan = (await Plan.load(RepositorySelection(root.path))).plan!;
-      const maximum = 9223372036854775807;
-      expect(plan.catalogue(offset: 1, limit: maximum), {
-        'mode': 'catalogue',
-        'nodes': [
-          {'id': 'core', 'responsibility': 'Core', 'owns_count': 1},
-          {'id': 'leaf', 'responsibility': 'Leaf', 'owns_count': 0},
-        ],
-        'total': 3,
-        'omitted': 1,
-        'offset': 1,
-        'limit': maximum,
-      });
-      expect(plan.catalogue(offset: maximum, limit: maximum), {
-        'mode': 'catalogue',
-        'nodes': [],
-        'total': 3,
-        'omitted': 3,
-        'offset': maximum,
-        'limit': maximum,
-      });
-    },
-  );
-  test(
     'CLI maximum pagination retains exact metadata and JSON transport',
     () async {
       final root = await graphRoot();
-      for (final offset in [1, 9223372036854775807]) {
+      const maximum = 9223372036854775807;
+      for (final (offset, payload) in [
+        (
+          1,
+          {
+            'mode': 'catalogue',
+            'nodes': [
+              {'id': 'core', 'responsibility': 'Core', 'owns_count': 1},
+              {'id': 'leaf', 'responsibility': 'Leaf', 'owns_count': 0},
+            ],
+            'total': 3,
+            'omitted': 1,
+            'offset': 1,
+            'limit': maximum,
+          },
+        ),
+        (
+          maximum,
+          {
+            'mode': 'catalogue',
+            'nodes': [],
+            'total': 3,
+            'omitted': 3,
+            'offset': maximum,
+            'limit': maximum,
+          },
+        ),
+      ]) {
         final result = await run(root, [
           'node',
           '--offset',
@@ -96,11 +49,7 @@ void main() {
         expect(result.$1, 0);
         expect(result.$3, '');
         final value = jsonDecode(result.$2);
-        expect(value['payload']['offset'], offset);
-        expect(value['payload']['limit'], 9223372036854775807);
-        expect(value['payload']['total'], 3);
-        expect(value['payload']['omitted'], offset == 1 ? 1 : 3);
-        expect(value['payload']['nodes'].length, offset == 1 ? 2 : 0);
+        expect(value['payload'], payload, reason: 'offset $offset');
       }
     },
   );
@@ -113,12 +62,18 @@ void main() {
       expect(full.$3, '');
       final value = jsonDecode(full.$2);
       expect(value['policy_hash'], matches(r'^sha256:[0-9a-f]{64}$'));
-      expect(value['payload']['nodes'].map((n) => n['id']).toList(), [
-        'app',
-        'core',
-        'leaf',
-      ]);
-      expect(value['payload']['omitted'], 0);
+      expect(value['payload'], {
+        'mode': 'catalogue',
+        'nodes': [
+          {'id': 'app', 'responsibility': 'App', 'owns_count': 1},
+          {'id': 'core', 'responsibility': 'Core', 'owns_count': 1},
+          {'id': 'leaf', 'responsibility': 'Leaf', 'owns_count': 0},
+        ],
+        'total': 3,
+        'omitted': 0,
+        'offset': 0,
+        'limit': null,
+      });
       final page = await run(root, ['node', '--limit=1', '--offset', '1']);
       expect(page.$1, 0);
       expect(jsonDecode(page.$2)['payload'], {
@@ -131,42 +86,17 @@ void main() {
         'offset': 1,
         'limit': 1,
       });
-    },
-  );
-  test(
-    'declared projection retains direct cycles without inferred edges',
-    () async {
-      final root = await graphRoot();
-      final file = File('${root.path}/architecture.yaml');
-      final policy = jsonDecode(await file.readAsString());
-      policy['nodes'][0]['allows'] = ['app'];
-      await file.writeAsString(jsonEncode(policy));
-      final loaded = await Plan.load(RepositorySelection(root.path));
-      expect(loaded.status, 'ok');
-      expect(
-        loaded.plan!
-            .declaredProjection()
-            .map((n) => [n.id, n.responsibility, n.allows])
-            .toList(),
-        [
-          [
-            'app',
-            'App',
-            ['core'],
-          ],
-          [
-            'core',
-            'Core',
-            ['leaf'],
-          ],
-          [
-            'leaf',
-            'Leaf',
-            ['app'],
-          ],
-        ],
-      );
-      expect(loaded.diagnostics.map((d) => d.code), contains('POLICY_CYCLE'));
+      final beyond = await run(root, ['node', '--offset', '99']);
+      expect(beyond.$1, 0);
+      expect(beyond.$3, '');
+      expect(jsonDecode(beyond.$2)['payload'], {
+        'mode': 'catalogue',
+        'nodes': [],
+        'total': 3,
+        'omitted': 3,
+        'offset': 99,
+        'limit': null,
+      });
     },
   );
   test(
@@ -194,31 +124,51 @@ void main() {
   test(
     'export escapes user labels and renders cycle warnings separately',
     () async {
-      final root = await graphRoot();
-      final file = File('${root.path}/architecture.yaml');
-      final policy = jsonDecode(await file.readAsString());
-      policy['nodes'][0]['allows'] = ['app'];
-      policy['nodes'][2]['responsibility'] = '"<>[]&;#\n%%{x} café 😀';
-      await file.writeAsString(jsonEncode(policy));
-      final result = await run(root, ['export', '--format', 'mermaid']);
-      expect(result.$1, 0);
-      expect(
-        result.$2,
-        contains(
-          '  n0["app: #34;#60;#62;#91;#93;#38;#59;#35;#10;#37;#37;#123;x#125; caf#233; #128512;"]\n',
+      for (final (responsibility, body) in [
+        (
+          'App',
+          'flowchart LR\n'
+              '  n0["app: App"]\n'
+              '  n1["core: Core"]\n'
+              '  n2["leaf: Leaf"]\n'
+              '  n0 --> n1\n'
+              '  n1 --> n2\n'
+              '  n2 --> n0\n',
         ),
-      );
-      expect(result.$2, contains('  n2 --> n0\n'));
-      expect(result.$2.split(' --> '), hasLength(4));
-      final diagnostics = jsonDecode(result.$3);
-      expect(diagnostics['command'], 'export');
-      expect(diagnostics['status'], 'ok');
-      expect(diagnostics['exit_code'], 0);
-      expect(diagnostics['payload'], {'format': 'mermaid', 'out': null});
-      expect(diagnostics['diagnostics'].map((d) => d['code']).toList(), [
-        'POLICY_CYCLE',
-      ]);
-      expect(result.$3.split('\n'), hasLength(2));
+        (
+          '"<>[]&;#\n%%{x} café 😀',
+          'flowchart LR\n'
+              '  n0["app: #34;#60;#62;#91;#93;#38;#59;#35;#10;#37;#37;#123;x#125; caf#233; #128512;"]\n'
+              '  n1["core: Core"]\n'
+              '  n2["leaf: Leaf"]\n'
+              '  n0 --> n1\n'
+              '  n1 --> n2\n'
+              '  n2 --> n0\n',
+        ),
+      ]) {
+        final root = await graphRoot();
+        final file = File('${root.path}/architecture.yaml');
+        final policy = jsonDecode(await file.readAsString());
+        policy['nodes'][0]['allows'] = ['app'];
+        policy['nodes'][2]['responsibility'] = responsibility;
+        await file.writeAsString(jsonEncode(policy));
+        final result = await run(root, ['export', '--format', 'mermaid']);
+        expect(result.$1, 0);
+        expect(
+          result.$2.split('\n').skip(2).join('\n'),
+          body,
+          reason: responsibility,
+        );
+        final diagnostics = jsonDecode(result.$3);
+        expect(diagnostics['command'], 'export');
+        expect(diagnostics['status'], 'ok');
+        expect(diagnostics['exit_code'], 0);
+        expect(diagnostics['payload'], {'format': 'mermaid', 'out': null});
+        expect(diagnostics['diagnostics'].map((d) => d['code']).toList(), [
+          'POLICY_CYCLE',
+        ]);
+        expect(result.$3.split('\n'), hasLength(2));
+      }
     },
   );
   test('export usage retains recognized format and normalized output without writes', () async {
@@ -458,7 +408,14 @@ void main() {
         ['export', '--format', 'mermaid', '--out', 'dir/'],
         ['export', '--format', 'mermaid', '--out', 'a/..'],
         ['export', '--format', 'mermaid', '--out', '/tmp/out'],
-        ['export', '--format', 'mermaid', '--overwrite=true'],
+        [
+          'export',
+          '--format',
+          'mermaid',
+          '--out',
+          'graph.mmd',
+          '--overwrite=true',
+        ],
         ['export', '--format', 'mermaid', '--format', 'mermaid'],
         ['export', '--format', 'mermaid', 'extra'],
         ['export', '--format', 'mermaid', '--json'],
@@ -485,14 +442,20 @@ void main() {
         expect(value['status'], 'usage_error');
         expect(value['policy_hash'], isNull);
         expect(value['diagnostics'][0]['code'], 'USAGE_ERROR');
+        if (args.length == 1 && args.single == 'export') {
+          expect(value['command'], 'export');
+          expect(value['payload'], {'format': null, 'out': null});
+          expect(
+            value['diagnostics'][0]['message'],
+            contains('--format mermaid'),
+          );
+        }
       }
     },
   );
   test(
     'offline help documents catalogue and export grammar and streams',
     () async {
-      final root = await graphRoot();
-      await File('${root.path}/architecture.yaml').delete();
       final nodeOut = StringBuffer();
       final nodeExit = await CLI().run([
         'node',
@@ -503,17 +466,21 @@ void main() {
       expect(node.$2, contains('[--limit N] [--offset N]'));
       expect(node.$2, isNot(contains('deferred')));
       final exportOut = StringBuffer();
+      final exportErr = StringBuffer();
       final exportExit = await CLI().run([
         'export',
         '--help',
-      ], CliStreams(exportOut, StringBuffer()));
+      ], CliStreams(exportOut, exportErr));
       final export = (exportExit, exportOut.toString());
       expect(export.$1, 0);
       expect(
         export.$2,
-        contains('--format mermaid [--out PATH [--overwrite]]'),
+        'archway [--root ROOT] export [--policy PATH] --format mermaid '
+        '[--out PATH [--overwrite]]\n'
+        'Exports the complete declared graph. Mermaid goes to stdout or the file; '
+        'JSON diagnostics go to stderr.\n',
       );
-      expect(export.$2, contains('stderr'));
+      expect(exportErr.toString(), '');
       final out = StringBuffer();
       expect(await CLI().run(['--help'], CliStreams(out, StringBuffer())), 0);
       expect(out.toString(), contains('Mermaid'));

@@ -249,22 +249,6 @@ void main() {
     }
   });
 
-  test('export help describes output without platform restrictions', () async {
-    final out = StringBuffer();
-    final err = StringBuffer();
-    final exit = await CLI().run(['export', '--help'], CliStreams(out, err));
-
-    expect(exit, 0);
-    expect(
-      out.toString(),
-      'archway [--root ROOT] export [--policy PATH] --format mermaid '
-      '[--out PATH [--overwrite]]\n'
-      'Exports the complete declared graph. Mermaid goes to stdout or the file; '
-      'JSON diagnostics go to stderr.\n',
-    );
-    expect(err.toString(), '');
-  });
-
   test(
     'selected policy is normalized inside exactly the selected root',
     () async {
@@ -442,19 +426,6 @@ void main() {
       ]);
     },
   );
-
-  test('export missing format retains its separate error transport', () async {
-    final out = StringBuffer();
-    final err = StringBuffer();
-    final exit = await CLI().run(['export'], CliStreams(out, err));
-    expect(exit, 64);
-    expect(out.toString(), '');
-    final value = jsonDecode(err.toString());
-    expect(value['command'], 'export');
-    expect(value['status'], 'usage_error');
-    expect(value['payload'], {'format': null, 'out': null});
-    expect(value['diagnostics'][0]['message'], contains('--format mermaid'));
-  });
 
   test(
     'CLI retains full first and second write-failure outcomes and exit streams',

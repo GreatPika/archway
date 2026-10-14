@@ -270,7 +270,11 @@ void main() {
             }
           },
         ),
-        throwsA(isA<Exception>()),
+        throwsA(
+          Platform.isWindows
+              ? isA<FileSystemException>()
+              : isA<posix.PosixException>(),
+        ),
       );
       expect(exposed, isFalse);
       expect(written.parent.existsSync(), isFalse);
