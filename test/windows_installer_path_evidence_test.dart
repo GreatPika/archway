@@ -8,6 +8,44 @@ import 'support/windows_installer_lifecycle_fake.dart';
 import 'support/windows_installer_registry.dart';
 
 void main() {
+  // Source wiring complements, rather than replaces, native installer probes.
+  test('owned tree is checked before upgrade and uninstall mutation', () {
+    final source = File('tool/installers/windows/lifecycle.iss')
+        .readAsStringSync();
+    final prepare = source
+        .split('function PrepareToInstall')
+        .last
+        .split(RegExp(r'\nprocedure '))
+        .first;
+    expect(prepare, contains('if WasOwned then NoReparseTree(InstallRoot);'));
+    final uninstall = source.split('procedure CurUninstallStepChanged').last;
+    expect(
+      uninstall.indexOf('NoReparseTree(InstallRoot);'),
+      allOf(
+        greaterThanOrEqualTo(0),
+        lessThan(uninstall.indexOf('RemoveOwnedPath;')),
+      ),
+    );
+  });
+
+  test('native tree enumeration checks ABI errors and closes its handle', () {
+    final source = File('tool/installers/windows/lifecycle.iss')
+        .readAsStringSync();
+    final tree = source
+        .split('procedure NoReparseTree')
+        .last
+        .split('function OwnedRoot')
+        .first;
+    expect(tree, contains('Require(SizeOf(Data) = 592'));
+    expect(tree, contains('ErrorCode = 18'));
+    expect(
+      tree,
+      matches(RegExp(r'finally\s+Require\(CloseFindHandle\(Handle\)')),
+    );
+    expect(tree, contains('ErrorCode := DLLGetLastError;'));
+    expect(source, isNot(contains(r'(Attributes = $FFFFFFFF) or')));
+  });
+
   test('Windows lexical stale-path and host gates precede registry access', () {
     for (final path in [
       r'C:\old..txt',

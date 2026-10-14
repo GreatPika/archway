@@ -8,6 +8,37 @@ import 'alias_hop_recheck_process_smoke.dart' as alias;
 import 'support/process_lifecycle.dart';
 
 void main() {
+  test(
+    'real entrypoint exits after flushed report with a pending native child',
+    () async {
+      Directory('build').createSync(recursive: true);
+      final root = Directory('build')
+          .createTempSync('entrypoint-pending-')
+          .absolute;
+      try {
+        final result = await Process.run(Platform.resolvedExecutable, [
+          '--suppress-analytics',
+          'run',
+          'test/support/runtime_entrypoint_child.dart',
+          root.path,
+        ]);
+        // Cleanup is checked before exit success so the regression's failure
+        // cannot conceal a leaked pending fixture process.
+        final marker = File('${root.path}/reaped');
+        expect(marker.existsSync(), isTrue, reason: '${result.stderr}');
+        expect(isProcessAlive(int.parse(marker.readAsStringSync())), isFalse);
+        expect(result.exitCode, 0, reason: '${result.stderr}');
+        expect(
+          result.stdout,
+          'entrypoint exit/schema verified; pending child killed and reaped\n',
+        );
+        expect(result.stderr, isEmpty);
+      } finally {
+        root.deleteSync(recursive: true);
+      }
+    },
+    skip: Platform.isLinux ? false : 'Linux child subreaper required to kill and reap the pending fixture child',
+  );
   test('alias capture preserves stdin, raw output and nonzero exit', () async {
     final result = await alias.capture(Platform.resolvedExecutable, [
       '--suppress-analytics',

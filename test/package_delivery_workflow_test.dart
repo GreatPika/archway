@@ -25,6 +25,37 @@ const hosts = {
 };
 
 void main() {
+  test(
+    'retired Python discovery leaves every replacement in source inventory',
+    () {
+      // The production source gate copies exact tracked bytes without .git.
+      // Inspect that runnable source tree; the outer gate binds it to Git and
+      // rejects missing or additional observed Dart suites independently.
+      final sources = <String>{
+        for (final directory in ['contracts', 'test', 'tool', 'bin', '.github'])
+          for (final file in Directory(
+            directory,
+          ).listSync(recursive: true, followLinks: false).whereType<File>())
+            file.path.replaceAll('\\', '/'),
+      };
+      expect(sources.where((path) => path.endsWith('.py')), isEmpty);
+      final discovered = sources
+          .where(
+            (path) => path.startsWith('test/') && path.endsWith('_test.dart'),
+          )
+          .toSet();
+      expect(
+        discovered,
+        containsAll([
+          'test/native_export_workflow_test.dart',
+          'test/runtime_capture_test.dart',
+          'test/windows_installer_path_evidence_test.dart',
+          'test/native_source_report_test.dart',
+          'test/npm_portable_bin_test.dart',
+        ]),
+      );
+    },
+  );
   final workflow = object(
     loadYaml(
       File('.github/workflows/package-delivery-probe.yml').readAsStringSync(),
@@ -78,7 +109,6 @@ void main() {
       'actions/download-artifact': 'd3f86a106a0bac45b974a628896c90dbdf5c8093',
       'actions/upload-artifact': 'ea165f8d65b6e75b540449e92b4886f43607fa02',
       'actions/setup-node': '49933ea5288caeca8642d1e84afbd3f7d6820020',
-      'actions/setup-python': 'a26af69be951a213d495a4c3e4e4022e16d87065',
     };
     for (final value in jobs.values) {
       final current = object(value);
@@ -471,7 +501,6 @@ void main() {
       'verify_export_sources.dart',
       'pub get --enforce-lockfile',
       'bash tool/prepare_typescript.sh',
-      'python3 -m unittest discover',
       'tool/ci/native_assembly_init_probe.dart',
     ];
     var previous = -1;
@@ -480,21 +509,20 @@ void main() {
       expect(offset, greaterThan(previous));
       previous = offset;
     }
-    final regression = pipeline.singleWhere(
-      (step) => '${step['run']}'.contains('python3 -m unittest discover'),
+    expect(script, isNot(contains('python')));
+    expect(script, isNot(contains('jsonschema')));
+    expect(script, isNot(contains('PyYAML')));
+    // Full source discovery belongs to the prepared three-host native gate.
+    final native = job('release-native');
+    expect(native.containsKey('if'), isFalse);
+    expect(native.containsKey('continue-on-error'), isFalse);
+    final execution = steps(native).singleWhere(
+      (step) => '${step['run']}'.contains('tool/ci/release_native_smoke.dart'),
     );
-    expect(regression.containsKey('if'), isFalse);
-    expect(regression['run'], contains('set -euo pipefail'));
-    expect(
-      regression['run'],
-      contains("python3 -m unittest discover -s test -p '*_test.py'"),
-    );
-    expect(regression['env'], {
-      'ARCHWAY_TEST_DART_SDK': r'${{ runner.temp }}/archway-dart/dart-sdk',
-      'ARCHWAY_TEST_NODE':
-          r'${{ runner.temp }}/archway-node/node-v24.21.0-linux-x64/bin/node',
-    });
-    expect(script, contains("'jsonschema==4.26.0' 'PyYAML==6.0.3'"));
+    expect(execution.containsKey('if'), isFalse);
+    expect(execution.containsKey('continue-on-error'), isFalse);
+    expect(execution['run'], contains('--ci-host'));
+    expect(job('release-finalize')['needs'], contains('release-native'));
     for (final flag in [
       '--dart-sdk',
       '--node',

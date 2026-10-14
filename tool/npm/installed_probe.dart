@@ -199,6 +199,11 @@ Future<Map<String, Object?>> inspectNpmRoute({
           environment: environment,
           command: command,
           projectRoot: inspectedProject,
+          additionalProtectedRoots: [
+            routeName == 'cache'
+                ? route.packageRoot.parent.parent
+                : route.installation,
+          ],
         ),
       );
       final controls = NpmInstalledControls(

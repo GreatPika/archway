@@ -89,6 +89,48 @@ void main() {
       'owned fixture helper',
     );
   });
+  test('core checks reject writes to a separate wrapper prefix', () async {
+    final prefix = Directory(p.join(base.path, 'global prefix ü'))
+      ..createSync();
+    final changed = File(p.join(prefix.path, 'unexpected'));
+    final control = File(p.join(installation.path, 'probe-control'))
+      ..writeAsStringSync('protected-write');
+    addTearDown(control.deleteSync);
+    final work = Directory(p.join(base.path, 'protected-work'))..createSync();
+    final output = Directory(p.join(base.path, 'protected-logs'))..createSync();
+    final recorder = InstalledCommandRecorder(output: output);
+    await expectLater(
+      runInstalledCommands(
+        binary,
+        installation,
+        work,
+        File(Platform.resolvedExecutable),
+        recorder,
+        version: '0.1.0',
+        additionalProtectedRoots: [prefix],
+        environment: {
+          ...Platform.environment,
+          'ARCHWAY_FIXTURE_PROTECTED_FILE': changed.path,
+        },
+      ),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'protected-root refusal',
+          'Check unexpectedly changed protected installation files',
+        ),
+      ),
+    );
+    expect(changed.readAsStringSync(), 'unexpected');
+    expect(recorder.commands, hasLength(6));
+    expect((recorder.commands.last['arguments'] as List).last, 'check');
+    final original = jsonDecode(
+      File(p.join(output.path, recorder.commands.last['stdout'] as String))
+          .readAsStringSync(),
+    );
+    expect(original['exit_code'], 0);
+    expect(original['payload']['analysis_complete'], true);
+  });
   test('installed command caller binds route arguments environment and release version', () async {
     final work = Directory(p.join(base.path, 'wrapped'))..createSync();
     final output = Directory(p.join(base.path, 'wrapped-logs'))..createSync();
@@ -99,6 +141,10 @@ void main() {
     final logical = File(p.join(base.path, 'logical npm or pub command'));
     final project = Directory(p.join(work.path, 'caller project café'))
       ..createSync();
+    final wrapper = Directory(p.join(base.path, 'unchanged wrapper prefix'))
+      ..createSync();
+    final wrapperFile = File(p.join(wrapper.path, 'owned'))
+      ..writeAsStringSync('wrapper bytes');
     final routed = <List<String>>[];
     await runInstalledCommands(
       logical,
@@ -109,6 +155,7 @@ void main() {
       readOnly: true,
       version: '2.3.4',
       projectRoot: project,
+      additionalProtectedRoots: [wrapper],
       environment: {
         ...Platform.environment,
         'ARCHWAY_FIXTURE_VERSION': '2.3.4',
@@ -120,6 +167,7 @@ void main() {
       },
     );
     expect(File(p.join(project.path, 'src/app/main.ts')).existsSync(), true);
+    expect(wrapperFile.readAsStringSync(), 'wrapper bytes');
     expect(routed, hasLength(8));
     final originalInit = jsonDecode(
       File(p.join(output.path, 'installed-2.json')).readAsStringSync(),

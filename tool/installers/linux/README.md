@@ -3,14 +3,14 @@
 Build an unsigned .deb from a complete extracted Linux release bundle:
 
 ```sh
-python3 tool/installers/linux/build.py \
+dart run tool/installers/linux/build.dart \
   --bundle /absolute/extracted-bundle \
   --expected-commit FULL_PAYLOAD_SOURCE_COMMIT \
   --output /absolute/fresh/archway.deb
 ```
 
-This build-time tool needs Python 3.11+ and dpkg-deb. Installation needs only
-standard OS/package-manager tools, not Python, Node or Dart. The existing bundle
+This build-time tool needs Dart and dpkg-deb. Installation needs only
+standard OS/package-manager tools, not Node or Dart. The existing bundle
 manifest supplies version, source and byte/mode inventory. Input, copied stage
 and final .deb readback must agree. The build preserves payload bytes and emits
 the final .deb SHA-256; checksums do not authenticate a publisher.
@@ -23,7 +23,7 @@ PATH editing, runtime download or project preparation. Project files and extra
 unowned files are left alone. Administrative authentication is normal for this
 system package. Use the desktop package manager's removal action to uninstall.
 
-`python3 test/linux_installer_test.py` builds real .deb files from synthetic
+`dart test test/linux_installer_builder_test.dart` builds real .deb files from synthetic
 release fixtures. Lifecycle tests run actual dpkg in an unprivileged user
 namespace against a temporary filesystem and package database. They never
 install Archway into the host or change its security settings. User namespaces

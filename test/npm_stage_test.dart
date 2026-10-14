@@ -8,6 +8,35 @@ import 'package:test/test.dart';
 import '../tool/release/installation_identity.dart';
 import 'support/npm_stage_fixture.dart';
 
+// Preserve the installed guide contract without requiring network access.
+void verifyPackagedReadmeLinks(String readme, Directory repository) {
+  final links = RegExp(r'\[[^\]]+\]\(([^)]+)\)').allMatches(readme);
+  if (links.isEmpty) throw const FormatException('Packaged guide has no links');
+  for (final match in links) {
+    final link = match[1]!;
+    final uri = Uri.parse(link);
+    if (uri.scheme != 'https' || uri.authority != 'github.com')
+      throw FormatException('Packaged guide link must use HTTPS GitHub', link);
+    if (link == 'https://github.com/GreatPika/archway/releases') continue;
+    const prefix = '/GreatPika/archway/blob/main/';
+    if (!uri.path.startsWith(prefix))
+      throw FormatException('Packaged guide link must name a repository file', link);
+    final target = File(p.join(repository.path, uri.path.substring(prefix.length)));
+    if (!target.existsSync())
+      throw FormatException('Packaged guide target is missing', link);
+    if (uri.fragment.isNotEmpty) {
+      final anchors = RegExp(r'^#+ (.+)$', multiLine: true)
+          .allMatches(target.readAsStringSync())
+          .map((heading) => heading[1]!
+              .toLowerCase()
+              .replaceAll(RegExp(r'[^\p{L}\p{N}_ -]', unicode: true), '')
+              .replaceAll(' ', '-'));
+      if (!anchors.contains(uri.fragment))
+        throw FormatException('Packaged guide heading is missing', link);
+    }
+  }
+}
+
 void main() {
   late Directory root, source;
   late Map<String, Object> identity;
@@ -42,6 +71,49 @@ void main() {
     environment: environment,
     includeParentEnvironment: environment == null,
   );
+  test('packaged npm guide refuses missing repository documents', () {
+    expect(
+      () => verifyPackagedReadmeLinks(
+        '[Missing](https://github.com/GreatPika/archway/blob/main/missing.md)',
+        root,
+      ),
+      throwsFormatException,
+    );
+  });
+  test('packaged npm guide fragments must name document headings', () {
+    File(p.join(root.path, 'guide.md'))
+        .writeAsStringSync('# Guide\n\n## Installation & usage\n');
+    const document = 'https://github.com/GreatPika/archway/blob/main/guide.md';
+    expect(
+      () => verifyPackagedReadmeLinks('[Guide]($document#installation--usage)', root),
+      returnsNormally,
+    );
+    expect(
+      () => verifyPackagedReadmeLinks('[Guide]($document#missing-heading)', root),
+      throwsFormatException,
+    );
+  });
+  test('packaged npm guide keeps its HTTPS repository link boundary', () {
+    verifyPackagedReadmeLinks(
+      '[Releases](https://github.com/GreatPika/archway/releases)',
+      root,
+    );
+    for (final link in [
+      'http://github.com/GreatPika/archway/releases',
+      'https://example.invalid/GreatPika/archway/releases',
+      'https://github.com/another/repository/blob/main/guide.md',
+    ]) {
+      expect(
+        () => verifyPackagedReadmeLinks('[Guide]($link)', root),
+        throwsFormatException,
+        reason: link,
+      );
+    }
+    expect(
+      () => verifyPackagedReadmeLinks('Guide without documentation links', root),
+      throwsFormatException,
+    );
+  });
   test('private thin stage binds canonical source and offline locked wrapper dependencies', () async {
     final environment = Map<String, String>.from(Platform.environment);
     final configured = await Process.run('npm', [
@@ -71,6 +143,12 @@ void main() {
     final result = await stage('stage', environment: environment);
     expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
     final package = Directory(p.join(root.path, 'stage/package'));
+    final readme = File(p.join(package.path, 'README.md')).readAsStringSync();
+    expect(
+      readme,
+      File(p.join(repository, 'tool/npm/README.md')).readAsStringSync(),
+    );
+    verifyPackagedReadmeLinks(readme, Directory(repository));
     final manifest = jsonDecode(
       File(p.join(package.path, 'package.json')).readAsStringSync(),
     ) as Map;

@@ -45,7 +45,7 @@ delivery. See Dart [exit](https://api.dart.dev/dart-io/exit.html) and
 
 For the Linux process checks below, use the pinned Dart 3.13.3 SDK with
 `--suppress-analytics` for every Dart command,
-Node 24.21.0, prepared dependencies/assets, Python jsonschema, and the repository
+Node 24.21.0, prepared dependencies/assets, and the repository
 native bridge build. DART/NODE are absolute executables, DART_SDK is the SDK root,
 and WRONG_NODE is a real incompatible Node executable (the fixture uses 24.19.0).
 Run from repository root with these pinned runtime directories on PATH and a
@@ -56,14 +56,14 @@ sh tool/build_native.sh
 "$DART" --suppress-analytics test
 "$DART" --suppress-analytics analyze
 sh tool/assemble.sh
-python3 test/runtime_entrypoint_process_smoke.py "$DART" "$NODE"
-python3 test/check_process_smoke.py build/install/bin/linux-x64/archway "$NODE"
-python3 test/runtime_process_smoke.py build/install/bin/linux-x64/archway "$NODE"
-python3 test/runtime_request_process_smoke.py build/install/bin/linux-x64/archway "$NODE"
-python3 test/runtime_preflight_process_smoke.py build/install/bin/linux-x64/archway "$NODE" "$WRONG_NODE" "$DART_SDK"
+"$DART" --suppress-analytics test test/runtime_capture_test.dart
+dart --suppress-analytics run test/check_process_smoke.dart build/install/bin/linux-x64/archway "$NODE"
+dart --suppress-analytics run test/runtime_process_smoke.dart build/install/bin/linux-x64/archway "$NODE"
+dart --suppress-analytics run test/runtime_request_process_smoke.dart build/install/bin/linux-x64/archway "$NODE"
+dart --suppress-analytics run test/runtime_preflight_process_smoke.dart build/install/bin/linux-x64/archway "$NODE" "$WRONG_NODE" "$DART_SDK"
 ```
 
-`runtime_process_smoke.py` uses the 120-second production deadline;
+`runtime_process_smoke.dart` uses the 120-second production deadline;
 it has no accelerated-clock mode. Every process suite validates one complete
 public JSON line, actual exit status, and silent stderr. The standalone fixtures
 copy installed assets with symlinks preserved, so an installation-safety failure

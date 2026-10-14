@@ -13,7 +13,7 @@ import '../native/physical_paths.dart';
 
 part 'export_file.dart';
 
-const archwayVersion = '0.1.0';
+const archwayVersion = '0.2.0';
 
 class CliStreams {
   final StringSink stdout;

@@ -98,17 +98,7 @@ jobs:
             git diff --exit-code -- pubspec.lock
             bash tool/prepare_typescript.sh
             git diff --exit-code -- assets/typescript/package-lock.json
-            python3 -m venv "$RUNNER_TEMP/archway-schema-venv"
-            "$RUNNER_TEMP/archway-schema-venv/bin/python" -m pip install --index-url https://pypi.org/simple 'jsonschema==4.26.0' 'PyYAML==6.0.3'
-            echo "$RUNNER_TEMP/archway-schema-venv/bin" >> "$GITHUB_PATH"
           } 2>&1 | tee build/delivery-probe/setup.log
-      - name: Python regression suite with pinned runtime fixtures
-        env:
-          ARCHWAY_TEST_DART_SDK: ${{ runner.temp }}/archway-dart/dart-sdk
-          ARCHWAY_TEST_NODE: ${{ runner.temp }}/archway-node/node-v24.21.0-linux-x64/bin/node
-        run: |
-          set -euo pipefail
-          python3 -m unittest discover -s test -p '*_test.py' 2>&1 | tee build/delivery-probe/python-regression.log
       - name: Genuine assembled and transported Linux init plus mixed process checks
         run: |
           dart --suppress-analytics run tool/ci/native_assembly_init_probe.dart \

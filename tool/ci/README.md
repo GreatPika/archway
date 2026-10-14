@@ -31,10 +31,9 @@ dart --suppress-analytics pub get --enforce-lockfile
 bash tool/prepare_typescript.sh
 ```
 
-Use the workflow's pinned Python/PyYAML/jsonschema setup for the selected probe.
-Windows assembly requires native Python 3.9+, PowerShell, explicit pinned Dart,
-and verified Git for Windows Bash with pinned Node/npm first on PATH. Windows
-init-only needs no jsonschema. Source policy/init controls need no Node.
+Windows assembly requires PowerShell, explicit pinned Dart, and verified Git for
+Windows Bash with pinned Node/npm first on PATH. Source policy/init controls
+need no Node.
 
 Jobs use bounded timeouts, `contents: read`, pinned actions and nonpersistent
 checkout credentials. Native export/probe runs have separate cancellation groups.
@@ -48,7 +47,7 @@ Standard hosted runners can consume billable private-repository minutes.
 
 Source policy/init, export and alias controls precede owned asset preparation,
 compiler readiness/suites and genuine maintainer assembly. Setup failures and
-non-native skips are not semantic results. The [shared init oracle](aot_init_assertions.py)
+non-native skips are not semantic results. The [shared init oracle](aot_init_assertions.dart)
 requires exit 0, `ok`/`created`, correct streams/JSON and exactly two bootstrap
 files for fresh-root mixed init, from foreign Unicode/spaced paths without
 Dart/Node on PATH. Windows OS essentials remain available.
@@ -87,7 +86,7 @@ controlled extraction and repeats init at a fresh relocated path before exposing
 `installation.tar` and external `provenance.json`.
 
 [Export](../release/installation_artifact.dart), [transport audit](audit_installation_transports.dart)
-and [combination](combine_installations.py) bind exact source commit/tree, both
+and [native archive production](../release/build_native_archives.dart) bind exact source commit/tree, both
 lock hashes, per-file bytes/sizes/modes, archive digest, actual target/runtimes and
 selected suites. Tracked identity does not attest ignored tools/caches; manifests
 identify the actual installation bytes. Windows transport modes do not attest
@@ -106,23 +105,6 @@ Consumers require the exact source SHA and current run ID/attempt; rerun all job
 rather than mix attempts. Successful producer dependencies and `github.sha`
 checkout establish the source relationship. Adjacent downloaded JSON alone does
 not establish authenticity.
-
-## Standalone private Linux npm smoke
-
-[The private packaging smoke](../../test/package_delivery_process_smoke.py) takes
-an existing Linux-x64-only installation prepared by the
-[maintainer assembler](../../docs/implementation/installation-layout.md#prepare-and-assemble),
-including its real native executable, bridge and owned TypeScript assets. On
-Linux x64/glibc, with Python `jsonschema` and Node 24.21.0/npm 11.19.0 on PATH,
-pass that installation and a separately prepared Node 24.19.0 executable:
-
-```sh
-python3 test/package_delivery_process_smoke.py PREPARED_LINUX_INSTALLATION PREPARED_NODE_24_19
-```
-
-It stages and installs a private package into temporary local/global/cache routes
-and checks rejection of the incomplete all-target input. This is a standalone
-Linux bundled-package regression, not acceptance of the 0.2.0 thin wrappers.
 
 ## Installed npm routes and termination limits
 
@@ -287,7 +269,7 @@ Publication and account actions require separate authorization.
 
 ## Release fixtures and regression checks
 
-[Native fixture preparation](prepare_native_acceptance.py) is a separate networked
+[Native fixture preparation](prepare_native_acceptance.dart) is a separate networked
 step: `--target TARGET --output NEW_DIRECTORY`. It verifies official Flutter
 3.47.4 / embedded Dart 3.13.3 and Node 24.19.0 archives, then prepares real locked
 hosted collection 1.19.1, path, workspace, pinned Git `pkgs/path` and Flutter pub
@@ -353,7 +335,7 @@ Compiler bytes and host identity, input manifest, installer bytes and original
 lifecycle/installed-command logs are bound to the source/archive report.
 
 A temporary, explicitly test-only `0.0.0` bundle adds an obsolete file; upgrade
-installs the exact `0.1.0` verified payload and proves removal of that file. The
+installs the verified current-version payload and proves removal of that file. The
 old test artifact is never included in the release. Linux uses an isolated dpkg
 root; macOS uses native Installer and the owned shell uninstaller; Windows uses
 its disposable runner account. Root-owned Unix payloads stay root-owned, while

@@ -54,11 +54,18 @@ Future<Map<String, Object?>> runInstalledCommands(
   Map<String, String>? environment,
   List<String> Function(List<String>)? command,
   Directory? projectRoot,
+  List<Directory> additionalProtectedRoots = const [],
 }) async {
   _require(
     installation.resolveSymbolicLinksSync() == installation.path,
     'Installation must be canonical',
   );
+  for (final root in additionalProtectedRoots) {
+    _require(
+      root.resolveSymbolicLinksSync() == root.path,
+      'Protected installation must be canonical',
+    );
+  }
   Future<NativeProcessResult> capture(
     List<String> arguments, {
     String? workingDirectory,
@@ -176,6 +183,9 @@ nodes:
     final before = _snapshot(project),
         cwd = _snapshot(foreign),
         owned = _snapshot(installation);
+    final protected = [
+      for (final root in additionalProtectedRoots) (root, _snapshot(root)),
+    ];
     final result = await capture(
       [binary.path, '--root', project.path, 'check', ...extra],
       workingDirectory: foreign.path,
@@ -192,6 +202,12 @@ nodes:
           sameJson(_snapshot(installation), owned),
       'Check unexpectedly changed files',
     );
+    for (final (root, snapshot) in protected) {
+      _require(
+        sameJson(_snapshot(root), snapshot),
+        'Check unexpectedly changed protected installation files',
+      );
+    }
     _require(
       result.stderr.isEmpty &&
           result.stdout.isNotEmpty &&

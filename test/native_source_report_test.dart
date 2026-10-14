@@ -33,6 +33,71 @@ List<Map<String, dynamic>> events(
   {'type': 'done', 'success': true},
 ];
 void main() {
+  test('staged lifecycle skips bind exact cases and hosts', () {
+    const path = 'test/macos_installer_builder_test.dart';
+    const names = [
+      'staged lifecycle registers command and owned inventory',
+      'staged lifecycle upgrade removes stale owned files and preserves foreign files',
+      'staged lifecycle refuses modified owned files and incoming foreign collisions',
+      'staged lifecycle uninstall preserves foreign and modified files and replaced command',
+      'staged lifecycle clean uninstall removes owned root and command',
+      'staged lifecycle malformed inventory refuses removal before mutation',
+      'staged lifecycle missing payload cannot register command or ownership',
+      'staged lifecycle refuses non-macOS host before mutation',
+      'staged lifecycle refuses foreign commands and aliased parents',
+      'staged lifecycle refuses foreign root without mutation',
+      'staged lifecycle upgrade refuses changed mode and uninstall preserves it',
+      'staged lifecycle postinstall refuses mode loss before registration',
+    ];
+    for (final name in names) {
+      for (final target in [...sourceTargets, 'unknown']) {
+        for (final reason in [
+          'POSIX macOS installer staging fixture',
+          'Non-macOS host control',
+        ]) {
+          final allowed =
+              target == 'windows-x64' &&
+                  reason == 'POSIX macOS installer staging fixture' ||
+              target == 'macos-arm64' &&
+                  name ==
+                      'staged lifecycle refuses non-macOS host before mutation' &&
+                  reason == 'Non-macOS host control';
+          expect(expectedSkip(target, path, name, reason), allowed);
+          expect(expectedSkip(target, '$path.other', name, reason), isFalse);
+          expect(expectedSkip(target, path, '$name extra', reason), isFalse);
+          expect(expectedSkip(target, path, name, '$reason extra'), isFalse);
+        }
+      }
+    }
+  });
+  test('new retirement keepers admit only exact host-specific skips', () {
+    const entries = [
+      (
+        'test/runtime_capture_test.dart',
+        'real entrypoint exits after flushed report with a pending native child',
+        'Linux child subreaper required to kill and reap the pending fixture child',
+        {'macos-arm64', 'windows-x64'},
+      ),
+      (
+        'test/native_export_workflow_test.dart',
+        'macOS assembly command forwards optional export and preserves failure',
+        'POSIX shell dispatch; native macOS workflow remains required',
+        {'windows-x64'},
+      ),
+    ];
+    for (final (path, name, reason, allowed) in entries) {
+      for (final target in [...sourceTargets, 'unknown']) {
+        expect(
+          expectedSkip(target, path, name, reason),
+          allowed.contains(target),
+        );
+        expect(expectedSkip(target, '$path.other', name, reason), isFalse);
+        expect(expectedSkip(target, path, '$name changed', reason), isFalse);
+        expect(expectedSkip(target, path, name, '$reason changed'), isFalse);
+        expect(expectedSkip(target, path, name, null), isFalse);
+      }
+    }
+  });
   test(
     'installer filename skips bind only unrepresentable Windows fixtures',
     () {

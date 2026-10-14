@@ -45,7 +45,7 @@ void main() {
       expect(value['exit_code'], exit);
       expect(value['diagnostics'], isEmpty);
       expect(value['tool_versions'], {
-        'archway': '0.1.0',
+        'archway': '0.2.0',
         'dart_adapter': null,
         'typescript_adapter': null,
         'dart_sdk': null,

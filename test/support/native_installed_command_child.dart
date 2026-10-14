@@ -80,6 +80,9 @@ void main(List<String> args) {
           };
   }
   if (command == 'check') {
+    if (fault == 'protected-write')
+      File(Platform.environment['ARCHWAY_FIXTURE_PROTECTED_FILE']!)
+          .writeAsStringSync('unexpected');
     if (fault == 'project-write')
       File('$root/changed').writeAsStringSync('unexpected');
     if (fault == 'foreign-write')

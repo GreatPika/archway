@@ -72,15 +72,15 @@ Node executable:
 ```sh
 sh tool/build_native.sh
 dart --suppress-analytics analyze
-dart --suppress-analytics test --concurrency=1
+dart --suppress-analytics test --concurrency=2
 sh tool/assemble.sh build/install
-python3 test/native_abi_process_smoke.py "$EXE"
-python3 test/native_fault_process_smoke.py "$EXE"
-python3 test/native_asset_process_smoke.py "$EXE"
-python3 test/catalogue_export_process_smoke.py "$EXE"
-python3 test/physical_path_process_smoke.py "$EXE" "$DART_SDK" "$NODE"
-python3 test/alias_wire_process_smoke.py "$EXE" "$NODE"
-python3 test/dart_resource_process_smoke.py "$EXE" "$DART_SDK"
+dart --suppress-analytics run test/native_abi_process_smoke.dart "$EXE"
+dart --suppress-analytics run test/native_fault_process_smoke.dart "$EXE"
+dart --suppress-analytics run test/native_asset_process_smoke.dart "$EXE"
+dart --suppress-analytics run test/catalogue_export_process_smoke.dart "$EXE"
+dart --suppress-analytics run test/physical_path_process_smoke.dart "$EXE" "$DART_SDK" "$NODE"
+dart --suppress-analytics run test/alias_wire_process_smoke.dart "$EXE" "$NODE"
+dart --suppress-analytics run test/dart_resource_process_smoke.dart "$EXE" "$DART_SDK"
 ```
 
 The independent ABI fixture checks compiled CLI decoding; its Win32/NTSTATUS

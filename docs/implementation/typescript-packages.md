@@ -96,8 +96,8 @@ Same-byte lock symlink retargeting still produces INPUT_CHANGED.
 Source package tests use the shared Dart offline extractor in
 `test/support/node_package_fixtures.dart`. It preserves archive bytes and actual
 hardlinks, creates native relative directory symlinks last, and verifies their
-traversal before inspection, including on Windows. The legacy Python helper is
-retained for remaining process-suite callers; their interpreter setup is unchanged.
+traversal before inspection, including on Windows. Process suites use the same
+Dart extractor.
 Local extractor results do not establish native platform acceptance.
 
 From repository root, with prepared dependencies/assets and native bridge:

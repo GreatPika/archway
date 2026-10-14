@@ -31,6 +31,15 @@ verification. Prelaunch errors go to stderr with exit 126, outside core JSON.
 Hashes detect corruption and identify artifact bytes; they are not a signature or
 protection from same-user tampering. Measure signal behavior separately on each OS.
 
+### Windows executable path limit
+
+The pinned Dart 3.13.3 native runtime uses a 261-byte UTF-8 buffer, including
+the terminating NUL, to locate its executable. Longer canonical paths can fail
+before Archway starts with an AOT-snapshot error. Unicode may use multiple bytes
+per character. A same-byte Windows fixture failed at 262 bytes and passed at 244;
+tested npm cache routes passed, but arbitrary deeply nested paths are unsupported.
+See the [Dart startup implementation](https://github.com/dart-lang/sdk/blob/3.13.3/runtime/bin/main_impl.cc#L1104-L1107).
+
 ## Prepare and assemble
 
 Use Dart 3.13.3, Node 24.21.0/npm 11.19.0 and prepared Dart dependencies. Prepare
@@ -77,7 +86,7 @@ publish, reserve a name or certify a route.
 
 ## Reproduce bounded acceptance
 
-Python process checks require jsonschema, pinned runtimes and prepared caches.
+Process checks use Dart with pinned runtimes and prepared caches.
 The [CI guide](../../tool/ci/README.md) records existing 0.1.0 source/AOT/transport
 fixtures; those bundled-package and pub snapshot results are historical route
 evidence, not acceptance of the new thin wrappers.

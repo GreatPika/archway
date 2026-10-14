@@ -2,6 +2,19 @@
 const sourceTargets = {'linux-x64', 'macos-arm64', 'windows-x64'};
 
 bool expectedSkip(String target, String path, String name, String? reason) {
+  if (const {'macos-arm64', 'windows-x64'}.contains(target) &&
+      path == 'test/runtime_capture_test.dart' &&
+      name ==
+          'real entrypoint exits after flushed report with a pending native child' &&
+      reason ==
+          'Linux child subreaper required to kill and reap the pending fixture child')
+    return true;
+  if (target == 'windows-x64' &&
+      path == 'test/native_export_workflow_test.dart' &&
+      name ==
+          'macOS assembly command forwards optional export and preserves failure' &&
+      reason == 'POSIX shell dispatch; native macOS workflow remains required')
+    return true;
   if (target == 'windows-x64' &&
       path == 'test/windows_installer_prepare_test.dart' &&
       reason == 'POSIX-only invalid Windows filename fixture.' &&
@@ -66,6 +79,18 @@ bool expectedSkip(String target, String path, String name, String? reason) {
     if (target == 'windows-x64' &&
         reason == 'POSIX macOS installer staging fixture' &&
         const {
+          'staged lifecycle registers command and owned inventory',
+          'staged lifecycle upgrade removes stale owned files and preserves foreign files',
+          'staged lifecycle refuses modified owned files and incoming foreign collisions',
+          'staged lifecycle uninstall preserves foreign and modified files and replaced command',
+          'staged lifecycle clean uninstall removes owned root and command',
+          'staged lifecycle malformed inventory refuses removal before mutation',
+          'staged lifecycle missing payload cannot register command or ownership',
+          'staged lifecycle refuses non-macOS host before mutation',
+          'staged lifecycle refuses foreign commands and aliased parents',
+          'staged lifecycle refuses foreign root without mutation',
+          'staged lifecycle upgrade refuses changed mode and uninstall preserves it',
+          'staged lifecycle postinstall refuses mode loss before registration',
           'stages exact payload and unchanged lifecycle without source commit policy',
           'rejects each caller policy violation without creating output',
           'rejects restricted and reserved paths, including uninstall subtree',
@@ -81,8 +106,10 @@ bool expectedSkip(String target, String path, String name, String? reason) {
         }.contains(name))
       return true;
     if (target == 'macos-arm64' &&
-        name ==
-            'native build refuses actual non-macOS host before any mutation' &&
+        const {
+          'native build refuses actual non-macOS host before any mutation',
+          'staged lifecycle refuses non-macOS host before mutation',
+        }.contains(name) &&
         reason == 'Non-macOS host control')
       return true;
   }

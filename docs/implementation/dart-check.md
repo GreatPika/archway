@@ -106,7 +106,7 @@ because inspection does not execute plugins.
 ## Reproduction
 
 Run from the repository root with pinned Dart/Node on PATH, a prepared PUB_CACHE,
-Python jsonschema, native bridge and trusted TypeScript assets. Set DART_SDK to
+native bridge and trusted TypeScript assets. Set DART_SDK to
 the SDK root, NODE to its absolute executable, ARCHWAY_PUB_GIT_FIXTURE to the
 prepared Git fixture, and optional ARCHWAY_FLUTTER_FIXTURE to its prepared project.
 The following AOT process commands are Linux host checks:
@@ -116,12 +116,12 @@ The following AOT process commands are Linux host checks:
 dart --suppress-analytics pub get --offline
 sh tool/build_native.sh
 dart --suppress-analytics analyze lib test
-dart --suppress-analytics test --concurrency=1
+dart --suppress-analytics test --concurrency=2
 sh tool/assemble.sh build/install
-python3 test/dart_check_process_smoke.py build/install/bin/linux-x64/archway "$DART_SDK" "$NODE"
-python3 test/dart_resource_process_smoke.py build/install/bin/linux-x64/archway "$DART_SDK"
-python3 test/prepare_package_process_pub.py "$PREPARED_PUB" "$DART_SDK/bin/dart"
-python3 test/package_provenance_process_smoke.py build/install/bin/linux-x64/archway "$PWD" "$PREPARED_PUB" "$ARCHWAY_PUB_GIT_FIXTURE" "$OUTPUT"
+dart --suppress-analytics run test/dart_check_process_smoke.dart build/install/bin/linux-x64/archway "$DART_SDK" "$NODE"
+dart --suppress-analytics run test/dart_resource_process_smoke.dart build/install/bin/linux-x64/archway "$DART_SDK"
+dart --suppress-analytics run test/prepare_package_process_pub.dart "$PREPARED_PUB" "$DART_SDK/bin/dart"
+dart --suppress-analytics run test/package_provenance_process_smoke.dart build/install/bin/linux-x64/archway "$PWD" "$PREPARED_PUB" "$ARCHWAY_PUB_GIT_FIXTURE" "$OUTPUT"
 ```
 
 PREPARED_PUB and OUTPUT are fresh directories. For the optional Flutter process
@@ -129,7 +129,7 @@ check, set both FLUTTER_SDK to the prepared SDK root and ARCHWAY_FLUTTER_FIXTURE
 to its prepared project, then run:
 
 ```sh
-python3 test/dart_flutter_process_smoke.py build/install/bin/linux-x64/archway "$FLUTTER_SDK" "$ARCHWAY_FLUTTER_FIXTURE"
+dart --suppress-analytics run test/dart_flutter_process_smoke.dart build/install/bin/linux-x64/archway "$FLUTTER_SDK" "$ARCHWAY_FLUTTER_FIXTURE"
 ```
 
 The Flutter process fixture creates a hardlinked copy on that filesystem
