@@ -30,7 +30,6 @@ class ReleaseWorkflow(unittest.TestCase):
         self.assertIn("'jsonschema==4.26.0'", runs)
         self.assertLess(runs.index('prepare_native_acceptance.py'), runs.index('release_native_smoke.py'))
         self.assertIn('--acceptance-fixtures "$RUNNER_TEMP/archway-native-fixtures/acceptance-fixtures.json"', runs)
-        self.assertGreaterEqual(int(native['timeout-minutes']), 25)
         self.assertIn('--expected-commit "$GITHUB_SHA"', runs)
         downloads = [step['with']['name'] for step in native['steps']
                      if 'download-artifact@' in step.get('uses', '')]

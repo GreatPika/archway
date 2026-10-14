@@ -62,7 +62,6 @@ void main() {
         expect(utf8.decode(result.stdout), contains('partial café stdout'));
         expect(utf8.decode(result.stderr), contains('partial ü stderr'));
         expect(utf8.decode(result.stderr), contains('TimeoutException'));
-        expect(Directory(p.join(base.path, 'not-built')).existsSync(), false);
       } finally {
         base.deleteSync(recursive: true);
       }

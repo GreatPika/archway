@@ -90,7 +90,7 @@ void main() {
     );
   });
   test(
-    'capture write failure stops and reaps rather than waiting for child',
+    'capture write failure propagates without waiting for child completion',
     () async {
       final temp = Directory.systemTemp.createTempSync(
         'acceptance-write-failure-',

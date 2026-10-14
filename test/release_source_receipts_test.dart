@@ -299,7 +299,7 @@ void main() {
       final f = Fixture('linux-x64');
       addTearDown(f.close);
       File(p.join(f.evidence.path, 'source-tests.stdout.log'))
-          .writeAsStringSync('${f.eventLog()} ');
+          .writeAsStringSync(' ${f.eventLog()}');
       await expectLater(f.validate(), throwsA(isA<FormatException>()));
     },
   );

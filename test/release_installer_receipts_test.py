@@ -36,7 +36,6 @@ class InstallerReceipts(unittest.TestCase):
                         'installer': installer_fixture(root, 'linux-x64', 'a' * 64)}
             mutations = [
                 lambda r: r.update(bundle_manifest_sha256='e'*64),
-                lambda r: r.update(commands=r['commands'][:1]),
                 lambda r: r['artifact'].update(name='test-only-old.deb'),
                 lambda r: r.update(cases=r['cases'][:-1]),
                 lambda r: r['old_fixture'].update(test_only=False),

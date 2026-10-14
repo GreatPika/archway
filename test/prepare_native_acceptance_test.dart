@@ -123,6 +123,7 @@ void main() {
         });
         final delays = <Duration>[];
         final file = File(p.join(root.path, '$status'));
+        final transient = [502, 503, 504].contains(status);
         await expectLater(
           downloadFixture(
             Uri.parse('http://127.0.0.1:${server.port}/archive'),
@@ -133,9 +134,20 @@ void main() {
               delays.add(duration);
             },
           ),
-          throwsA(anyOf(isA<HttpException>(), isA<FormatException>())),
+          throwsA(
+            transient
+                ? isA<FormatException>().having(
+                    (error) => error.message,
+                    'checksum rejection',
+                    contains('checksum mismatch'),
+                  )
+                : isA<HttpException>().having(
+                    (error) => error.message,
+                    'HTTP status rejection',
+                    'HTTP $status',
+                  ),
+          ),
         );
-        final transient = [502, 503, 504].contains(status);
         expect(requests, transient ? 2 : 1);
         expect(delays, transient ? [const Duration(seconds: 1)] : isEmpty);
         await server.close(force: true);
@@ -175,11 +187,24 @@ void main() {
         }
       }
       final evidence = await fixtureReadiness(root);
-      expect(evidence.length, 5);
-      expect(
-        evidence['pub/hosted']!['pubspec.lock'],
-        'b0f4b2e7996a5f4f315bdbc6233973376144870ecd6524e417c05c36dde88745',
-      );
+      const preparedSha =
+          'b0f4b2e7996a5f4f315bdbc6233973376144870ecd6524e417c05c36dde88745';
+      const configSha =
+          'ec057def78c49f89b6244c0b7532f9f5fa4a0774619ee29c978cf32386443014';
+      expect(evidence, {
+        for (final name in [
+          'pub/hosted',
+          'pub/path',
+          'pub/workspace',
+          'git-fixture',
+          'flutter-fixture',
+        ])
+          name: {
+            'pubspec.yaml': preparedSha,
+            'pubspec.lock': preparedSha,
+            '.dart_tool/package_config.json': configSha,
+          },
+      });
       final config = File(
         p.join(root.path, 'flutter-fixture/.dart_tool/package_config.json'),
       );
@@ -363,20 +388,23 @@ void main() {
     },
   );
 
-  test('preparation rejects foreign host before allocating output', () async {
-    final root = Directory.systemTemp.createTempSync('prepare-host-');
-    addTearDown(() => root.deleteSync(recursive: true));
-    final output = Directory(p.join(root.path, 'output'));
-    await expectLater(
-      prepareNativeFixtures(
-        target: 'unsupported',
-        output: output,
-        repository: Directory.current,
-      ),
-      throwsArgumentError,
-    );
-    expect(output.existsSync(), isFalse);
-  });
+  test(
+    'preparation rejects an unsupported target before allocating output',
+    () async {
+      final root = Directory.systemTemp.createTempSync('prepare-host-');
+      addTearDown(() => root.deleteSync(recursive: true));
+      final output = Directory(p.join(root.path, 'output'));
+      await expectLater(
+        prepareNativeFixtures(
+          target: 'unsupported',
+          output: output,
+          repository: Directory.current,
+        ),
+        throwsArgumentError,
+      );
+      expect(output.existsSync(), isFalse);
+    },
+  );
   test('archive extraction chooses only native tools for reviewed formats', () {
     expect(
       officialExtractionCommand(

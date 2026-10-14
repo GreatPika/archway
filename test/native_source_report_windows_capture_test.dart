@@ -47,14 +47,14 @@ void main() {
         );
         if ((target == 'windows-x64') == unsupported) {
           expect((report()['skipped'] as List).single['reason'], reason);
+          for (final wrong in [null, '', 'dependency missing', '$reason ']) {
+            expect(expectedSkip(target, path, name, wrong), isFalse);
+          }
+          expect(expectedSkip(target, '$path.other', name, reason), isFalse);
+          expect(expectedSkip(target, path, '$name changed', reason), isFalse);
         } else {
           expect(report, throwsFormatException);
         }
-        for (final wrong in [null, '', 'dependency missing', '$reason ']) {
-          expect(expectedSkip(target, path, name, wrong), isFalse);
-        }
-        expect(expectedSkip(target, '$path.other', name, reason), isFalse);
-        expect(expectedSkip(target, path, '$name changed', reason), isFalse);
       }
     }
   });
@@ -107,14 +107,14 @@ void main() {
         );
         if ((target == 'windows-x64') == unsupported) {
           expect((report()['skipped'] as List).single['reason'], reason);
+          for (final wrong in [null, '', 'dependency missing', '$reason ']) {
+            expect(expectedSkip(target, path, name, wrong), isFalse);
+          }
+          expect(expectedSkip(target, '$path.other', name, reason), isFalse);
+          expect(expectedSkip(target, path, '$name changed', reason), isFalse);
         } else {
           expect(report, throwsFormatException);
         }
-        for (final wrong in [null, '', 'dependency missing', '$reason ']) {
-          expect(expectedSkip(target, path, name, wrong), isFalse);
-        }
-        expect(expectedSkip(target, '$path.other', name, reason), isFalse);
-        expect(expectedSkip(target, path, '$name changed', reason), isFalse);
       }
     }
   });

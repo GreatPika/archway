@@ -46,7 +46,7 @@ void main() {
     );
     expect(result.exitCode, 0);
   });
-  test('guide text retains universal-newline reading without relaxing policy bytes', () async {
+  test('shared oracle accepts CRLF guide text', () async {
     final child = File(
       p.join(Directory.current.path, 'test/support/aot_init_oracle_child.dart'),
     );

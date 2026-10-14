@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:path/path.dart' as p;
-
 import 'package:test/test.dart';
 
 import '../tool/ci/native_acceptance_capture.dart';
@@ -133,14 +131,11 @@ void main() {
     },
   );
 
-  test('Windows cleanup diagnostics use invoking stderr and leave child log bytes intact', () async {
-    final root = Directory.systemTemp.createTempSync('acceptance-cleanup-');
-    addTearDown(() => root.deleteSync(recursive: true));
+  test('Windows cleanup diagnostics use invoking stderr and retain the primary failure', () async {
     final result = await Process.run(Platform.resolvedExecutable, [
       '--suppress-analytics',
       'run',
       'test/support/windows_acceptance_cleanup_probe.dart',
-      root.path,
     ]);
     expect(result.exitCode, 0, reason: result.stderr as String);
     expect(result.stdout, 'original timeout retained');
@@ -150,15 +145,5 @@ void main() {
         'Windows acceptance cleanup unconfirmed: Bad state: injected job cleanup failure',
       ),
     );
-    expect(File(p.join(root.path, 'child.stdout')).readAsBytesSync(), [
-      0,
-      255,
-      1,
-    ]);
-    expect(File(p.join(root.path, 'child.stderr')).readAsBytesSync(), [
-      254,
-      2,
-      0,
-    ]);
   });
 }

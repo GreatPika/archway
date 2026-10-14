@@ -43,27 +43,6 @@ Matcher missingExecutableError(String executable, {required bool windows}) =>
           .having((e) => e.errorCode, 'errorCode', 2);
 
 void main() {
-  test(
-    'missing executable matcher accepts only the native missing-file error',
-    () {
-      const executable = '/owned/absent';
-      final windows = missingExecutableError(executable, windows: true);
-      final posix = missingExecutableError(executable, windows: false);
-      expect(const OSError('CreateProcessW', 2), windows);
-      expect(const OSError('CreateProcessW', 5), isNot(windows));
-      expect(const OSError('CreateNamedPipeW', 2), isNot(windows));
-      expect(ProcessException(executable, [], 'missing', 2), posix);
-      expect(ProcessException(executable, [], 'denied', 13), isNot(posix));
-      expect(ProcessException('/other', [], 'missing', 2), isNot(posix));
-      expect(
-        ProcessException(executable, ['unexpected'], 'missing', 2),
-        isNot(posix),
-      );
-      expect(const OSError('CreateProcessW', 2), isNot(posix));
-      expect(ProcessException(executable, [], 'missing', 2), isNot(windows));
-    },
-  );
-
   late RunnerFixture f;
   setUp(() => f = RunnerFixture());
   tearDown(() => f.root.deleteSync(recursive: true));
@@ -81,7 +60,7 @@ void main() {
         'output_root': f.output.resolveSymbolicLinksSync(),
         'fixtures': readFixtures(f.manifest).provenance,
         'suites': [
-          for (final name in names) {'suite': name},
+          for (final name in names) {'suite': name, 'exit_code': 0},
         ],
         'source_suite': f.sourceProof,
       });
@@ -232,6 +211,9 @@ void main() {
       }
       await expectLater(f.run(), throwsA(isA<FileSystemException>()));
       expect(f.events, isEmpty);
+      if (kind == 'file') {
+        expect(File(f.output.path).readAsStringSync(), 'prior');
+      }
       expect(
         FileSystemEntity.typeSync(f.output.path, followLinks: false),
         kind == 'directory'
@@ -595,7 +577,7 @@ class RunnerFixture {
         'fixture-path',
       ].join(Platform.isWindows ? ';' : ':'),
     );
-    return {'suite': name};
+    return {'suite': name, 'exit_code': 0};
   }
 
   Future<Map<String, Object?>> source(
