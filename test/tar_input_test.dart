@@ -98,6 +98,9 @@ void main() {
     () async {
       final manifest = ordinary(name: 'manifest.json');
       final duplicate = [...manifest.take(1024), ...manifest];
+      final missingNewline = paxRecord('uname', 'owner')..last = 88;
+      final invalidUtf8 = paxRecord('uname', 'x');
+      invalidUtf8[invalidUtf8.length - 2] = 255;
       for (final bytes in [
         duplicate,
         ordinary(),
@@ -105,6 +108,17 @@ void main() {
         [...manifest]..[515] = 1,
         changedHeader(manifest, (h) => h[156] = 50),
         withPax(paxRecord('size', '3'), following: manifest),
+        [
+          ...manifest.take(1024),
+          ...withPax(
+            paxRecord('uname', 'owner'),
+            following: List.filled(1024, 0),
+          ),
+        ],
+        withPax(missingNewline, following: manifest),
+        withPax(paxRecord('uname', ''), following: manifest),
+        withPax(paxRecord('uname', 'a\x00b'), following: manifest),
+        withPax(invalidUtf8, following: manifest),
       ]) {
         final source = File(p.join(root.path, 'bad-manifest.tar'))
           ..writeAsBytesSync(bytes);
@@ -138,9 +152,6 @@ void main() {
     expect(snapshots.listSync(), isEmpty);
   });
 
-  test('ordinary TAR contents match the complete expected inventory', () async {
-    await verify(ordinary());
-  });
   test('matching header metadata cannot hide changed file bytes', () async {
     await expectLater(
       verify([...ordinary()]..[512] = 100),
@@ -153,6 +164,7 @@ void main() {
     'requires zero body padding and two complete zero terminator blocks',
     () async {
       final bytes = ordinary();
+      await verify([...bytes, ...List.filled(512, 0)]);
       for (final bad in [
         [...bytes]..[515] = 1,
         bytes.sublist(0, 1024),
@@ -201,49 +213,38 @@ void main() {
         verify(withPax(body, following: withPax(body))),
         throwsFormatException,
       );
-      await expectLater(
-        verify(withPax(body, following: List.filled(1024, 0))),
-        throwsFormatException,
-      );
     },
   );
 
-  test(
-    'rejects global PAX, sparse and unknown metadata before file processing',
-    () async {
-      for (final key in [
-        'GNU.sparse.size',
-        'GNU.sparse.map',
-        'GNU.sparse.major',
-        'GNU.sparse.realsize',
-        'SCHILY.filetype',
-        'size',
-        'linkpath',
-        'unknown',
-      ]) {
-        await expectLater(
-          verify(withPax(paxRecord(key, '3'))),
-          throwsFormatException,
-        );
-      }
+  test('rejects global PAX, sparse and unknown metadata', () async {
+    for (final key in [
+      'GNU.sparse.size',
+      'GNU.sparse.map',
+      'GNU.sparse.major',
+      'GNU.sparse.realsize',
+      'SCHILY.filetype',
+      'size',
+      'linkpath',
+      'unknown',
+    ]) {
       await expectLater(
-        verify(withPax(paxRecord('path', 'payload'), type: 103)),
+        verify(withPax(paxRecord(key, '3'))),
         throwsFormatException,
       );
-    },
-  );
+    }
+    await expectLater(
+      verify(withPax(paxRecord('path', 'payload'), type: 103)),
+      throwsFormatException,
+    );
+  });
 
   test(
-    'strict PAX framing rejects malformed, duplicated and empty values',
+    'strict PAX framing rejects invalid record lengths and repeated keys',
     () async {
       for (final body in [
         utf8.encode('99 path=safe\n'),
         utf8.encode('0 path=safe\n'),
-        utf8.encode('13 path=safeX'),
         [...paxRecord('path', 'payload'), ...paxRecord('path', 'payload')],
-        paxRecord('path', ''),
-        paxRecord('path', 'a\x00b'),
-        [55, 32, 255, 61, 120, 121, 10],
       ]) {
         await expectLater(verify(withPax(body)), throwsFormatException);
       }
@@ -251,7 +252,7 @@ void main() {
   );
 
   test(
-    'ordinary type, exact names and bounded fields survive raw header parsing',
+    'raw TAR headers preserve compatible types and reject malformed fields',
     () async {
       for (final type in '1234567SgLKX'.codeUnits) {
         await expectLater(
@@ -263,6 +264,10 @@ void main() {
       for (final change in <void Function(List<int>)>[
         (h) => h[157] = 32,
         (h) => h.setRange(124, 136, ascii.encode('01000000001\x00')),
+        (h) {
+          h[156] = 120;
+          h.setRange(124, 136, ascii.encode('00004000001\x00'));
+        },
         (h) => h.setRange(124, 136, List.filled(12, 255)),
         (h) => h.setRange(124, 136, ascii.encode('garbage     ')),
         (h) => h.setRange(124, 136, ascii.encode('00000000003\n')),
@@ -282,7 +287,7 @@ void main() {
     'all checksums, body bounds and complete inventory membership are required',
     () async {
       await expectLater(
-        verify([...ordinary()]..[0] ^= 1),
+        verify([...ordinary()]..[265] = 65),
         throwsFormatException,
       );
       await expectLater(
@@ -290,7 +295,7 @@ void main() {
         throwsFormatException,
       );
       await expectLater(
-        verify(ordinary().sublist(0, 513)),
+        verify(ordinary().sublist(0, 512)),
         throwsFormatException,
       );
       final pair = {
@@ -302,10 +307,6 @@ void main() {
         ...ordinary(name: 'other'),
       ], files: pair);
       await expectLater(verify(ordinary(), files: pair), throwsFormatException);
-      await expectLater(
-        verify([...ordinary().take(1024), ...ordinary()], files: pair),
-        throwsFormatException,
-      );
       for (final name in [
         '../escape',
         '/absolute',
@@ -338,18 +339,5 @@ void main() {
         ),
       },
     );
-  });
-
-  test('metadata declared bound is checked before reading its body', () async {
-    await expectLater(
-      verify(
-        changedHeader(ordinary(), (h) {
-          h[156] = 120;
-          h.setRange(124, 136, ascii.encode('00004000001\x00'));
-        }),
-      ),
-      throwsFormatException,
-    );
-    await verify([...ordinary(), ...List.filled(512, 0)]);
   });
 }

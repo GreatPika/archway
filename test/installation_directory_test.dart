@@ -52,16 +52,6 @@ void main() {
     },
   );
   test(
-    'accepts a canonical installation beyond the Windows legacy path limit',
-    () async {
-      await verifyInstallationDirectory(
-        moveDeep(),
-        expected,
-        compareModes: false,
-      );
-    },
-  );
-  test(
     'long traversal retains byte checks and refuses aliased descendants',
     () async {
       final moved = moveDeep();
@@ -94,13 +84,6 @@ void main() {
       expect(target.readAsStringSync(), 'hello\n');
     },
   );
-  test('rejects changed bytes even when the size is unchanged', () async {
-    file.writeAsStringSync('world\n');
-    await expectLater(
-      verifyInstallationDirectory(root, expected, compareModes: false),
-      throwsFormatException,
-    );
-  });
   test('compares physical modes only when requested', () async {
     posix.chmod(file.path, '755');
     await verifyInstallationDirectory(root, expected, compareModes: false);

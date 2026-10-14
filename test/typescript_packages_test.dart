@@ -760,13 +760,14 @@ void main() {
         );
         final file = File('${root.path}/package.json');
         final value = jsonDecode(await file.readAsString()) as Map;
-        if (manager == 'npm') {
-          value['overrides'] = {'ansi-regex': '99.0.0'};
-        } else {
-          value['dependencies']['ansi-regex'] = '99.0.0';
-        }
+        value['dependencies']['ansi-regex'] = '99.0.0';
         await file.writeAsString(jsonEncode(value));
-        if (manager == 'pnpm') {
+        if (manager == 'npm') {
+          final lockFile = File('${root.path}/package-lock.json');
+          final lock = jsonDecode(await lockFile.readAsString()) as Map;
+          lock['packages']['']['dependencies']['ansi-regex'] = '99.0.0';
+          await lockFile.writeAsString(jsonEncode(lock));
+        } else {
           for (final name in [
             'pnpm-lock.yaml',
             'node_modules/.pnpm/lock.yaml',

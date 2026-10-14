@@ -200,7 +200,7 @@ void main() {
       await rejected([...first, 31, 139, 8]);
     },
   );
-  test('truncated optional header fields fail before inspection', () async {
+  test('rejects truncated optional headers and invalid deflate', () async {
     final encoded = gzip.encode([97, 98, 99]);
     for (final (flag, tail) in [
       (4, [255, 255]),

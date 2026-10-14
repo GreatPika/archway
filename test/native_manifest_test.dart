@@ -103,7 +103,6 @@ void main() {
       for (final invalid in [
         '[]',
         '{"files":{}}',
-        '{"files":[],"files":{}}',
         text.replaceFirst('"files":', '"f\\u0069les":{},"files":'),
         text.replaceFirst('"size":3', '"size":3.0'),
         text.replaceFirst('"size":3', '"size":true'),

@@ -178,7 +178,11 @@ void main() {
   );
   test('rejects malformed UTF8 and high bytes without UTF8 flag', () async {
     for (final flags in [0, 0x800]) {
-      final bytes = zip(manifest), c = central(zip(manifest));
+      final bytes = zip([
+        ('payload', [1]),
+        ...manifest,
+      ]);
+      final c = central(bytes);
       set16(bytes, 6, flags);
       set16(bytes, c + 8, flags);
       bytes[30] = 255;
@@ -190,11 +194,11 @@ void main() {
     'end signature': (b, c) => b[b.length - 22] = 0,
     'multi disk': (b, c) => set16(b, b.length - 18, 1),
     'disk counts': (b, c) => set16(b, b.length - 14, 0),
-    'count lies': (b, c) {
+    'zero count with nonempty directory': (b, c) {
       set16(b, b.length - 14, 0);
       set16(b, b.length - 12, 0);
     },
-    'count bound': (b, c) {
+    'oversized count with incomplete directory': (b, c) {
       set16(b, b.length - 14, 4097);
       set16(b, b.length - 12, 4097);
     },
@@ -233,11 +237,11 @@ void main() {
       set32(b, 18, 1000);
       set32(b, c + 20, 1000);
     },
-    'file bound': (b, c) {
+    'oversized root member declaration': (b, c) {
       set32(b, 22, maxArchiveFileBytes + 1);
       set32(b, c + 24, maxArchiveFileBytes + 1);
     },
-    'manifest bound': (b, c) {
+    'oversized root JSON declaration': (b, c) {
       set32(b, 22, maxArchiveJsonBytes + 1);
       set32(b, c + 24, maxArchiveJsonBytes + 1);
     },
@@ -405,15 +409,18 @@ void main() {
     }
     await expectLater(inspect(bytes, readZipManifest), throwsFormatException);
   });
-  test('actual manifest bomb stops at declared bound', () async {
-    final bytes = zip([('manifest.json', List.filled(1024 * 1024, 97))]);
-    set32(bytes, 22, 2);
-    set32(bytes, central(bytes) + 24, 2);
-    await expectLater(
-      inspect(bytes, readZipManifest),
-      throwsA(isA<Exception>()),
-    );
-  });
+  test(
+    'rejects highly expanding manifest with a smaller declared size',
+    () async {
+      final bytes = zip([('manifest.json', List.filled(1024 * 1024, 97))]);
+      set32(bytes, 22, 2);
+      set32(bytes, central(bytes) + 24, 2);
+      await expectLater(
+        inspect(bytes, readZipManifest),
+        throwsA(isA<Exception>()),
+      );
+    },
+  );
   test('native deflate framing parity still requires exact expanded identity', () async {
     final files = [
       ('manifest.json', [97, 98, 99]),
