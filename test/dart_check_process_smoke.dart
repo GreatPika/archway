@@ -413,6 +413,17 @@ void main(List<String> paths) {
     final marker = at('executed-project-code');
     final wrapper = at(p.basename(dartExecutable(sdk)));
     await compileTripwire(sdk, wrapper.path, marker);
+    final calibration = await runNativeProcess([
+      wrapper.path,
+      '--version',
+    ], timeout: const Duration(seconds: 5));
+    check(
+      calibration.exitCode == 99 &&
+          marker.existsSync() &&
+          marker.readAsStringSync() == 'query\n',
+      'Project-runtime tripwire did not record its calibration execution',
+    );
+    marker.deleteSync();
     final aliases = Directory(p.join(base.path, 'aliases'))..createSync();
     Link(p.join(aliases.path, p.basename(wrapper.path)))
         .createSync(wrapper.path);

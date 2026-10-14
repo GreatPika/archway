@@ -123,6 +123,7 @@ void main() {
     final producers = {
       for (final owner in [
         'audit_installation_transports.dart',
+        'tool/prepare_typescript.sh',
         'build_native_archives.dart',
         'generate_descriptor.dart',
         'tool/npm/stage.dart',
@@ -138,6 +139,7 @@ void main() {
     for (final chain in [
       [
         'audit_installation_transports.dart',
+        'tool/prepare_typescript.sh',
         'build_native_archives.dart',
         'generate_descriptor.dart',
       ],
@@ -246,13 +248,58 @@ void main() {
           .singleWhere((line) => line.contains(owner));
       expect(command, contains(r'${registry_args[@]+"${registry_args[@]}"}'));
     }
-    final nativeSteps = steps(job('release-native'));
+    final native = job('release-native');
+    expect(native['needs'], ['audit']);
+    expect(native['runs-on'], r'${{ matrix.os }}');
+    expect(native['timeout-minutes'] as int, greaterThanOrEqualTo(45));
+    final nativeStrategy = object(native['strategy']);
+    expect(nativeStrategy['fail-fast'], isFalse);
+    expect(
+      object(nativeStrategy['matrix'])['include'],
+      unorderedEquals([
+        for (final host in hosts.entries)
+          {'os': host.key, 'target': host.value},
+      ]),
+    );
+    expect(download(native, 'release-bundles-')['with'], {
+      'name': 'release-bundles-$attempt',
+      'path': 'release-input',
+    });
+    final nativeSteps = steps(native);
+    final nativeScript = runs(native);
+    var previousPreparation = -1;
+    for (final owner in [
+      'tool/ci/bootstrap_pub_dart.sh',
+      'tool/ci/prepare_locked_checkout.dart',
+      'git diff --exit-code -- pubspec.lock',
+      'tool/ci/verify_export_sources.dart',
+      'tool/ci/prepare_native_acceptance.dart',
+      'tool/ci/native_fixture_controls.dart fixtures',
+      'tool/ci/release_native_smoke.dart',
+    ]) {
+      final offset = nativeScript.indexOf(owner);
+      expect(offset, greaterThan(previousPreparation), reason: owner);
+      previousPreparation = offset;
+      final step = nativeSteps.singleWhere(
+        (s) => '${s['run']}'.contains(owner),
+      );
+      expect(step.containsKey('if'), isFalse, reason: owner);
+    }
     final npmPreparation = nativeSteps.singleWhere(
       (step) => '${step['run']}'.contains('npm ci'),
     );
     final nativeExecution = nativeSteps.singleWhere(
       (step) => '${step['run']}'.contains('tool/ci/release_native_smoke.dart'),
     );
+    for (final flag in [
+      r'"$NATIVE_DART" --suppress-analytics run tool/ci/release_native_smoke.dart',
+      '--ci-host',
+      '--installer-checks',
+      r'--expected-commit "$GITHUB_SHA"',
+      r'--acceptance-fixtures "$RUNNER_TEMP/archway-native-fixtures/acceptance-fixtures.json"',
+    ]) {
+      expect(nativeExecution['run'], contains(flag));
+    }
     expect(
       nativeSteps.indexOf(npmPreparation),
       lessThan(nativeSteps.indexOf(nativeExecution)),

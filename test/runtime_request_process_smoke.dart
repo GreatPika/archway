@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../tool/validation/json_schema.dart';
+import '../tool/validation/json_values.dart';
 import 'support/installation_staging.dart';
 import 'support/native_process_support.dart';
 
@@ -209,7 +210,16 @@ nodes: [{id: all, responsibility: All, owns: [src/], allows: [], public: []}]
       );
       marker.deleteSync();
       final changed = '${tail.substring(0, tail.length - 3)}z.ts';
+      final expectedContents = utf8.encode('export {};\n');
+      check(
+        sameJson(corpusFile(tail).readAsBytesSync(), expectedContents),
+        'Native corpus contents differ before rename',
+      );
       corpusFile(tail).renameSync(corpusFile(changed).path);
+      check(
+        sameJson(corpusFile(changed).readAsBytesSync(), expectedContents),
+        'Native corpus contents changed after rename',
+      );
       paths[paths.length - 1] = changed;
       request['expected_files'] = [...paths]..sort();
       check(requestBytes() == limit + 1, 'Corpus does not encode to 8 MiB + 1');

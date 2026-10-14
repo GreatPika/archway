@@ -224,6 +224,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test "$(node --version)" = v24.21.0
+          test "$(npm --version)" = 11.19.0
+          bash tool/prepare_typescript.sh
+          git diff --exit-code -- assets/typescript/package-lock.json
           dart run tool/release/build_native_archives.dart --source "$GITHUB_WORKSPACE" \
             --expected-commit "$GITHUB_SHA" --transports transports \
             --guide tool/release/QUICKSTART.txt --output "$RUNNER_TEMP/archway-native-bundles"
@@ -543,8 +547,6 @@ jobs:
     defaults:
       run:
         shell: bash
-    env:
-      PYTHONUTF8: '1'
     steps:
       - name: Preserve tracked source bytes on ephemeral runner
         run: git config --global core.autocrlf false
@@ -552,9 +554,6 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: '3.13.7'
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '24.21.0'
@@ -562,68 +561,32 @@ jobs:
         with:
           name: release-bundles-${{ github.run_id }}-${{ github.run_attempt }}
           path: release-input
-      - name: Prepare real pinned compiler and dependency fixtures separately from checks
+      - name: Bootstrap official checksum-pinned preparation Dart
+        run: bash tool/ci/bootstrap_pub_dart.sh '${{ matrix.target }}' "$RUNNER_TEMP/archway-native-bootstrap"
+      - name: Prepare locked checkout dependencies separately from checks
         run: |
           set -euo pipefail
           mkdir -p build/release-native
-          python -m pip --isolated install --index-url https://pypi.org/simple 'jsonschema==4.26.0' \
-            2>&1 | tee build/release-native/python-setup.log
-          python -u tool/ci/prepare_native_acceptance.py --target '${{ matrix.target }}' \
-            --output "$RUNNER_TEMP/archway-native-fixtures" --expected-commit "$GITHUB_SHA" \
-            2>&1 | tee build/release-native/fixture-preparation.log
-      - name: Verify native acceptance fixture controls without skips
+          "$PUB_BOOTSTRAP_DART" tool/ci/prepare_locked_checkout.dart \
+            2>&1 | tee build/release-native/checkout-preparation.log
+          git diff --exit-code -- pubspec.lock
+          "$PUB_BOOTSTRAP_DART" tool/ci/verify_export_sources.dart "$GITHUB_SHA"
+      - name: Prepare real pinned compiler and dependency fixtures separately from checks
         run: |
           set -euo pipefail
-          python - <<'PYTHON' 2>&1 | tee build/release-native/fixture-controls.log
-          import json, os, pathlib, shutil, subprocess, sys
-          manifest = pathlib.Path(os.environ['RUNNER_TEMP']) / 'archway-native-fixtures/acceptance-fixtures.json'
-          fixtures = json.loads(manifest.read_text(encoding='utf-8'))
-          sdk = pathlib.Path(fixtures['dart_sdk']).resolve(strict=True)
-          dart = sdk / 'bin' / ('dart.exe' if os.name == 'nt' else 'dart')
-          assert dart.is_file(), dart
-          version = subprocess.check_output([str(dart), '--version'], stderr=subprocess.STDOUT, text=True, timeout=30)
-          assert version.split()[:4] == ['Dart', 'SDK', 'version:', '3.13.3'], version
-          node = shutil.which('node')
-          assert node, 'Pinned Node is unavailable'
-          assert subprocess.check_output([node, '--version']).strip() == b'v24.21.0'
-          environment = {**os.environ, 'ARCHWAY_TEST_DART_SDK': str(sdk),
-                         'ARCHWAY_TEST_NODE': node, 'PYTHONPATH': str(pathlib.Path('test').resolve())}
-          subprocess.run([sys.executable, '-m', 'unittest', 'installation_staging_test',
-                          'process_fixture_support_test', 'node_preflight_fixture_test',
-                          'raw_path_fixture_test', 'process_lifecycle_support_test',
-                          'resource_type_fixture_test', 'long_path_fixture_test',
-                          'node_package_fixture_support_test'],
-                         env=environment, check=True)
-          # Preparation is explicit: fixture setup does not prepare this checkout.
-          subprocess.run([str(dart), '--suppress-analytics', 'pub', 'get', '--enforce-lockfile'],
-                         env=environment, check=True, timeout=180)
-          subprocess.run(['git', 'diff', '--exit-code', '--', 'pubspec.lock'], check=True)
-          if os.name == 'nt':
-              subprocess.run([sys.executable, '-m', 'unittest', 'windows_output_lock_test'],
-                             env=environment, check=True)
-              subprocess.run([str(dart), '--suppress-analytics', 'test',
-                              'test/windows_console_test.dart'], env=environment, check=True, timeout=60)
-              subprocess.run([str(dart), '--suppress-analytics', 'run',
-                              'test/windows_console_capability.dart'], env=environment, check=True, timeout=180)
-          with pathlib.Path(os.environ['GITHUB_ENV']).open('a', encoding='utf-8') as stream:
-              stream.write(f'NATIVE_DART={dart.as_posix()}\n')
-          PYTHON
+          "$PUB_BOOTSTRAP_DART" --suppress-analytics run tool/ci/prepare_native_acceptance.dart \
+            --target '${{ matrix.target }}' --output "$RUNNER_TEMP/archway-native-fixtures" \
+            2>&1 | tee build/release-native/fixture-preparation.log
+      - name: Verify native acceptance fixture controls
+        run: |
+          set -euo pipefail
+          "$PUB_BOOTSTRAP_DART" --suppress-analytics run tool/ci/native_fixture_controls.dart fixtures \
+            2>&1 | tee build/release-native/fixture-controls.log
       - name: Verify existing OpenSSL for ephemeral loopback TLS tests
         run: |
           set -euo pipefail
-          python - <<'PYTHON' 2>&1 | tee build/release-native/openssl-setup.log
-          import os, pathlib, subprocess, sys
-          selected = (pathlib.Path(os.environ['ProgramFiles']) / 'OpenSSL/bin/openssl.exe'
-                      if os.name == 'nt' else pathlib.Path(
-                          '/opt/homebrew/bin/openssl' if sys.platform == 'darwin' else '/usr/bin/openssl'))
-          assert selected.is_file(), 'Existing hosted OpenSSL is required for real TLS tests'
-          selected = selected.resolve(strict=True)
-          version = subprocess.check_output([str(selected), 'version'], text=True, timeout=30).strip()
-          assert version.startswith('OpenSSL '), version
-          print(version)
-          with pathlib.Path(os.environ['GITHUB_ENV']).open('a', encoding='utf-8') as stream:
-              stream.write(f'ARCHWAY_TEST_OPENSSL={selected.as_posix()}\n')
-          PYTHON
+          "$PUB_BOOTSTRAP_DART" --suppress-analytics run tool/ci/native_fixture_controls.dart openssl \
+            2>&1 | tee build/release-native/openssl-setup.log
       - name: Prepare locked npm wrapper cache for copied-source tests
         run: |
           set -euo pipefail

@@ -98,8 +98,6 @@ jobs:
         run: |
           {
             command -v ln
-            command -v python3
-            python3 --version
             # The existing Linux-only exact-NFC case remains an explicit skip.
             dart --suppress-analytics test -r expanded \
               test/bootstrap_test.dart test/catalogue_export_test.dart \
@@ -147,18 +145,6 @@ jobs:
               test/typescript_projects_test.dart test/dart_inspection_test.dart \
               test/input_mutations_test.dart
           } 2>&1 | tee build/macos-probe/adapter-source.log
-      - name: Prepare pinned Python schema validation for process regressions
-        run: |
-          set -o pipefail
-          {
-            python3 -m venv "$RUNNER_TEMP/archway-schema-venv"
-            python="$RUNNER_TEMP/archway-schema-venv/bin/python"
-            "$python" --version
-            # Match the locally exercised version, verified on official PyPI.
-            "$python" -m pip install --index-url https://pypi.org/simple 'jsonschema==4.26.0'
-            "$python" -c 'from importlib.metadata import version; from jsonschema import Draft202012Validator; assert version("jsonschema") == "4.26.0"; Draft202012Validator.check_schema({"type": "object"}); print("jsonschema", version("jsonschema"))'
-            echo "$RUNNER_TEMP/archway-schema-venv/bin" >> "$GITHUB_PATH"
-          } 2>&1 | tee build/macos-probe/schema-setup.log
       - name: Genuine maintainer-assembled macOS AOT init and process regressions
         env:
           EXPORT_INSTALLATION: ${{ inputs.export-installation }}

@@ -197,6 +197,7 @@ Future<void> inspectPubInstallation({
   final host = await PrivatePubHost.start(
     upload,
     preparedCache,
+    expectedVersion: descriptor['version'] as String,
     dependencyLockfile: File(p.join(source.path, 'pubspec.lock')),
   );
   try {

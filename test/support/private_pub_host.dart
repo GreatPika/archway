@@ -38,6 +38,7 @@ final class PrivatePubHost {
   static Future<PrivatePubHost> start(
     File archwayUpload,
     Directory preparedPubCache, {
+    required String expectedVersion,
     File? dependencyLockfile,
   }) async {
     _physical(preparedPubCache, FileSystemEntityType.directory);
@@ -49,8 +50,8 @@ final class PrivatePubHost {
     final packages = <String, ({Map pubspec, List<int> bytes})>{};
     packages['archway'] = await withArchiveInput(archwayUpload, (input) async {
       final pubspec = await _uploadPubspec(input);
-      if (pubspec['name'] != 'archway' || pubspec['version'] != '0.2.0') {
-        throw const FormatException('Expected archway 0.2.0 SDK upload');
+      if (pubspec['name'] != 'archway' || pubspec['version'] != expectedVersion) {
+        throw FormatException('Expected archway $expectedVersion SDK upload');
       }
       return (pubspec: pubspec, bytes: await input.file.readAsBytes());
     }, maxBytes: 32 * 1024 * 1024);

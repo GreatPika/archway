@@ -270,6 +270,17 @@ nodes:
     }
 
     preflight(marker: marker.path, version: '');
+    final calibration = await runNativeProcess([
+      p.join(runtime.path, runtimeName),
+      '--version',
+    ], timeout: const Duration(seconds: 5));
+    check(
+      calibration.exitCode == 0 &&
+          marker.existsSync() &&
+          marker.readAsStringSync() == 'queried',
+      'Configured Node fixture did not record its calibration query',
+    );
+    marker.deleteSync();
     for (final args in [
       ['--help'],
       ['--version'],

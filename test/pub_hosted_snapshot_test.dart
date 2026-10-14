@@ -118,6 +118,7 @@ Future<void> main(List<String> args) async {
     final host = await PrivatePubHost.start(
       archive,
       Directory(Platform.environment['PUB_CACHE']!),
+      expectedVersion: descriptor['version'] as String,
     );
     addTearDown(host.close);
     final pubCache = Directory(p.join(fixture.root.path, 'pub cache'));

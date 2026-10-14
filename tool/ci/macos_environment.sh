@@ -22,16 +22,20 @@ device=$(df -P "$probe_tmp" | awk 'NR == 2 { print $1 }')
 printf 'Test directory filesystem device: %s\n' "$device"
 diskutil info "$device"
 diskutil info -plist "$device" > "$RUNNER_TEMP/archway-volume.plist"
-python3 - "$RUNNER_TEMP/archway-volume.plist" "$probe_tmp" <<'PY'
-import pathlib, plistlib, sys, tempfile
-with open(sys.argv[1], "rb") as source:
-    info = plistlib.load(source)
-if info.get("FilesystemType", "").lower() != "apfs":
-    raise SystemExit("APFS required; this is a prerequisite failure, not target red")
-with tempfile.TemporaryDirectory(prefix="case-probe-", dir=sys.argv[2]) as root:
-    lower = pathlib.Path(root, "case-check")
-    lower.write_text("probe", encoding="ascii")
-    print("APFS case-sensitive:", not pathlib.Path(root, "CASE-CHECK").exists())
-print("Canonical test TMPDIR:", sys.argv[2])
-PY
+filesystem=$(plutil -extract FilesystemType raw -o - "$RUNNER_TEMP/archway-volume.plist")
+if [[ "$(printf '%s' "$filesystem" | tr '[:upper:]' '[:lower:]')" != apfs ]]; then
+  echo 'APFS required; this is a prerequisite failure, not target red' >&2
+  exit 1
+fi
+case_probe=$(mktemp -d "$probe_tmp/case-probe-XXXXXX")
+trap 'rm -rf "$case_probe"' EXIT
+printf probe > "$case_probe/case-check"
+if [[ -e "$case_probe/CASE-CHECK" ]]; then
+  echo 'APFS case-sensitive: False'
+else
+  echo 'APFS case-sensitive: True'
+fi
+printf 'Canonical test TMPDIR: %s\n' "$probe_tmp"
+rm -rf "$case_probe"
+trap - EXIT
 echo "TMPDIR=$probe_tmp/" >> "$GITHUB_ENV"
