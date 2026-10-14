@@ -143,17 +143,28 @@ Future<void> runScenario(String scenario) async {
   });
   addTearDown(() => File('${marker}.descendant-release').createSync());
   addTearDown(() => File('${marker}.parent-release').createSync());
-  await waitUntil(
-    () =>
-        File('${marker}.parent').existsSync() &&
-        File('${marker}.descendant').existsSync(),
-  );
-  parent = NativeWitness(
-    int.parse(File('${marker}.parent').readAsStringSync()),
-  );
-  descendant = NativeWitness(
-    int.parse(File('${marker}.descendant').readAsStringSync()),
-  );
+  int? readPublishedPid(String role) {
+    final file = File('$marker.$role');
+    if (!file.existsSync()) return null;
+    try {
+      return int.parse(file.readAsStringSync());
+    } on FileSystemException catch (error) {
+      // Atomic publication closes the writer, but an existing Windows file can
+      // still have a transient sharing conflict. Readability is part of the
+      // same bounded readiness barrier; malformed PIDs and other errors fail.
+      if (error.osError?.errorCode != 32) rethrow;
+      return null;
+    }
+  }
+
+  int? parentPid, descendantPid;
+  await waitUntil(() {
+    parentPid ??= readPublishedPid('parent');
+    descendantPid ??= readPublishedPid('descendant');
+    return parentPid != null && descendantPid != null;
+  });
+  parent = NativeWitness(parentPid!);
+  descendant = NativeWitness(descendantPid!);
   expect(parent.exited, isFalse);
   expect(descendant.exited, isFalse);
   File('${marker}.parent-release').createSync();

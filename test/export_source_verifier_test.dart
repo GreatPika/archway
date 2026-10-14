@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -24,6 +25,8 @@ void main() {
     Platform.resolvedExecutable,
     [verifier, expected ?? commit],
     workingDirectory: root.path,
+    stdoutEncoding: utf8,
+    stderrEncoding: utf8,
   );
 
   setUp(() async {

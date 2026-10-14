@@ -100,6 +100,12 @@ def environment(root, dart, flutter):
         raise ValueError('Real Git executable required')
     paths = [str(dart.parent), str(Path(git).parent)]
     if os.name == 'nt':
+        # Assembly and archive source controls need native PowerShell, but not
+        # the rest of the ambient PATH. Match the Dart preparation replacement.
+        powershell = shutil.which('pwsh.exe')
+        if not powershell:
+            raise ValueError('Real PowerShell executable required')
+        paths.append(str(Path(powershell).resolve().parent))
         paths.append(str(Path(os.environ['SystemRoot']) / 'System32'))
     else:
         paths += ['/usr/bin', '/bin']

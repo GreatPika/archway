@@ -16,8 +16,12 @@ void main() {
 
   test('source identity requires a clean tracked commit', () async {
     final repo = Directory(p.join(base.path, 'repository'))..createSync();
-    Future<String> git(List<String> args) async {
-      final result = await Process.run('git', ['-C', repo.path, ...args]);
+    Future<String> git(List<String> args, {Directory? directory}) async {
+      final result = await Process.run('git', [
+        '-C',
+        (directory ?? repo).path,
+        ...args,
+      ]);
       expect(result.exitCode, 0, reason: '${result.stderr}');
       return (result.stdout as String).trim();
     }
@@ -57,19 +61,19 @@ void main() {
       },
     });
     // A real second repository can otherwise supply plausible, wrong identity.
-    final other = Directory(p.join(base.path, 'other repository'));
-    final clone = await Process.run('git', [
-      'clone',
-      '-q',
-      '--no-hardlinks',
-      repo.path,
-      other.path,
-    ]);
-    expect(clone.exitCode, 0, reason: '${clone.stderr}');
-    File(p.join(other.path, 'pubspec.lock')).writeAsStringSync('other lock\n');
-    final commit = await Process.run('git', [
-      '-C',
-      other.path,
+    final other = Directory(p.join(base.path, 'other repository'))
+      ..createSync();
+    await git(['init', '-q', '--template='], directory: other);
+    for (final name in [
+      'pubspec.lock',
+      'assets/typescript/package-lock.json',
+    ]) {
+      File(p.join(other.path, name))
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('other lock\n');
+    }
+    await git(['add', '.'], directory: other);
+    await git([
       '-c',
       'user.name=Test',
       '-c',
@@ -77,10 +81,10 @@ void main() {
       '-c',
       'commit.gpgSign=false',
       'commit',
-      '-qam',
+      '-qm',
       'other identity',
-    ]);
-    expect(commit.exitCode, 0, reason: '${commit.stderr}');
+    ], directory: other);
+    expect(await sourceIdentity(other), isNot(identity));
     final redirected = {
       ...Platform.environment,
       'GIT_DIR': p.join(other.path, '.git'),

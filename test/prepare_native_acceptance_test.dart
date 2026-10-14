@@ -62,12 +62,19 @@ void main() {
         'bin',
         'dart',
       );
+      final powerShell = File(p.join(root.path, 'PowerShell', 'pwsh.exe'))
+        ..parent.createSync()
+        ..writeAsStringSync('selected native prerequisite');
       final env = preparationEnvironment(
         root,
         dart,
         p.join(root.path, 'flutter'),
         git: p.join(root.path, 'git', 'bin', 'git'),
         inherited: {
+          'PATH': [
+            p.join(root.path, 'unrelated'),
+            powerShell.parent.path,
+          ].join(Platform.isWindows ? ';' : ':'),
           'HOME': '/personal',
           'PUB_CACHE': '/personal',
           'GIT_CONFIG_COUNT': '99',
@@ -82,10 +89,17 @@ void main() {
       expect(env['GIT_CONFIG_KEY_0'], 'core.hooksPath');
       expect(env, isNot(contains('NODE_OPTIONS')));
       expect(env['HTTPS_PROXY'], 'http://proxy');
-      expect(
-        env['PATH']!.split(Platform.isWindows ? ';' : ':').first,
+      expect(env['PATH']!.split(Platform.isWindows ? ';' : ':'), [
         p.dirname(dart),
-      );
+        p.join(root.path, 'git', 'bin'),
+        if (Platform.isWindows) ...[
+          powerShell.parent.resolveSymbolicLinksSync(),
+          r'C:\Windows\System32',
+        ] else ...[
+          '/usr/bin',
+          '/bin',
+        ],
+      ]);
       expect(File(env['GIT_CONFIG_GLOBAL']!).readAsStringSync(), '');
       expect(Directory(env['GIT_CONFIG_VALUE_0']!).listSync(), isEmpty);
       expect(

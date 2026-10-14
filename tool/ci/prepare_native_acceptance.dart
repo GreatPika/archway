@@ -73,9 +73,30 @@ Map<String, String> preparationEnvironment(
     'https_proxy',
     'no_proxy',
   };
+  // Source acceptance includes native assembly and archive extraction. Keep
+  // their PowerShell prerequisite without restoring the ambient tool search path.
+  String? powerShell;
+  if (Platform.isWindows) {
+    final path = parent.entries
+        .where((entry) => entry.key.toLowerCase() == 'path')
+        .map((entry) => entry.value)
+        .firstOrNull;
+    for (final directory in (path ?? '').split(';')) {
+      if (directory.isEmpty) continue;
+      final candidate = File(p.join(directory, 'pwsh.exe'));
+      if (candidate.existsSync()) {
+        powerShell = candidate.resolveSymbolicLinksSync();
+        break;
+      }
+    }
+    if (powerShell == null) {
+      throw StateError('Real PowerShell executable required');
+    }
+  }
   final paths = [
     p.dirname(dart),
     p.dirname(git),
+    if (powerShell != null) p.dirname(powerShell),
     if (Platform.isWindows)
       p.join(
         parent.entries

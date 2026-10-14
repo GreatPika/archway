@@ -35,6 +35,7 @@ void main() {
       try {
         final source = Directory(p.join(base.path, 'fixture'))..createSync();
         final tool = Directory(p.join(source.path, 'tool'))..createSync();
+        final output = p.join(base.path, 'not-built');
         File(
           p.join(
             tool.path,
@@ -43,8 +44,10 @@ void main() {
         ).writeAsStringSync(
           Platform.isWindows
               ? 'param([string]\$Output, [string]\$Dart)\n[Console]::Out.Write("partial café stdout"); [Console]::Out.Flush(); '
-                    '[Console]::Error.Write("partial ü stderr"); [Console]::Error.Flush(); while (\$true) {}\n'
-              : "printf 'partial café stdout'; printf 'partial ü stderr' >&2; while :; do :; done\n",
+                    '[Console]::Error.Write("partial ü stderr"); [Console]::Error.Flush(); '
+                    '[IO.File]::WriteAllText("\${Output}.ready", "ready"); while (\$true) {}\n'
+              : "printf 'partial café stdout'; printf 'partial ü stderr' >&2; "
+                    ': > "\$1.ready"; while :; do :; done\n',
         );
         final child = File('test/support/assembly_timeout_child.dart').absolute;
         final result = await runNativeProcess(
@@ -52,16 +55,26 @@ void main() {
             Platform.resolvedExecutable,
             child.path,
             source.path,
-            p.join(base.path, 'not-built'),
+            output,
             base.path,
           ],
           timeout: const Duration(seconds: 20),
           workingDirectory: Directory.current.path,
         );
-        expect(result.exitCode, isNot(0));
-        expect(utf8.decode(result.stdout), contains('partial café stdout'));
-        expect(utf8.decode(result.stderr), contains('partial ü stderr'));
-        expect(utf8.decode(result.stderr), contains('TimeoutException'));
+        final out = utf8.decode(result.stdout),
+            err = utf8.decode(result.stderr);
+        expect(result.exitCode, isNot(0), reason: '$out\n$err');
+        expect(err, contains('TimeoutException'), reason: '$out\n$err');
+        // This witness is written only after the fixture flushes both streams.
+        // It distinguishes an absent/slow assembler prerequisite from output
+        // lost by timeout capture, which must still fail the byte assertions.
+        expect(
+          File('$output.ready').existsSync(),
+          isTrue,
+          reason: 'Assembler never flushed its partial-output fixture.\n$err',
+        );
+        expect(out, contains('partial café stdout'));
+        expect(err, contains('partial ü stderr'));
       } finally {
         base.deleteSync(recursive: true);
       }

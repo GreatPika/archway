@@ -128,11 +128,11 @@ void main() {
         ], workingDirectory: source.path);
         expect(result.exitCode, isNot(0));
         if (fault == 'extraction') {
-          final receipt = jsonDecode(
-            await File(
-              p.join(report.parent.path, 'portable', 'installed-0.json'),
-            ).readAsString(),
-          ) as Map;
+          final receiptFile = File(
+            p.join(report.parent.path, 'portable', 'installed-0.json'),
+          );
+          expect(receiptFile.existsSync(), isTrue, reason: '${result.stderr}');
+          final receipt = jsonDecode(await receiptFile.readAsString()) as Map;
           expect(receipt['exit_code'], 0, reason: '${result.stderr}');
           expect(receipt['timed_out'], false);
           expect(report.existsSync(), isFalse);

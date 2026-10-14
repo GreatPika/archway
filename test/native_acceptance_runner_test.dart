@@ -550,6 +550,7 @@ class RunnerFixture {
     calls.add(name);
     events.add(name);
     final sdk = paths['dart_sdk']!;
+    // This orchestration fixture selects linux-x64, even on Windows hosts.
     final tails = <String, List<String>>{
       'plan_query': [],
       'cli': [],
@@ -564,7 +565,7 @@ class RunnerFixture {
       'runtime': [node],
       'runtime_request': [
         node,
-        p.join(logs.path, 'runtime-request-coverage.json'),
+        p.posix.join(logs.path, 'runtime-request-coverage.json'),
       ],
       'runtime_preflight': [node, paths['wrong_node']!, sdk],
       'native_asset': [],
@@ -574,15 +575,15 @@ class RunnerFixture {
         repo.path,
         paths['pub_fixture']!,
         paths['git_fixture']!,
-        p.join(logs.path, 'package-provenance'),
+        p.posix.join(logs.path, 'package-provenance'),
       ],
       'dart_flutter': [paths['flutter_sdk']!, paths['flutter_fixture']!],
     };
     expect(command, [
-      p.join(sdk, 'bin', 'dart'),
+      p.posix.join(sdk, 'bin', 'dart'),
       '--suppress-analytics',
       'run',
-      p.join(repo.path, 'test', '${name}_process_smoke.dart'),
+      p.posix.join(repo.path, 'test', '${name}_process_smoke.dart'),
       executable,
       ...tails[name]!,
     ]);
