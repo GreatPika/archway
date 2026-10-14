@@ -226,7 +226,16 @@ List<ArchiveMember> _preflight(
               size != expected.size ||
               header.mode != expected.mode ||
               members.length >= inventory.files.length) {
-            throw const FormatException('Unexpected TAR member metadata');
+            throw FormatException(
+              'Unexpected TAR member metadata: ${jsonEncode({
+                'name': name,
+                'actual': {'type': header.typeFlag, 'size': size, 'mode': header.mode.toRadixString(8)},
+                'expected': expected == null ? null : {'type': '0', 'size': expected.size, 'mode': expected.mode.toRadixString(8)},
+                'member_index': members.length,
+                'expected_count': inventory.files.length,
+                'tar_sha256': input.sha256,
+              })}',
+            );
           }
         }
         final member = (name: name, size: size, mode: header.mode);

@@ -188,6 +188,30 @@ void main() {
           mode: mode,
         );
       }
+      await expectLater(
+        verify(ordinary(name: name), name: name, mode: 0x1ed),
+        throwsA(
+          isA<FormatException>().having(
+            (error) {
+              const prefix = 'Unexpected TAR member metadata: ';
+              if (!error.message.startsWith(prefix)) return null;
+              final detail =
+                  jsonDecode(error.message.substring(prefix.length)) as Map;
+              detail.remove('tar_sha256');
+              return detail;
+            },
+            'original rejected member metadata',
+            {
+              'name': name,
+              'actual': {'type': '0', 'size': 3, 'mode': '644'},
+              'expected': {'type': '0', 'size': 3, 'mode': '755'},
+              'member_index': 0,
+              'expected_count': 1,
+            },
+          ),
+        ),
+      );
+      expect(snapshots.listSync(), isEmpty);
     },
   );
 

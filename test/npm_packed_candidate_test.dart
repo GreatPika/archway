@@ -76,7 +76,7 @@ void main() {
         isA<FormatException>().having(
           (error) => error.message,
           'actual packed member boundary',
-          'Unexpected TAR member metadata',
+          startsWith('Unexpected TAR member metadata: '),
         ),
       ),
     );
