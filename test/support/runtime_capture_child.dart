@@ -5,11 +5,6 @@ import 'dart:io';
 import '../alias_hop_recheck_process_smoke.dart' as alias;
 import '../runtime_process_smoke.dart' as runtime;
 
-void publish(File file, String value) {
-  final pending = File('${file.path}.pending')..writeAsStringSync(value);
-  pending.renameSync(file.path);
-}
-
 Future<void> main(List<String> arguments) async {
   if (arguments[0] == 'echo') {
     stdout.add([0, 255]);
@@ -21,36 +16,22 @@ Future<void> main(List<String> arguments) async {
     return;
   }
   final marker = File(arguments[1]);
-  if (arguments[0] == 'hold') {
-    publish(marker, '$pid');
-    await Future<void>.delayed(const Duration(seconds: 60));
-  } else if (arguments[0] == 'parent') {
-    await Process.start(Platform.resolvedExecutable, [
-      '--suppress-analytics',
-      'run',
-      Platform.script.toFilePath(),
-      'hold',
-      marker.path,
-    ], mode: ProcessStartMode.inheritStdio);
-    final elapsed = Stopwatch()..start();
-    while (!marker.existsSync()) {
-      if (elapsed.elapsed > const Duration(seconds: 5))
-        throw StateError('Holder not ready');
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-    }
-    publish(File('${marker.path}.parent'), '$pid');
-    stdout.write('out');
-    stderr.write('err');
-    await stdout.flush();
-    await stderr.flush();
-    exit(0);
-  } else if (arguments[0] == 'capture') {
+  if (arguments[0] == 'capture') {
+    // Exercise inherited pipes, not two nested Dart compilations within the
+    // capture deadline. The native parent exits with both pipes held by sleep.
     final command = [
-      Platform.resolvedExecutable,
-      '--suppress-analytics',
-      'run',
-      Platform.script.toFilePath(),
-      'parent',
+      '/bin/sh',
+      '-c',
+      r'''/bin/sleep 60 &
+printf '%s' "$!" > "$1.pending"
+/bin/mv "$1.pending" "$1"
+printf '%s' "$$" > "$1.parent.pending"
+/bin/mv "$1.parent.pending" "$1.parent"
+printf out
+printf err >&2
+exit 0
+''',
+      'runtime-held-pipe',
       marker.path,
     ];
     final owner = arguments[2];
