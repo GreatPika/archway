@@ -9,6 +9,7 @@ import 'support/loopback_tls.dart';
 import 'support/npm_stage_fixture.dart';
 import '../tool/npm/installed_route.dart';
 import '../tool/ci/installed_command_recorder.dart';
+import '../tool/ci/native_acceptance_capture.dart';
 import 'support/npm_native_fixture.dart';
 
 void main() {
@@ -203,34 +204,66 @@ https.get=function(url,...args){if(url.href!==${jsonEncode(descriptor['targets']
             'space argument',
             'café',
           ]);
-          final child = await Process.start(
-            invocation.first,
-            invocation.skip(1).toList(),
-            workingDirectory: (cwd ?? foreign).path,
-            environment: {...environment, ...extra},
-            includeParentEnvironment: false,
-            runInShell: installedRoute.needsCommandShell,
-          );
-          child.stdin.write('inherited input\n');
-          await child.stdin.close();
-          final output = child.stdout.transform(utf8.decoder).join();
-          final errors = child.stderr.transform(utf8.decoder).join();
-          expect(
-            await child.exitCode,
-            failure == null ? 37 : 126,
-            reason: await errors,
-          );
+          late int code;
+          late String output;
+          late String errors;
+          if (Platform.isWindows) {
+            final input = File(p.join(base.path, 'launch.stdin'))
+              ..writeAsStringSync('inherited input\n');
+            final outFile = File(p.join(base.path, 'launch.stdout'));
+            final errFile = File(p.join(base.path, 'launch.stderr'));
+            final out = outFile.openSync(mode: FileMode.write);
+            RandomAccessFile? err;
+            try {
+              err = errFile.openSync(mode: FileMode.write);
+              code = await captureAcceptanceProcess(
+                invocation,
+                (cwd ?? foreign).path,
+                {...environment, ...extra},
+                out,
+                err,
+                const Duration(seconds: 30),
+                windowsStdinFile: input,
+                windowsCommand: installedRoute.windowsCommandFor(invocation),
+                waitForWindowsJobEmpty: true,
+              );
+            } finally {
+              try {
+                out.closeSync();
+              } finally {
+                err?.closeSync();
+              }
+            }
+            output = outFile.readAsStringSync();
+            errors = errFile.readAsStringSync();
+          } else {
+            final child = await Process.start(
+              invocation.first,
+              invocation.skip(1).toList(),
+              workingDirectory: (cwd ?? foreign).path,
+              environment: {...environment, ...extra},
+              includeParentEnvironment: false,
+            );
+            child.stdin.write('inherited input\n');
+            await child.stdin.close();
+            final out = child.stdout.transform(utf8.decoder).join();
+            final err = child.stderr.transform(utf8.decoder).join();
+            code = await child.exitCode;
+            output = await out;
+            errors = await err;
+          }
+          expect(code, failure == null ? 37 : 126, reason: errors);
           if (failure != null) {
-            expect(await output, isEmpty);
-            expect(await errors, startsWith('archway launcher:'));
-            expect(await errors, contains(failure));
+            expect(output, isEmpty);
+            expect(errors, startsWith('archway launcher:'));
+            expect(errors, contains(failure));
             return;
           }
-          expect(jsonDecode(await output), {
+          expect(jsonDecode(output), {
             'args': ['space argument', 'café'],
             'stdin': 'inherited input\n',
           });
-          expect(await errors, 'native stderr\n');
+          expect(errors, 'native stderr\n');
         }
 
         await launch();
