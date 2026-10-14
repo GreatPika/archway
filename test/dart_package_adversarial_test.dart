@@ -35,7 +35,19 @@ void main() {
         (report.payload['violations'] as List).single['code'],
         'LOCAL_TARGET_OUTSIDE_SCOPE',
       );
-      expect((report.payload['input_identity'] as Map)['aliases'], isNotEmpty);
+      expect(
+        (report.payload['input_identity'] as Map)['aliases'],
+        contains(
+          equals({
+            'observed_file_uri': File(
+              '${await root.resolveSymbolicLinks()}/dependency-alias',
+            ).uri.toString(),
+            'canonical_file_uri': File(
+              await Directory(original.toFilePath()).resolveSymbolicLinks(),
+            ).uri.toString(),
+          }),
+        ),
+      );
     },
   );
   for (final damage in [

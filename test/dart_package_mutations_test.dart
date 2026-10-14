@@ -159,7 +159,7 @@ void main() {
 
   for (final input in ['HEAD', 'checkout config', 'cache config']) {
     test(
-      'prepared Git $input is observed and rechecked without running Git',
+      'prepared Git $input is observed and rechecked',
       () async {
         final (root, checkout, cache) = await isolatedGit();
         final file = File(switch (input) {

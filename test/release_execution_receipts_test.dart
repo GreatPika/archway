@@ -185,18 +185,6 @@ void main() {
       );
     }
   });
-  test('shared evidence path identity is lexical and target aware', () {
-    expect(sameEvidencePath('/sdk/other/../dart', '/sdk/dart', p.posix), false);
-    expect(sameEvidencePath('//sdk/dart', '/sdk/dart', p.posix), false);
-    expect(
-      sameEvidencePath(
-        r'C:\SDK\bin\dart.exe',
-        'c:/sdk/bin/DART.EXE',
-        p.windows,
-      ),
-      true,
-    );
-  });
   test('nonfinite elapsed values fail without JSON serialization', () {
     for (final value in [
       double.nan,

@@ -9,7 +9,7 @@ import 'package:test/test.dart';
 import 'dart_inspection_test.dart' show dartFixture, dartPolicy;
 
 void main() {
-  test('plugin-dependent analysis options remain incomplete without executing plugins', () async {
+  test('plugin-dependent analysis options remain incomplete', () async {
     final root = await dartFixture();
     await File('${root.path}/analysis_options.yaml').writeAsString(
       'plugins:\n  custom_analyzer:\n    path: tools/custom_analyzer\n',

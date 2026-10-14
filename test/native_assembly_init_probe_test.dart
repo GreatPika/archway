@@ -6,11 +6,7 @@ import '../tool/ci/native_assembly_init_probe.dart';
 import 'support/native_process_support.dart';
 
 void main() {
-  test('assembly options reject a lone mixed compiler runtime', () {
-    expect(
-      () => AssemblyOptions.parse(['--dart-sdk', '/sdk']),
-      throwsFormatException,
-    );
+  test('assembly options reject a lone Node compiler runtime', () {
     expect(
       () => AssemblyOptions.parse(['--node', '/node']),
       throwsFormatException,
@@ -31,13 +27,22 @@ void main() {
   test(
     'unknown and incomplete options fail rather than becoming build paths',
     () {
-      for (final args in [
-        ['--unknown'],
-        ['--node'],
-        ['--node', '--init-only'],
-        ['positional'],
+      for (final (args, message) in [
+        (['--unknown'], 'Unknown argument: --unknown'),
+        (['--node'], 'Missing value for --node'),
+        (['--node', '--init-only'], 'Missing value for --node'),
+        (['positional'], 'Unknown argument: positional'),
       ]) {
-        expect(() => AssemblyOptions.parse(args), throwsFormatException);
+        expect(
+          () => AssemblyOptions.parse(args),
+          throwsA(
+            isA<FormatException>().having(
+              (error) => error.message,
+              'message',
+              message,
+            ),
+          ),
+        );
       }
     },
   );

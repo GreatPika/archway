@@ -381,8 +381,9 @@ void main() {
     'summary pass count': (f) => f.source['tests']['passed'] = 2,
     'summary inventory': (f) => f.source['tests']['suites'] = [],
     'summary unknown field': (f) => f.source['tests']['extra'] = true,
-    'event duplicate JSON key': (f) =>
-        f.replaceEvents('{"type":"done","type":"done","success":true}\n'),
+    'event duplicate JSON key': (f) => f.replaceEvents(
+      f.eventLog().replaceFirst('"type":"done"', '"type":"done","type":"done"'),
+    ),
     'event blank line': (f) => f.replaceEvents('\n${f.eventLog()}'),
     'event missing terminal': (f) {
       f.events.removeLast();
