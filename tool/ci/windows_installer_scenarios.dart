@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 
+import '../../test/support/check_inventory_fixture.dart';
 import '../../test/support/native_file_fixtures.dart';
 import '../../test/support/windows_installer_lifecycle.dart';
 import '../../test/support/windows_installer_registry.dart';
@@ -50,13 +51,29 @@ Future<Map<String, Object?>> runWindowsInstallerScenarios({
   final raw =
       '%SystemRoot%\\System32;${List.generate(250, (i) => 'C:\\unrelated spaced путь $i').join(';')};;';
   Future<void> junction(String path, String target) async {
-    final comspec = Platform.environment['COMSPEC'];
-    if (comspec == null) throw StateError('COMSPEC required');
     await command(
-      [comspec, '/d', '/c', 'mklink', '/J', path, target],
+      [
+        windowsInventoryCommand(),
+        ...windowsInventoryJunctionArguments(path, target),
+      ],
       timeout: const Duration(seconds: 180),
       expectedExit: 0,
     );
+    try {
+      _require(
+        windowsReparseMetadata(path).tag == 0xa0000003 &&
+            Directory(path).resolveSymbolicLinksSync() ==
+                Directory(target).resolveSymbolicLinksSync(),
+        'Junction fixture must resolve to the intended target',
+      );
+    } catch (_) {
+      try {
+        removeWindowsDirectoryEntry(path);
+      } catch (cleanupError) {
+        stderr.writeln('Junction fixture cleanup failed: $cleanupError');
+      }
+      rethrow;
+    }
   }
 
   Future<void> temporary(Future<void> Function(Directory) body) async {
