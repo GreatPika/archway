@@ -167,20 +167,23 @@ void main() {
             )..writeAsStringSync('hello\n')).path,
           );
         }
-        if (kind == 'special') createNonregularResource(extra);
+        if (kind == 'special') {
+          binary.deleteSync();
+          createNonregularResource(binary.path);
+        }
         if (kind == 'empty-directory') Directory(extra).createSync();
         if (kind == 'extra') File(extra).writeAsStringSync('extra');
         if (kind == 'missing') binary.deleteSync();
         await expectLater(
           export((_, _) async => fail('Invalid source reached acceptance')),
-          throwsA(isA<Exception>()),
+          throwsFormatException,
         );
         cleaned();
         if (kind == 'alias') Link(binary.path).deleteSync();
-        if (kind == 'special') removeNonregularResource(extra);
+        if (kind == 'special') removeNonregularResource(binary.path);
         if (kind == 'empty-directory') Directory(extra).deleteSync();
         if (kind == 'extra') File(extra).deleteSync();
-        if (kind == 'alias' || kind == 'missing')
+        if (kind == 'alias' || kind == 'special' || kind == 'missing')
           binary.writeAsStringSync('hello\n');
       }
     },

@@ -18,6 +18,7 @@ void main() {
         'version: 1\nprojects: [{id: a, id: b}]\nscope: []\nexclude: []\nnodes: []\n',
         '${empty}1: ignored\n',
         '${empty}extra: {false: ignored}\n',
+        'version: 1\nprojects: []\nscope: []\nexclude: []\nnodes: [{id: app, 42: wrong}]\n',
         '${empty}extra: {<<: ignored}\n',
         '${empty}extra: .nan\n',
         '${empty}extra: .inf\n',

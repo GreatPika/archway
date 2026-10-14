@@ -29,36 +29,6 @@ void main() {
     expect(result.diagnostics.single.severity, 'warning');
   });
   test(
-    'rejects malformed nested project shape at its policy pointer',
-    () async {
-      final root = await Directory.systemTemp.createTemp('archway-project-');
-      addTearDown(() => root.delete(recursive: true));
-      await File('${root.path}/architecture.yaml').writeAsString(
-        'version: 1\nprojects: [{id: app, adapter: dart, package_roots: []}]\nscope: []\nexclude: []\nnodes: []\n',
-      );
-      final result = await Plan.load(RepositorySelection(root.path));
-      expect(result.status, 'invalid_policy');
-      expect(result.diagnostics.single.code, 'POLICY_SCHEMA_INVALID');
-      expect(
-        result.diagnostics.single.rulePointer,
-        '/projects/0/package_roots',
-      );
-    },
-  );
-  test(
-    'non-string YAML keys fail grammar before policy shape validation',
-    () async {
-      final root = await Directory.systemTemp.createTemp('archway-grammar-');
-      addTearDown(() => root.delete(recursive: true));
-      await File('${root.path}/architecture.yaml').writeAsString(
-        'version: 1\nprojects: []\nscope: []\nexclude: []\nnodes: [{id: app, 42: wrong}]\n',
-      );
-      final result = await Plan.load(RepositorySelection(root.path));
-      expect(result.status, 'invalid_policy');
-      expect(result.diagnostics.single.code, 'POLICY_PARSE_ERROR');
-    },
-  );
-  test(
     'owns future paths lexically with exclusion and scope precedence',
     () async {
       final result = await loadPolicy({

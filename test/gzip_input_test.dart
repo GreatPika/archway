@@ -277,11 +277,12 @@ void main() {
   test('callback failure closes output and removes all owned files', () async {
     final source = File(p.join(root.path, 'rejected.gz'))
       ..writeAsBytesSync(gzip.encode([97]));
+    final rejection = StateError('Consumer rejected decoded input');
     await expectLater(
       withGzipInput(source, (_) async {
-        throw StateError('Consumer rejected decoded input');
+        throw rejection;
       }, temporaryParent: snapshots),
-      throwsStateError,
+      throwsA(same(rejection)),
     );
     expect(snapshots.listSync(), isEmpty);
     expect(source.existsSync(), isTrue);

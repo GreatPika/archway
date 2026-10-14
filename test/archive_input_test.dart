@@ -330,11 +330,12 @@ void main() {
     () async {
       final source = File(p.join(root.path, 'archive'))
         ..writeAsStringSync('abc');
+      final rejection = FormatException('Rejected archive');
       await expectLater(
         withArchiveInput(source, (_) async {
-          throw const FormatException('Rejected archive');
+          throw rejection;
         }, temporaryParent: snapshots),
-        throwsFormatException,
+        throwsA(same(rejection)),
       );
       expect(snapshots.listSync(), isEmpty);
       expect(source.readAsStringSync(), 'abc');
