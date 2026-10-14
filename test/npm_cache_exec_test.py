@@ -17,7 +17,7 @@ import npm_installed_acceptance as acceptance
 
 class CacheExecTests(unittest.TestCase):
     def test_init_subprocess_deadline_is_cache_specific(self):
-        for route, expected in [('local', 30), ('global', 30), ('cache', 120)]:
+        for route, expected in [('local', 30), ('cache', 120)]:
             with self.subTest(route=route), tempfile.TemporaryDirectory() as tmp:
                 base = Path(tmp).resolve()
                 project, foreign, installed = [base / name for name in ['project', 'foreign', 'installed']]

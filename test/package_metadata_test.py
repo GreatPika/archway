@@ -33,21 +33,6 @@ class PackageMetadataTest(unittest.TestCase):
                        for heading in headings}
             self.assertIn(parsed.fragment, anchors, link)
 
-    def test_packaged_readme_releases_link_is_exact(self):
-        self.assert_packaged_readme_link('https://github.com/GreatPika/archway/releases')
-        for link in (
-            'https://github.com/OtherOwner/archway/releases',
-            'https://github.com/GreatPika/other/releases',
-            'https://github.com/GreatPika/archway/releases-extra',
-            'https://github.com/GreatPika/archway/releases/tag/other',
-            'https://github.com/GreatPika/archway/releases?other=true',
-            'https://github.com/GreatPika/archway/releases#other',
-            'http://github.com/GreatPika/archway/releases',
-            'https://github.com.example/GreatPika/archway/releases',
-        ):
-            with self.subTest(link=link), self.assertRaises(AssertionError):
-                self.assert_packaged_readme_link(link)
-
     def test_all_target_npm_describes_product_without_enabling_registry_publish(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()

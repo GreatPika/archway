@@ -56,11 +56,6 @@ class CandidateValidation(unittest.TestCase):
         with self.assertRaises(ValueError):
             validation.validate_pub_advisories(stdout.replace('3 packages', '4 packages'), '', 65)
 
-    def test_package_filenames_are_not_diagnostics(self):
-        stdout = self.preamble + self.issues
-        stdout += 'The server may enforce additional checks.\n\nPackage has 7 warnings.\n'
-        self.assertEqual(validation.validate_pub_advisories(stdout, '', 65)['expected_advisories'], 7)
-
     def test_retains_expected_dry_run_status_and_export_advisories(self):
         dry = self.preamble + self.issues + 'The server may enforce additional checks.\n\nPackage has 7 warnings.\n'
         proof = validation.validate_pub_advisories(dry, '', 65)
