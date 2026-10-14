@@ -149,7 +149,7 @@ Future<void> probeNativeRelease({
       if (windows) {
         await recorder.capture(
           [
-            'pwsh',
+            _powerShell(),
             '-NoProfile',
             '-Command',
             r'$ErrorActionPreference="Stop"; Expand-Archive -LiteralPath $env:ARCHWAY_SMOKE_ARCHIVE -DestinationPath $env:ARCHWAY_SMOKE_OUTPUT',
@@ -321,4 +321,19 @@ Future<void> probeNativeRelease({
       flush: true,
     );
   });
+}
+
+// Windows capture starts an explicit executable rather than performing PATH
+// lookup. Resolve the host prerequisite before handing it to that boundary.
+String _powerShell() {
+  final path = Platform.environment.entries
+      .where((entry) => entry.key.toUpperCase() == 'PATH')
+      .map((entry) => entry.value)
+      .firstOrNull;
+  for (final directory in (path ?? '').split(';')) {
+    if (directory.isEmpty) continue;
+    final candidate = File(p.join(directory, 'pwsh.exe'));
+    if (candidate.existsSync()) return candidate.resolveSymbolicLinksSync();
+  }
+  throw StateError('Prerequisite failure: native PowerShell is unavailable.');
 }

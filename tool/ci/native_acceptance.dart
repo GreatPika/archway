@@ -129,7 +129,11 @@ Map<String, String> fixtureEnvironment(
   String node,
   Map<String, String> parent,
 ) {
-  final result = {...parent, ...fixtures.environment};
+  final result = {
+    ...parent,
+    ...fixtures.environment,
+    'ARCHWAY_TEST_NODE': node,
+  };
   result['PATH'] = [
     p.join(fixtures.paths['dart_sdk']!, 'bin'),
     p.dirname(node),

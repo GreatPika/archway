@@ -49,10 +49,30 @@ void main() {
         : false,
   );
   fixtureTest('synthetic lifecycle builds old then final, upgrades and removes owned files', () async {
-    final root = await Directory.systemTemp.createTemp('macos-fixture-');
+    final root = Directory(
+      await (await Directory.systemTemp.createTemp('macos-fixture-'))
+          .resolveSymbolicLinks(),
+    );
     try {
       final fixture = Fixture(root);
       await fixture.prepare();
+      final alias = Link('${root.path}/temporary-alias');
+      await alias.create(root.path);
+      fixture.temporaryParent = Directory(alias.path);
+      fixture.beforeRun = (args) async {
+        if (args.first == fixture.dart.path) {
+          final input = Directory(args[args.indexOf('--bundle') + 1]);
+          expect(
+            input.path,
+            await input.resolveSymbolicLinks(),
+            reason: 'Installer builder requires a canonical bundle',
+          );
+          expect(
+            Directory(args.last).parent.path,
+            await Directory(args.last).parent.resolveSymbolicLinks(),
+          );
+        }
+      };
       final result = await fixture.exercise();
       expect(fixture.inspected, isTrue);
       expect(fixture.calls.map((a) => a.first == 'sudo' ? a[2] : a.first), [
@@ -274,6 +294,7 @@ void main() {
 class Fixture {
   Fixture(this.root);
   final Directory root;
+  late Directory temporaryParent = root;
   final calls = <List<String>>[];
   late final bundle = Directory('${root.path}/bundle');
   late Directory output = Directory('${root.path}/output');
@@ -387,7 +408,7 @@ class Fixture {
     installed: installed,
     command: command,
     compiler: compiler,
-    temporaryParent: root,
+    temporaryParent: temporaryParent,
     run: run,
     commands: () => const [],
     deleteTemporary: deleteTemporary,

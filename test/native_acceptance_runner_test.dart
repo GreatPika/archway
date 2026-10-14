@@ -358,6 +358,24 @@ void main() {
           expect(cmd.first, p.join(f.paths['dart_sdk']!, 'bin', 'dart'));
           expect(cwd, isNot(f.repo.path));
           if (name == 'source-tests') {
+            final observer = RunnerFixture.write(
+              f.root,
+              'observe-node.dart',
+              "import 'dart:io'; void main() { "
+                  "stdout.write(Platform.environment['ARCHWAY_TEST_NODE']); }",
+            );
+            await executeSuite(
+              'source-node-environment',
+              [Platform.resolvedExecutable, observer.path],
+              cwd,
+              env,
+              logs,
+            );
+            expect(
+              File(p.join(logs.path, 'source-node-environment.stdout.log'))
+                  .readAsStringSync(),
+              File(f.node).resolveSymbolicLinksSync(),
+            );
             final events = [
               {
                 'type': 'suite',

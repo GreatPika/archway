@@ -12,9 +12,9 @@ import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 void main() {
-  for (final fault in ['checksum', 'source', 'target'])
+  for (final fault in ['checksum', 'source', 'target', 'extraction'])
     test(
-      'native release refuses $fault mismatch before report or payload',
+      'native release $fault boundary keeps evidence before final report admission',
       () async {
         final temporary = Directory(
           await (await Directory.systemTemp.createTemp('native release '))
@@ -127,6 +127,17 @@ void main() {
           report.path,
         ], workingDirectory: source.path);
         expect(result.exitCode, isNot(0));
+        if (fault == 'extraction') {
+          final receipt = jsonDecode(
+            await File(
+              p.join(report.parent.path, 'portable', 'installed-0.json'),
+            ).readAsString(),
+          ) as Map;
+          expect(receipt['exit_code'], 0, reason: '${result.stderr}');
+          expect(receipt['timed_out'], false);
+          expect(report.existsSync(), isFalse);
+          return;
+        }
         expect(
           result.stderr,
           contains(

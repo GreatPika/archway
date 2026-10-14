@@ -107,7 +107,10 @@ Future<Map<String, Object?>> exerciseMacosInstaller({
   final artifact = File(
     p.join(output.path, 'archway-0.1.0-macos-arm64-unsigned.pkg'),
   );
-  final base = await temporaryParent.createTemp('archway pkg ');
+  final base = Directory(
+    await (await temporaryParent.createTemp('archway pkg '))
+        .resolveSymbolicLinks(),
+  );
   late Map<String, Object?> oldIdentity;
   late Map<String, Object?> commandResult;
   var failed = false;
