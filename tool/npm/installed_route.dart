@@ -94,13 +94,15 @@ final class NpmInstalledRoute {
       _cachedShim ??
       File(
         route == 'global'
-            ? p.join(
+            ? p.joinAll([
                 installation.path,
-                Platform.isWindows ? 'archway.cmd' : 'bin/archway',
-              )
+                if (!Platform.isWindows) 'bin',
+                Platform.isWindows ? 'archway.cmd' : 'archway',
+              ])
             : p.join(
                 installation.path,
-                'node_modules/.bin',
+                'node_modules',
+                '.bin',
                 Platform.isWindows ? 'archway.cmd' : 'archway',
               ),
       );
@@ -108,13 +110,12 @@ final class NpmInstalledRoute {
   Directory get packageRoot =>
       _cachedPackage ??
       Directory(
-        p.join(
+        p.joinAll([
           installation.path,
-          route == 'global' && !Platform.isWindows
-              ? 'lib/node_modules'
-              : 'node_modules',
+          if (route == 'global' && !Platform.isWindows) 'lib',
+          'node_modules',
           npmProductName,
-        ),
+        ]),
       );
 
   Future<void> _locateCache() async {
@@ -225,7 +226,7 @@ console.log(JSON.stringify({shim,installed,node:process.execPath,version:process
         .firstOrNull;
     if (root == null || !p.windows.isAbsolute(root))
       throw StateError('Absolute SystemRoot is required');
-    final file = File(p.join(root, 'System32/cmd.exe'));
+    final file = File(p.join(root, 'System32', 'cmd.exe'));
     if (FileSystemEntity.typeSync(file.path, followLinks: false) !=
             FileSystemEntityType.file ||
         file.resolveSymbolicLinksSync() != file.path)

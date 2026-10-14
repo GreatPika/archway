@@ -38,7 +38,7 @@ Future<void> prepareNpmNative({
         node.path,
         '--eval',
         npmNativePreparationProgram,
-        p.join(wrapper.path, 'bin/cache.cjs'),
+        p.join(wrapper.path, 'bin', 'cache.cjs'),
         p.join(wrapper.path, 'acquisition.json'),
         target,
         cache.path,

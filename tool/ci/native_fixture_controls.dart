@@ -7,6 +7,26 @@ import 'package:path/path.dart' as p;
 import 'native_fixture_pins.dart';
 import 'preparation_process.dart';
 
+String requiredFixtureEnvironment(
+  Map<String, String> environment,
+  String name, {
+  required bool windows,
+}) {
+  // Copying Platform.environment loses its Windows case-insensitive lookup.
+  final value = windows
+      ? environment.entries
+            .where((entry) => entry.key.toUpperCase() == name.toUpperCase())
+            .map((entry) => entry.value)
+            .firstOrNull
+      : environment[name];
+  if (value == null || value.isEmpty) {
+    throw FormatException(
+      'Required fixture environment is missing or empty: $name',
+    );
+  }
+  return value;
+}
+
 Future<void> main(List<String> args) async {
   try {
     if (args.length != 1 || !['fixtures', 'openssl'].contains(args.single)) {
@@ -15,6 +35,11 @@ Future<void> main(List<String> args) async {
       );
     }
     final environment = Map<String, String>.of(Platform.environment);
+    String requiredEnvironment(String name) => requiredFixtureEnvironment(
+      environment,
+      name,
+      windows: Platform.isWindows,
+    );
     final logs = Directory('build/release-native');
     Future<String> run(List<String> command, String name, int? seconds) async {
       final log = File(p.join(logs.path, '$name.log'));
@@ -53,7 +78,7 @@ Future<void> main(List<String> args) async {
       if (value.contains('\n') || value.contains('\r')) {
         throw FormatException('Invalid environment value: $name');
       }
-      File(environment['GITHUB_ENV']!).writeAsStringSync(
+      File(requiredEnvironment('GITHUB_ENV')).writeAsStringSync(
         '$name=${value.replaceAll('\\', '/')}\n',
         mode: FileMode.append,
       );
@@ -63,7 +88,7 @@ Future<void> main(List<String> args) async {
       final selected = File(
         Platform.isWindows
             ? p.join(
-                environment['ProgramFiles']!,
+                requiredEnvironment('ProgramFiles'),
                 'OpenSSL',
                 'bin',
                 'openssl.exe',
@@ -83,7 +108,7 @@ Future<void> main(List<String> args) async {
     final fixtures = jsonDecode(
       File(
         p.join(
-          environment['RUNNER_TEMP']!,
+          requiredEnvironment('RUNNER_TEMP'),
           'archway-native-fixtures',
           'acceptance-fixtures.json',
         ),
@@ -99,9 +124,7 @@ Future<void> main(List<String> args) async {
       throw const FormatException('Wrong native fixture Dart version');
     }
     final nodeName = Platform.isWindows ? 'node.exe' : 'node';
-    final path = environment.entries
-        .firstWhere((entry) => entry.key.toLowerCase() == 'path')
-        .value;
+    final path = requiredEnvironment('PATH');
     final node = path
         .split(Platform.isWindows ? ';' : ':')
         .where((entry) => entry.isNotEmpty)

@@ -15,7 +15,7 @@ Future<Map<String, Object?>> exerciseInstalledTermination(
   bool cacheRoute = false,
 }) async {
   final helper = File(
-    p.join(controls.payload.path, 'assets/typescript/helper.cjs'),
+    p.join(controls.payload.path, 'assets', 'typescript', 'helper.cjs'),
   );
   final original = helper.readAsBytesSync(), before = controls.snapshot();
   final ready = File(
@@ -197,7 +197,7 @@ Future<Map<String, Object?>> exerciseInstalledTermination(
         node.path,
         '-e',
         "Object.defineProperty(process,'platform',{value:'freebsd'});require(process.argv[1]);",
-        p.join(controls.wrapper.path, 'bin/archway.cjs'),
+        p.join(controls.wrapper.path, 'bin', 'archway.cjs'),
       ],
       workingDirectory: controls.cwd.path,
       environment: controls.environment,

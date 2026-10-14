@@ -44,7 +44,7 @@ Future<Map<String, Object?>> inspectNpmRoute({
       .writeAsStringSync('{"private":true}');
   final home = Directory(p.join(work.path, 'home'))..createSync();
   final userCache = Platform.isMacOS
-      ? p.join(home.path, 'Library/Caches')
+      ? p.join(home.path, 'Library', 'Caches')
       : p.join(home.path, 'cache');
   final environment =
       installedRuntimeEnvironment(Platform.environment, node.parent.path)
@@ -130,7 +130,7 @@ Future<Map<String, Object?>> inspectNpmRoute({
       receipt,
     );
     final pin = (descriptor['targets'] as Map)[target] as Map;
-    final cache = Directory(p.join(userCache, 'archway/npm'));
+    final cache = Directory(p.join(userCache, 'archway', 'npm'));
     if (nativeArchive != null) {
       await prepareNpmNative(
         wrapper: route.packageRoot,
@@ -161,7 +161,7 @@ Future<Map<String, Object?>> inspectNpmRoute({
     );
     final selected = await inspectNpmNativeCache(
       wrapper: route.packageRoot,
-      cache: Directory(p.join(userCache, 'archway/npm')),
+      cache: Directory(p.join(userCache, 'archway', 'npm')),
       target: target,
       receipt: receipt,
     );
@@ -238,7 +238,9 @@ Future<Map<String, Object?>> inspectNpmRoute({
           'corpus',
           () => exerciseInstalledCorpus(
             controls,
-            selected: File(p.join(route.packageRoot.path, 'bin/archway.cjs')),
+            selected: File(
+              p.join(route.packageRoot.path, 'bin', 'archway.cjs'),
+            ),
           ),
         ),
       };

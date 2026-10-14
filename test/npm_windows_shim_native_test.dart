@@ -7,7 +7,7 @@ import 'package:test/test.dart';
 
 import '../tool/ci/installed_command_recorder.dart';
 import '../tool/ci/native_release_host.dart';
-import '../tool/npm/windows_shim_command.dart';
+import '../tool/npm/installed_route.dart';
 
 void main() {
   test(
@@ -16,11 +16,7 @@ void main() {
       final runtime = await nativeReleaseNode('windows-x64');
       final node = runtime.executable;
       final npm = File(
-        p.join(node.parent.path, 'node_modules/npm/bin/npm-cli.js'),
-      );
-      final cmd = p.join(
-        Platform.environment['SystemRoot']!,
-        'System32/cmd.exe',
+        p.join(node.parent.path, 'node_modules', 'npm', 'bin', 'npm-cli.js'),
       );
       final root = Directory(
         Directory.systemTemp
@@ -32,7 +28,7 @@ void main() {
       final marker = File(p.join(root.path, 'should-not-exist'));
       File(p.join(package.path, 'package.json')).writeAsStringSync(
         jsonEncode({
-          'name': 'archway-command-fixture',
+          'name': 'archway-architecture-cli',
           'version': '1.0.0',
           'private': true,
           'bin': {'archway': 'bin/args.cjs'},
@@ -59,7 +55,6 @@ process.stderr.write('fixture stderr\\n');process.exitCode=23;
         );
       environment.addAll({
         'PATH': node.parent.path,
-        'COMSPEC': cmd,
         'ARCHWAY_EXPANSION': 'EXPANDED-NOT-LITERAL',
         'npm_config_cache': p.join(root.path, 'cache'),
         'npm_config_offline': 'true',
@@ -67,7 +62,6 @@ process.stderr.write('fixture stderr\\n');process.exitCode=23;
         'npm_config_audit': 'false',
         'npm_config_fund': 'false',
         'npm_config_registry': 'http://127.0.0.1:9',
-        'npm_config_script_shell': cmd,
       });
       for (final name in ['userconfig', 'globalconfig']) {
         final config = File(p.join(root.path, '$name.npmrc'))
@@ -122,54 +116,33 @@ process.stderr.write('fixture stderr\\n');process.exitCode=23;
           ..createSync();
         File(p.join(prefix.path, 'package.json'))
             .writeAsStringSync('{"private":true}');
-        if (route != 'cache')
-          await recorder.capture(
-            [
-              node.path,
-              npm.path,
-              'install',
-              if (route == 'local') '-D' else '--global',
-              '--prefix',
-              prefix.path,
-              archive,
-              '--offline',
-              '--ignore-scripts',
-            ],
-            workingDirectory: prefix.path,
-            environment: environment,
-          );
-        final shim = File(
-          route == 'global'
-              ? p.join(prefix.path, 'archway.cmd')
-              : p.join(prefix.path, 'node_modules/.bin/archway.cmd'),
+        final installed = NpmInstalledRoute(
+          route: route,
+          archive: File(archive),
+          node: node,
+          npmCli: npm,
+          project: prefix,
+          installation: prefix,
+          environment: Map<String, String>.from(environment),
+          recorder: recorder,
         );
-        final logical = route == 'cache'
-            ? [
-                node.path,
-                npm.path,
-                'exec',
-                '--offline',
-                '--yes',
-                '--package=$archive',
-                '--',
-                'archway',
-                ...values,
-              ]
-            : [shim.path, ...values];
-        final raw = route == 'cache'
-            ? null
-            : windowsNpmShimCommand(
-                logical,
-                cmdExecutable: cmd,
-                nodeExecutable: node.path,
-                shimSource: shim.readAsStringSync(),
-                environment: environment,
-              );
+        await installed.install();
+        expect(
+          installed.systemCmd,
+          File(installed.systemCmd).resolveSymbolicLinksSync(),
+        );
+        expect(installed.shim.path, installed.shim.resolveSymbolicLinksSync());
+        expect(
+          installed.packageRoot.path,
+          installed.packageRoot.resolveSymbolicLinksSync(),
+        );
+        final logical = installed.invocation(values);
+        final raw = installed.windowsCommandFor(logical);
         final result = await recorder.capture(
           logical,
           windowsCommand: raw,
           workingDirectory: prefix.path,
-          environment: environment,
+          environment: installed.environment,
           expectedExit: 23,
         );
         expect(jsonDecode(utf8.decode(result.stdout)), values, reason: route);

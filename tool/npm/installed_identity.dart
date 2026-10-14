@@ -160,7 +160,7 @@ inspectNpmNativeCache({
   final executable = manifest.completeArchiveInventory.files[relative];
   _require(executable != null, 'Native executable identity is missing');
   await withArchiveInput(
-    File(p.join(payload.path, relative)),
+    File(p.joinAll([payload.path, ...relative.split('/')])),
     (_) async {},
     expected: (size: executable!.size, sha256: executable.sha256),
     maxBytes: maxArchiveFileBytes,

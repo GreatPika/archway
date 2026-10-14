@@ -176,15 +176,18 @@ Future<List<Map<String, Object?>>> exerciseInstalledAssets(
   }
 
   for (final (name, relative) in [
-    ('helper', 'assets/typescript/helper.cjs'),
-    ('compiler', 'assets/typescript/vendor/typescript/lib/typescript.js'),
+    ('helper', ['assets', 'typescript', 'helper.cjs']),
+    (
+      'compiler',
+      ['assets', 'typescript', 'vendor', 'typescript', 'lib', 'typescript.js'],
+    ),
     (
       'payload',
-      p.relative(controls.nativeExecutable.path, from: controls.payload.path),
+      ['bin', controls.target, p.basename(controls.nativeExecutable.path)],
     ),
-    ('manifest', 'manifest.json'),
+    ('manifest', ['manifest.json']),
   ]) {
-    final asset = File(p.join(controls.payload.path, relative));
+    final asset = File(p.joinAll([controls.payload.path, ...relative]));
     final saved = File('${asset.path}.control-saved');
     controls.require(
       FileSystemEntity.typeSync(saved.path, followLinks: false) ==
@@ -202,7 +205,12 @@ Future<List<Map<String, Object?>>> exerciseInstalledAssets(
       if (name != 'helper') await missingOrAlias('missing');
       final alias = Link(asset.path)..createSync(p.basename(saved.path));
       controls.require(
-        alias.resolveSymbolicLinksSync() == saved.path,
+        FileSystemEntity.typeSync(alias.path, followLinks: false) ==
+                FileSystemEntityType.link &&
+            alias.targetSync() == p.basename(saved.path) &&
+            alias.resolveSymbolicLinksSync() == saved.path &&
+            sha256.convert(File(alias.path).readAsBytesSync()) ==
+                sha256.convert(saved.readAsBytesSync()),
         'Asset alias did not select its saved bytes',
       );
       await missingOrAlias('aliased');

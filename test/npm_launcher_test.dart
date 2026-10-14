@@ -97,10 +97,14 @@ void main() {
       ) as Map;
       final archive = p.join(root.path, 'packed', packed['filename'] as String);
       final npmCli = Platform.isWindows
-          ? p.join(p.dirname(node), 'node_modules/npm/bin/npm-cli.js')
+          ? p.join(p.dirname(node), 'node_modules', 'npm', 'bin', 'npm-cli.js')
           : p.join(
               p.dirname(p.dirname(node)),
-              'lib/node_modules/npm/bin/npm-cli.js',
+              'lib',
+              'node_modules',
+              'npm',
+              'bin',
+              'npm-cli.js',
             );
       expect(File(npmCli).existsSync(), true);
       final tls = await createLoopbackTls(root);
@@ -153,7 +157,7 @@ https.get=function(url,...args){if(url.href!==${jsonEncode(descriptor['targets']
         environment.addAll({
           'HOME': home.path,
           'USERPROFILE': home.path,
-          'LOCALAPPDATA': p.join(home.path, 'AppData/Local'),
+          'LOCALAPPDATA': p.join(home.path, 'AppData', 'Local'),
           'XDG_CACHE_HOME': p.join(home.path, '.cache'),
           'NODE_EXTRA_CA_CERTS': tls.certificate.path,
           'NODE_OPTIONS': '--require ${jsonEncode(preload.path)}',
@@ -263,15 +267,19 @@ https.get=function(url,...args){if(url.href!==${jsonEncode(descriptor['targets']
           extra: {'ARCHWAY_FIXTURE_UNSUPPORTED': '1'},
         );
         final nativeCache = Directory(
-          p.join(
+          p.joinAll([
             home.path,
-            Platform.isWindows
-                ? 'AppData/Local'
-                : Platform.isMacOS
-                ? 'Library/Caches'
-                : '.cache',
-            'archway/npm',
-          ),
+            if (Platform.isWindows) ...[
+              'AppData',
+              'Local',
+            ] else if (Platform.isMacOS) ...[
+              'Library',
+              'Caches',
+            ] else
+              '.cache',
+            'archway',
+            'npm',
+          ]),
         );
         final record = File(
           p.join(
