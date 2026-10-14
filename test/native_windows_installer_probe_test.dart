@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:path/path.dart' as p;
 
 import 'package:test/test.dart';
 
@@ -29,15 +30,61 @@ void main() {
       expect(await Directory('${temp.path}/missing').exists(), isFalse);
     },
   );
+  test(
+    'native installer admits slash-spelled relative report output before builder checks',
+    () async {
+      final temp = Directory(
+        await (await Directory.current.createTemp('windows report '))
+            .resolveSymbolicLinks(),
+      );
+      addTearDown(() => temp.delete(recursive: true));
+      final bundle = await Directory(p.join(temp.path, 'bundle')).create();
+      final report = File(
+        '${p.basename(temp.path)}/build/release-native/report.json',
+      ).absolute;
+      await report.parent.create(recursive: true);
+      final output = Directory(p.join(report.parent.path, 'installer'));
+      await expectLater(
+        runWindowsInstallerProbe(
+          builderDart: File(p.join(temp.path, 'absent-dart.exe')),
+          repository: temp,
+          bundle: bundle,
+          output: output,
+          disposableAccount: true,
+          inspect: (_, _) async => throw StateError('Unexpected inspection'),
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'builder admission',
+            'Explicit absolute builder Dart executable required',
+          ),
+        ),
+      );
+      expect(await output.exists(), isFalse);
+      expect(await report.exists(), isFalse);
+      expect(await report.parent.list().toList(), isEmpty);
+      expect(await bundle.list().toList(), isEmpty);
+    },
+    skip: !Platform.isWindows
+        ? 'Requires genuine Windows path admission'
+        : false,
+  );
   test('native output refusals preserve existing bytes and never create nested output', () async {
-    final temp = await Directory.systemTemp.createTemp('windows output ');
+    final temp = Directory(
+      await (await Directory.systemTemp.createTemp('windows output '))
+          .resolveSymbolicLinks(),
+    );
     addTearDown(() => temp.delete(recursive: true));
-    final bundle = await Directory('${temp.path}/bundle').create();
-    final existing = await Directory('${temp.path}/existing').create();
-    final sentinel = await File('${existing.path}/sentinel')
+    final bundle = await Directory(p.join(temp.path, 'bundle')).create();
+    final existing = await Directory(p.join(temp.path, 'existing')).create();
+    final sentinel = await File(p.join(existing.path, 'sentinel'))
         .writeAsBytes([0, 255, 10]);
-    final nested = Directory('${bundle.path}/new/child');
-    for (final output in [existing, nested]) {
+    final nested = Directory(p.join(bundle.path, 'new', 'child'));
+    final alias = await Link(p.join(temp.path, 'alias')).create(existing.path);
+    final aliased = Directory(p.join(alias.path, 'new', 'child'));
+    final dotted = Directory(p.join(temp.path, '.', 'new', 'child'));
+    for (final output in [existing, nested, aliased, dotted]) {
       final operation = Platform.isWindows
           ? runWindowsInstallerProbe(
               builderDart: File(Platform.resolvedExecutable),
@@ -51,7 +98,9 @@ void main() {
       await expectLater(operation, throwsFormatException);
       expect(await sentinel.readAsBytes(), [0, 255, 10]);
       expect(existing.listSync().map((e) => e.path), [sentinel.path]);
-      expect(await Directory('${bundle.path}/new').exists(), isFalse);
+      expect(await Directory(p.join(bundle.path, 'new')).exists(), isFalse);
+      expect(await Directory(p.join(temp.path, 'new')).exists(), isFalse);
+      expect(await alias.target(), existing.path);
     }
   });
 

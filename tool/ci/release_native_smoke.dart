@@ -218,6 +218,7 @@ Future<void> probeNativeRelease({
           return inspectInstalledCommands(
             command,
             root,
+            target: target,
             repository: repository,
             base: projectBase,
             node: node.executable,
@@ -273,6 +274,7 @@ Future<void> probeNativeRelease({
           fixtureFile,
           Directory(p.join(report.parent.path, 'acceptance')),
           verifyInstallation,
+          target: target,
         );
       }
       await verifyInstallation();

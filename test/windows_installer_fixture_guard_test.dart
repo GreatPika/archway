@@ -8,6 +8,12 @@ void main() {
     () {
       const cases = [
         (
+          'test/native_windows_installer_probe_test.dart',
+          'native installer admits slash-spelled relative report output before builder checks',
+          'Requires genuine Windows path admission',
+          false,
+        ),
+        (
           'test/windows_installer_registry_test.dart',
           'native registry rejects unsupported ABI before opening keys',
           'Non-native Windows registry host control',

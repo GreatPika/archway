@@ -376,7 +376,14 @@ Future<void> main(List<String> args) async {
       final binary = paths.join(root, 'bin', target, 'archway');
       final output = paths.join(root, 'logs');
       final node = paths.join(root, 'node');
-      final commands = suiteCommands(root, binary, node, fixtures, output);
+      final commands = suiteCommands(
+        root,
+        binary,
+        node,
+        fixtures,
+        output,
+        target: target,
+      );
       final tails = <String, List<String>>{
         'plan_query': [],
         'cli': [],

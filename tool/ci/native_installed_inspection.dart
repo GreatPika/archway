@@ -14,6 +14,7 @@ import 'native_source_acceptance.dart' show SourceExecute;
 Future<Map<String, Object?>> inspectInstalledCommands(
   File binary,
   Directory installation, {
+  required String target,
   required Directory repository,
   required Directory base,
   required File node,
@@ -80,6 +81,7 @@ Future<Map<String, Object?>> inspectInstalledCommands(
         node.path,
         fixtures.paths,
         suites.path,
+        target: target,
       ))
         if (['plan_query', 'dart_check'].contains(suite.name))
           await execute(

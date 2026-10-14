@@ -155,10 +155,19 @@ void main() {
           'environment': {'ARCHWAY_FIXTURE': 'prepared'},
         }),
       );
+    // Unix installers expose an alias outside the archive target directory.
+    final selectedCommand = Platform.isWindows
+        ? binary
+        : File(p.join(base.path, 'usr', 'local', 'bin', 'archway'));
+    if (!Platform.isWindows) {
+      selectedCommand.parent.createSync(recursive: true);
+      Link(selectedCommand.path).createSync(binary.path);
+    }
     final suites = <String>[];
     final result = await inspectInstalledCommands(
-      binary,
+      selectedCommand,
       installation,
+      target: nativeTarget().target,
       repository: Directory.current,
       base: work,
       node: File(Platform.resolvedExecutable),
@@ -178,7 +187,7 @@ void main() {
               command[3],
               p.absolute('test', '${name}_process_smoke.dart'),
             );
-            expect(command[4], binary.path);
+            expect(command[4], selectedCommand.path);
             expect(environment['ARCHWAY_FIXTURE'], 'prepared');
             expect(directory.path, p.join(output.path, 'suites'));
             return {'suite': name, 'synthetic_test_only': true};
@@ -209,7 +218,7 @@ void main() {
       },
     ]);
     expect(suites, ['plan_query', 'dart_check']);
-    expect(result['binary'], binary.path);
+    expect(result['binary'], selectedCommand.path);
   });
   test(
     'runtime environment removes case variants of loader and npm influence',

@@ -175,6 +175,10 @@ bool expectedSkip(String target, String path, String name, String? reason) {
   // matches its owning test's Platform guard; dependencies never qualify.
   const windowsOnly = {
     (
+      'test/native_windows_installer_probe_test.dart',
+      'native installer admits slash-spelled relative report output before builder checks',
+    ): 'Requires genuine Windows path admission',
+    (
       'test/windows_installer_fixture_test.dart',
       'Windows deletion lock permits reads and writes but denies deletion',
     ): 'Native Windows deletion-only sharing fixture',

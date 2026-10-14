@@ -25,6 +25,7 @@ Future<Map<String, Object?>> runAcceptance(
   File fixtureFile,
   Directory output,
   FutureOr<void> Function() verifyInstallation, {
+  required String target,
   SourceExecute execute = executeSuite,
   SourceRunner source = runSourceTests,
 }) async {
@@ -55,6 +56,7 @@ Future<Map<String, Object?>> runAcceptance(
     node,
     fixtures.paths,
     output.path,
+    target: target,
   )) {
     await verifyInstallation();
     try {

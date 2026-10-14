@@ -24,12 +24,12 @@ List<AcceptanceCommand> suiteCommands(
   String executable,
   String node,
   Map<String, String> fixtures,
-  String output,
-) {
-  final windows =
-      p.windows.isAbsolute(executable) && !p.posix.isAbsolute(executable);
-  final paths = p.Context(style: windows ? p.Style.windows : p.Style.posix);
-  final target = paths.basename(paths.dirname(executable));
+  String output, {
+  required String target,
+}) {
+  final paths = p.Context(
+    style: target == 'windows-x64' ? p.Style.windows : p.Style.posix,
+  );
   if (!['linux-x64', 'macos-arm64', 'windows-x64'].contains(target)) {
     throw ArgumentError('Unsupported archive target: $target');
   }

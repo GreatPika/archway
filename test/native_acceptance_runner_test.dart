@@ -350,6 +350,7 @@ void main() {
         f.manifest,
         f.output,
         () => f.events.add('verify'),
+        target: 'linux-x64',
         execute: (name, cmd, cwd, env, logs, {required timeout}) async {
           if (!name.startsWith('source-'))
             return f.execute(name, cmd, cwd, env, logs, timeout: timeout);
@@ -466,6 +467,7 @@ void main() {
         f.manifest,
         f.output,
         () => f.events.add('verify'),
+        target: 'linux-x64',
         execute: f.execute,
       ),
       throwsA(
@@ -624,6 +626,7 @@ class RunnerFixture {
     manifest,
     output,
     verify ?? () => events.add('verify'),
+    target: 'linux-x64',
     execute: execute ?? this.execute,
     source: source ?? this.source,
   );

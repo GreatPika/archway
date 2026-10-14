@@ -29,7 +29,11 @@ Future<Map<String, Object?>> runWindowsInstallerProbe({
   }
   if (!disposableAccount) throw ArgumentError('Disposable account required');
   bundle = bundle.absolute;
-  output = output.absolute;
+  // Native Dart preserves slash spelling in absolute paths from CLI arguments.
+  // Change separators only: aliases, case and dot segments still face admission.
+  output = Directory(
+    output.absolute.path.replaceAll('/', Platform.pathSeparator),
+  );
   repository = repository.absolute;
   await validateWindowsInstallerOutput(bundle, output);
   if (!p.isAbsolute(builderDart.path) || !await builderDart.exists()) {
