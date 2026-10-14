@@ -28,8 +28,8 @@ def audit(directories, expected_commit):
             raise ValueError('Unsupported manifest schema')
         host, checks = record['host'], record['checks']
         suites = [] if target == 'windows-x64' else [
-            'native_asset_process_smoke.py', 'cli_process_smoke.py',
-            'dart_check_process_smoke.py', 'alias_trace_gap_process_smoke.py']
+            'native_asset_process_smoke.dart', 'cli_process_smoke.dart',
+            'dart_check_process_smoke.dart', 'alias_trace_gap_process_smoke.dart']
         profile = 'init-only' if target == 'windows-x64' else 'process'
         if ((host['system'], host['machine']) != TARGETS[target]
                 or not isinstance(host['release'], str) or not host['release']

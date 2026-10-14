@@ -15,8 +15,8 @@ CLI = ROOT / 'tool/ci/combine_installations.py'
 TARGETS = {'linux-x64': ('Linux', 'x86_64', 'archway', 'libarchway_io.so'),
            'macos-arm64': ('Darwin', 'arm64', 'archway', 'libarchway_io.dylib'),
            'windows-x64': ('Windows', 'AMD64', 'archway.exe', 'archway_io.dll')}
-SUITES = ['native_asset_process_smoke.py', 'cli_process_smoke.py',
-          'dart_check_process_smoke.py', 'alias_trace_gap_process_smoke.py']
+SUITES = ['native_asset_process_smoke.dart', 'cli_process_smoke.dart',
+          'dart_check_process_smoke.dart', 'alias_trace_gap_process_smoke.dart']
 
 
 class CombineTests(unittest.TestCase):

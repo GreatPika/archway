@@ -41,7 +41,7 @@ class DeliveryWorkflowTests(unittest.TestCase):
         self.assertNotIn('secrets:', raw)
         self.assertEqual(raw.count('npm pack --ignore-scripts --offline --json'), 1)
         runs = '\n'.join(s.get('run', '') for s in jobs['audit']['steps'])
-        self.assertLess(runs.index('audit_installation_transports.py'), runs.index('combine_installations.py combine'))
+        self.assertLess(runs.index('audit_installation_transports.dart'), runs.index('combine_installations.py combine'))
         self.assertLess(runs.index('combine_installations.py combine'), runs.index('tool/package_delivery.py npm'))
         self.assertLess(runs.index('tool/package_delivery.py npm'), runs.index('npm pack'))
         self.assertLess(runs.index('npm pack'), runs.index('combine_installations.py verify-pack'))
@@ -150,7 +150,7 @@ class DeliveryWorkflowTests(unittest.TestCase):
                      'Install official checksum-verified Linux toolchains')
         regression = next(s for s in steps if s.get('name') ==
                           'Python regression suite with pinned runtime fixtures')
-        assembly = next(s for s in steps if 'native_assembly_init_probe.py' in s.get('run', ''))
+        assembly = next(s for s in steps if 'native_assembly_init_probe.dart' in s.get('run', ''))
         self.assertLess(steps.index(setup), steps.index(regression))
         self.assertLess(steps.index(regression), steps.index(assembly))
         self.assertIn("'jsonschema==4.26.0' 'PyYAML==6.0.3'", setup['run'])
@@ -176,7 +176,7 @@ class DeliveryWorkflowTests(unittest.TestCase):
         self.assertIn('verify_export_sources.py "$GITHUB_SHA"', steps[2]['run'])
         runs = '\n'.join(step.get('run', '') for step in steps)
         for required in ['pub get --enforce-lockfile', 'bash tool/prepare_typescript.sh',
-                         'native_assembly_init_probe.py', '--dart-sdk', '--node',
+                         'native_assembly_init_probe.dart', '--dart-sdk', '--node',
                          '--artifact-directory', 'sha256sum -c -']:
             self.assertIn(required, runs)
         payload, evidence = [s for s in steps if 'upload-artifact@' in s.get('uses', '')]

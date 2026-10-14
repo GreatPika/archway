@@ -63,15 +63,15 @@ link-only cleanup; a junction or skip cannot substitute. Pinned runtime resoluti
 and actual NTFS TEMP/TMP are checked, with environment restoration in `finally`.
 Counts and results come from logs, not predicted test totals.
 
-[The assembly probe](native_assembly_init_probe.py) invokes the real assembler,
+[The assembly probe](native_assembly_init_probe.dart) invokes the real assembler,
 checks fixed layout/exact owned assets, relocates the installation and runs the
 shared init oracle. Profiles:
 
 ```sh
 # Linux/macOS: asset and CLI process regressions, plus mixed compiler/alias checks.
-python3 tool/ci/native_assembly_init_probe.py --dart-sdk "$DART_SDK" --node "$NODE"
+dart --suppress-analytics run tool/ci/native_assembly_init_probe.dart --dart-sdk "$DART_SDK" --node "$NODE"
 # Windows: real assembly, guards, relocation and init only.
-python tool/ci/native_assembly_init_probe.py --init-only --dart "$DART_EXE"
+dart --suppress-analytics run tool/ci/native_assembly_init_probe.dart --init-only --dart "$DART_EXE"
 ```
 
 Omit both Unix runtime arguments for the asset/CLI-only profile; supply them
@@ -86,7 +86,7 @@ all selected checks pass. Export requires a clean tracked checkout, verifies a
 controlled extraction and repeats init at a fresh relocated path before exposing
 `installation.tar` and external `provenance.json`.
 
-[Export](installation_artifact.py), [transport audit](audit_installation_transports.py)
+[Export](../release/installation_artifact.dart), [transport audit](audit_installation_transports.dart)
 and [combination](combine_installations.py) bind exact source commit/tree, both
 lock hashes, per-file bytes/sizes/modes, archive digest, actual target/runtimes and
 selected suites. Tracked identity does not attest ignored tools/caches; manifests

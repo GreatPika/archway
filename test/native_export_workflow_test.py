@@ -54,7 +54,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertNotIn('-Phase aot-init', runs)
         self.assertNotIn('continue-on-error', str(workflow))
         if target == 'macos-arm64':
-            self.assertEqual(runs.count('native_assembly_init_probe.py'), 1)
+            self.assertEqual(runs.count('native_assembly_init_probe.dart'), 1)
         else:
             self.assertIn("$arguments = @{ Phase = 'assembly-init' }", assembly['run'])
 
@@ -68,12 +68,12 @@ class WorkflowTests(unittest.TestCase):
     def test_macos_command_forwards_optional_path_and_preserves_failure(self):
         workflow = yaml.load((ROOT / '.github/workflows/macos-native-probe.yml').read_text(), Loader=yaml.BaseLoader)
         command = next(s['run'] for s in workflow['jobs']['macos-init']['steps']
-                       if 'native_assembly_init_probe.py' in s.get('run', ''))
+                       if 'native_assembly_init_probe.dart' in s.get('run', ''))
         with tempfile.TemporaryDirectory(prefix='export path ') as directory:
             (Path(directory) / 'build/macos-probe').mkdir(parents=True)
             for enabled, exit_code in (('', '0'), ('false', '0'), ('true', '0'), ('true', '7')):
                 env = dict(os.environ, EXPORT_INSTALLATION=enabled, RUNNER_TEMP=directory, PROBE_EXIT=exit_code)
-                stub = 'python3() { printf "%s\\n" "$@"; return "$PROBE_EXIT"; };\n'
+                stub = 'dart() { printf "%s\\n" "$@"; return "$PROBE_EXIT"; };\n'
                 result = subprocess.run(['bash', '-eo', 'pipefail', '-c', stub + command],
                                         cwd=directory, env=env, capture_output=True, text=True)
                 self.assertEqual(result.returncode, int(exit_code), result.stderr)
@@ -87,11 +87,11 @@ class WorkflowTests(unittest.TestCase):
         wrapper = (ROOT / 'tool/ci/windows-native-probe.ps1').read_text()
         self.assertIn("if ($ArtifactDirectory -and $Phase -ne 'assembly-init')", wrapper)
         self.assertIn("$arguments += @('--artifact-directory', $ArtifactDirectory)", wrapper)
-        self.assertIn('& $python @arguments', wrapper)
+        self.assertIn('& $dart @arguments', wrapper)
         self.assertNotIn("'aot-init'", wrapper)
         self.assertNotIn('aot-init-passed.txt', wrapper)
         self.assertIn('if (!(Test-Path "$evidence/aot-assets-passed.txt"))', wrapper)
-        self.assertIn("$arguments = @('-u', 'tool/ci/native_assembly_init_probe.py', '--init-only', '--dart', $dart)", wrapper)
+        self.assertIn("$arguments = @('--suppress-analytics', 'run', 'tool/ci/native_assembly_init_probe.dart', '--init-only', '--dart', $dart)", wrapper)
         self.assertIn("if ($LASTEXITCODE -ne 0) { throw 'Maintainer assembly/init assertion failed;", wrapper)
         self.assertLess(wrapper.index("throw 'ArtifactDirectory"), wrapper.index('Start-Transcript'))
 

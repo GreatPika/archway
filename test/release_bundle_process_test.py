@@ -90,8 +90,8 @@ class ReleaseBundles(unittest.TestCase):
                 'host': {'system': system, 'machine': machine, 'release': 'SYNTHETIC'},
                 'checks': {'profile': 'init-only' if target == 'windows-x64' else 'process',
                     'suites': [] if target == 'windows-x64' else [
-                        'native_asset_process_smoke.py', 'cli_process_smoke.py',
-                        'dart_check_process_smoke.py', 'alias_trace_gap_process_smoke.py'],
+                        'native_asset_process_smoke.dart', 'cli_process_smoke.dart',
+                        'dart_check_process_smoke.dart', 'alias_trace_gap_process_smoke.dart'],
                     'relocated_init': True, 'transported_init': True},
                 'runtimes': {'build_dart': 'SYNTHETIC Dart 3.13.3'}, 'files': files,
                 'archive': {'name': archive.name, 'sha256': digest(archive)}}

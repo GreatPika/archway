@@ -166,7 +166,7 @@ jobs:
           if [[ "$EXPORT_INSTALLATION" == true ]]; then
             args+=(--artifact-directory "$RUNNER_TEMP/archway-native-export-macos-arm64")
           fi
-          python3 -u tool/ci/native_assembly_init_probe.py "${args[@]}" \
+          dart --suppress-analytics run tool/ci/native_assembly_init_probe.dart "${args[@]}" \
             --log-directory build/macos-probe \
             --dart-sdk "$RUNNER_TEMP/archway-dart/dart-sdk" \
             --node "$RUNNER_TEMP/archway-node/node-v24.21.0-darwin-arm64/bin/node" \
