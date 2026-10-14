@@ -119,6 +119,26 @@ Future<void> verifyNpmArchiveInput(
   ArchiveInventory inventory,
 ) => withGzipSnapshot(
   input,
-  (expanded) =>
-      withArchiveInput(expanded, (tar) => verifyTarInput(tar, inventory)),
+  (expanded) => withArchiveInput(expanded, (tar) async {
+    try {
+      await verifyTarInput(tar, inventory);
+    } on FormatException catch (error, stack) {
+      const bin = 'package/bin/archway.cjs';
+      final executable = inventory.files[bin];
+      if (executable == null || executable.mode != 0x1ed) rethrow;
+      // npm's Windows pack can retain 0644 for a nested declared bin.
+      // npm bin-links makes that bin executable during normal installation.
+      // Keep canonical source identity and every other member exact: this is
+      // a second complete inventory, never a general permission relaxation.
+      final portable = ArchiveInventory({
+        ...inventory.files,
+        bin: (size: executable.size, mode: 0x1a4, sha256: executable.sha256),
+      });
+      try {
+        await verifyTarInput(tar, portable);
+      } on FormatException {
+        Error.throwWithStackTrace(error, stack);
+      }
+    }
+  }),
 );

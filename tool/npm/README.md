@@ -84,3 +84,12 @@ exits pass through unchanged. Signal behavior is OS-specific.
 If the installation is inside the inspected project, configure scope and exclude
 explicitly. Archway is MIT licensed; licenses/notices remain with their owning
 wrapper and native dependency assets.
+
+### Packed launcher permissions
+
+The canonical source inventory records `bin/archway.cjs` as `0755`. npm can
+pack that declared bin as `0644` on Windows. Packed admission accepts exactly
+these two complete inventories, differing only in that launcher's mode; every
+member's bytes, size, name and other permissions remain pinned. npm installation
+makes declared bins executable and creates the platform command links/shims.
+This npm transport rule does not change native payload archive permissions.
