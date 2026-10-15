@@ -1,10 +1,11 @@
 # Installation and package staging
 
 The [delivery contract](../../contracts/compatibility/delivery.md) defines the
-0.2.0 preview design. Thin wrapper production and hosted installation are not yet
-certified. Published 0.1.0 artifacts remain unchanged; see the
-[release page](https://github.com/GreatPika/archway/releases) for actual availability.
-Default stages are private. Staging does not publish or establish target acceptance.
+0.2.0 preview package layout. See the
+[release page](https://github.com/GreatPika/archway/releases) for available artifacts
+and registry installation instructions. Use registry packages only when the
+selected release lists them as published. Default stages are private; staging
+does not publish packages or establish installation acceptance.
 
 ## Layout and trust boundary
 
@@ -73,10 +74,9 @@ source tree. The pub launcher is staged separately from tool/pub. Install it wit
 retain plain archway. Pub needs the SDK for activation and every invocation;
 no generated alias, launcher rewrite or setup/repair command belongs to this route.
 Offline pub invocation requires its prepared activated snapshot under the same
-SDK plus the verified native cache. SDK-switch and missing/stale-snapshot behavior,
-including SDK recompilation or network use, must be measured separately. Do not
-present an unmeasured or unpublished package as available. The
-[package guide](../../tool/npm/README.md) describes the intended user boundary.
+SDK plus the verified native cache. SDK switches or missing/stale snapshots can
+trigger SDK recompilation and network use. The
+[package guide](../../tool/npm/README.md) describes installation and usage.
 
 Retain Archway's [MIT license](../../LICENSE), required dependency notices and
 exact inventories in their owning artifacts. Default source/developer stages
@@ -84,33 +84,20 @@ remain private. Registry-ready metadata is an explicit staging choice made befor
 hashing and validation, never a post-test edit. Staging does not authenticate,
 publish, reserve a name or certify a route.
 
-## Reproduce bounded acceptance
+## Platform verification
 
-Process checks use Dart with pinned runtimes and prepared caches.
-The [CI guide](../../tool/ci/README.md) records existing 0.1.0 source/AOT/transport
-fixtures; those bundled-package and pub snapshot results are historical route
-evidence, not acceptance of the new thin wrappers.
+Portable bundles, automated installer scenarios, npm local/global/cache and pub
+global-run routes were tested in CI on Ubuntu 24.04 x64, macOS 15 arm64 and
+Windows Server 2025 x64. See the
+[CI guide](../../tool/ci/README.md) for test procedures and process limitations.
 
-The 0.2.0 gates run real packed npm local/global/cache commands and installed pub
-commands. Private injected transport/cache/extraction fixtures exercise download
-bounds, redirects, invalid archives, interruption, concurrent publication and
-corruption refusal. Include offline warm use, another cwd, spaces/Unicode,
-unsupported targets, actual native writes, runtime failures, arguments/streams/
-exits and artifact inventory identity. Preserve all native compiler/platform
-checks from the delivery contract.
+Pub offline use requires the prepared activated snapshot under the same SDK and
+the verified native cache. After an SDK change, prewarm with
+`dart pub global run archway:archway --version` before capturing JSON: the SDK can
+print dependency-resolution progress while preparing its snapshot. This step
+may require network access.
 
-A genuine private hosted Linux fixture with Dart 3.13.3 passes no-executables
-activation and explicit global run: exact argv/streams/exit 37, no execution-time
-HTTP, and offline operation with the server stopped. Poisoned still-present source
-continues to dispatch the prepared snapshot. This is bounded SDK-route evidence;
-the actual thin-wrapper fixture also measured a switch from Dart 3.13.3 to 3.13.5.
-The first switched invocation printed SDK dependency-resolution progress before
-native stdout; warm and offline invocations preserved native streams. No requests
-reached the live fixture registry during that switch, which is not a general
-no-network guarantee. After an SDK change, prewarm with
-`dart pub global run archway:archway --version` before capturing JSON.
-Actual Archway thin-wrapper runs on all three platforms remain required. Native uploads require
-separate authorization, then actual pinned hosted-URL cold fetch must pass before
-separately authorized registry publication. Local tests are not hosted download
-or registry certification. Windows Server evidence does not certify Windows 11,
-and assembly success does not certify downloaded desktop installation.
+CI installation tests do not establish public download or registry availability.
+Consult the release notes for public-download verification and published packages.
+Windows 11 and downloaded-file GUI installation on the target desktops have not
+been verified. Installers are unsigned, and the macOS installer is not notarized.

@@ -1,16 +1,16 @@
 # Archway packages
 
 Archway checks prepared TypeScript and Dart projects against architecture.yaml.
-This guide describes the 0.2.0 thin-wrapper design. It is not a claim that these
-packages are published or their installation routes certified. Check the
-[GitHub releases page](https://github.com/GreatPika/archway/releases) for actual
-artifacts; published 0.1.0 downloads remain unchanged. Do not substitute similarly
-named registry packages. See the
+The 0.2.0 preview uses thin npm/pub launchers. Check the
+[GitHub releases page](https://github.com/GreatPika/archway/releases) for available
+artifacts and registry installation instructions. Install a registry package only
+when the selected release lists it as published; do not substitute similarly
+named packages. See the
 [staging guide](https://github.com/GreatPika/archway/blob/main/docs/implementation/installation-layout.md).
 
 ## Installation routes
 
-The intended npm routes are local development dependency, global installation and
+The npm routes are local development dependency, global installation and
 cache/exec using the exact verified package version or tarball. Installation has
 no lifecycle scripts. Node launches the small wrapper, which fetches only the
 current platform's pinned native archive on first invocation. It needs no C
@@ -28,18 +28,22 @@ fetches the same native core; it does not ship the analyzer/core source tree.
 Pub uses the longer explicit SDK command for every invocation; native/npm retain
 plain archway. No alias is generated, and no setup/repair or launcher rewrite is
 needed. Updating means explicitly activating the desired version the same way.
-A genuine private hosted Linux fixture passed this SDK route; actual Archway
-thin-wrapper platform runs and hosted public installation remain unverified.
+Installation routes were tested in CI on Ubuntu 24.04 x64, macOS 15 arm64 and
+Windows Server 2025 x64. CI tests do not establish public download or registry
+availability; consult the release notes for public-download verification and
+published packages.
 
 Both wrappers use separate user caches independent of your project. First use
 requires network access to the pinned native archive; `archway --version` can
 prewarm it (for pub: `dart pub global run archway:archway --version`). Offline pub
 use requires its prepared activated snapshot under the same pinned SDK and the
 verified native cache. SDK switches or missing/stale snapshots can trigger SDK
-recompilation; their network/offline behavior requires separate measured checks. There is no setup command, automatic
-updater, project dependency installation or SDK download. Unsupported platforms
-and corrupt cached payloads fail explicitly; the launcher does not automatically
-delete or repair them.
+recompilation. After an SDK change, prewarm with
+`dart pub global run archway:archway --version` before capturing JSON: SDK
+snapshot preparation can print dependency progress on the first invocation.
+There is no setup command, automatic updater, project dependency installation
+or SDK download. Unsupported platforms and corrupt cached payloads fail
+explicitly; the launcher does not automatically delete or repair them.
 
 ## Usage
 

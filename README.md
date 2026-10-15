@@ -35,15 +35,13 @@ Ownership queries work for future files too. For Dart projects, use
 
 ## Get Archway
 
-Archway 0.1.0 is an unsigned preview. Check the
-[GitHub releases page](https://github.com/GreatPika/archway/releases) for downloadable
-artifacts and `SHA256SUMS`. npm and pub registry packages are not published.
-You can also run Archway from source.
-
-The 0.2.0 work in this checkout changes package delivery to thin npm/pub
-launchers with a pinned first-use native download and offline warm use. That
-route is not yet published or certified; see the [delivery contract](contracts/compatibility/delivery.md).
-Its init command creates ARCHITECTURE.md; published 0.1.0 artifacts are unchanged.
+Archway 0.2.0 is an unsigned preview with thin npm/pub launchers, a pinned
+first-use native download and offline warm use. Check the
+[GitHub releases page](https://github.com/GreatPika/archway/releases) for available
+artifacts, `SHA256SUMS` and registry installation instructions. Use a registry
+package only when that release lists it as published. You can also run Archway
+from source. See the [delivery contract](contracts/compatibility/delivery.md)
+for package requirements.
 
 ### Run from source
 
@@ -92,16 +90,18 @@ Prepared Flutter projects use their compatible embedded SDK; see the
 
 Developers can [stage packages locally](docs/implementation/installation-layout.md#stage-packages).
 The [package guide](tool/npm/README.md) describes the 0.2.0 thin-wrapper routes
-and their remaining installation gates.
+and installation requirements.
 
 Portable bundles and unsigned native installers target Linux x64, macOS arm64
 and Windows x64. Use the [bundle guide](tool/release/QUICKSTART.txt) only with
 matching artifacts and checksums. Do not substitute a similarly named npm or pub
 registry package.
 
-Windows CI uses Windows Server 2025; Windows 11 desktop installation and
-downloaded-file GUI installation on the target desktops have not been verified.
-Installers are unsigned, and the macOS installer is not notarized.
+Installation routes were tested in CI on Ubuntu 24.04 x64, macOS 15 arm64 and
+Windows Server 2025 x64. CI tests do not establish public download or registry
+availability; consult the release notes for public-download verification and
+published packages. Windows 11 and downloaded-file GUI installation have not
+been verified. Installers are unsigned, and the macOS installer is not notarized.
 
 ## Set up each project
 
@@ -158,11 +158,10 @@ can prevent complete analysis. Filesystem rechecks do not provide an atomic snap
   Offline use needs the prepared snapshot under the same SDK and verified native
   cache. After an SDK change, run `dart pub global run archway:archway --version`
   once before capturing JSON: SDK snapshot preparation can print dependency
-  progress on the first invocation. Linux SDK-route feasibility does not certify
-  actual Archway packages on all platforms or hosted public installation.
+  progress on the first invocation.
 
 See the [installation guide](docs/implementation/installation-layout.md) for
-platform evidence and remaining package-route gates.
+platform requirements and installation limitations.
 
 ## Development
 

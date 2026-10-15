@@ -2,10 +2,11 @@ Archway 0.2.0 package guide
 ===========================
 Archway checks prepared TypeScript and Dart projects against architecture.yaml.
 
-Archway 0.2.0 is unreleased; these examples describe intended, unverified routes.
-Use them only after matching artifacts and SHA256SUMS are published and verified.
-Check https://github.com/GreatPika/archway/releases for actual availability.
-npm and pub registry packages are not published. To run from source, see:
+Archway 0.2.0 is an unsigned preview. Check
+https://github.com/GreatPika/archway/releases for available artifacts, SHA256SUMS
+and registry installation instructions. Use these examples with matching verified
+artifacts, and registry packages only when the release lists them as published.
+To run from source, see:
 https://github.com/GreatPika/archway#run-from-source
 
 Native installers
@@ -57,18 +58,18 @@ review if it blocks launch; no security bypass is required by this guide.
 
 Thin wrapper packages
 ---------------------
-The 0.2.0 design uses thin npm/pub launchers that fetch only the selected target's
-pinned native archive on first invocation and run offline thereafter. It replaces
-the all-target npm tarball and source-pub setup route. Installation has no scripts.
-The sole intended pub route is:
+The thin npm/pub launchers fetch only the selected target's pinned native archive
+on first invocation and reuse the verified cache offline. Installation has no
+scripts. For a published package version, the pub route is:
 dart pub global activate --no-executables archway VERSION
 dart pub global run archway:archway <args>
 Pub needs pinned Dart 3.13.3 for activation and invocation, without generated aliases
 or setup/repair. Offline use needs its prepared snapshot under the same SDK and
-verified native cache; SDK-switch/missing/stale-snapshot behavior is a measured gate.
-A Linux private hosted fixture passed; actual Archway platform routes are unverified. See tool/npm/README.md for remaining gates.
-No 0.2.0 wrapper package is currently published or certified. Published 0.1.0
-artifacts and their filenames remain unchanged.
+verified native cache. After an SDK change, run
+dart pub global run archway:archway --version
+once before capturing JSON: SDK snapshot preparation can print dependency
+progress on the first invocation. Replace VERSION with the published version
+listed on the release page. See tool/npm/README.md for package requirements.
 
 First use
 ---------
@@ -106,10 +107,12 @@ and 2 when the policy is invalid or analysis is incomplete. Export emits Mermaid
 Supported targets and notices
 -----------------------------
 Payloads target Linux x64, macOS arm64 and Windows x64. Linux ARM, Intel macOS
-and Windows ARM payloads are not included. Windows testing used Windows Server
-2025; Windows 11 desktop installation has not been verified. Downloaded-file
-GUI installation on the target desktops has not yet been verified. Installers
-are unsigned, and the macOS installer is not notarized.
+and Windows ARM payloads are not included. Installation routes were tested in CI
+on Ubuntu 24.04 x64, macOS 15 arm64 and Windows Server 2025 x64. CI tests do not
+establish public download or registry availability; consult the release notes
+for public-download verification and published packages. Windows 11 and
+downloaded-file GUI installation have not been verified. Installers are unsigned,
+and the macOS installer is not notarized.
 
 Archway is MIT licensed; see LICENSE. Third-party notices are included under
 assets/. JSON result schemas are under schemas/. manifest.json records versions,
