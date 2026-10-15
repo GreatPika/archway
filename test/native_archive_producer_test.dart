@@ -109,68 +109,78 @@ void main() {
       );
     }
   });
-  test('native producer refuses changed evidence without publishing partial output', () async {
-    final fixture = await prepareNativeReleaseFixture();
-    addTearDown(() => fixture.root.deleteSync(recursive: true));
-    final path = File(
-      p.join(fixture.transports.path, 'linux-x64/provenance.json'),
+  for (final row in <(String, void Function(Map), String)>[
+    (
+      'source',
+      (record) => (record['source'] as Map)['commit'] = '0' * 40,
+      'Transport source or target mismatch',
+    ),
+    (
+      'target',
+      (record) => record['target'] = 'windows-x64',
+      'Transport source or target mismatch',
+    ),
+    (
+      'archive',
+      (record) => (record['archive'] as Map)['sha256'] = '0' * 64,
+      'Archive identity mismatch',
+    ),
+    (
+      'missing-analysis',
+      (record) => (record['runtimes'] as Map).remove('analysis_dart'),
+      'Invalid transport runtime evidence',
+    ),
+    (
+      'runtime',
+      (record) => (record['runtimes'] as Map)['build_dart'] =
+          'Dart SDK version: 3.13.4 (stable)',
+      'Analysis Dart differs from build runtime',
+    ),
+  ]) {
+    test(
+      'native producer refuses changed ${row.$1} evidence without publishing partial output',
+      () async {
+        final fixture = await prepareNativeReleaseFixture();
+        addTearDown(() => fixture.root.deleteSync(recursive: true));
+        final path = File(
+          p.join(fixture.transports.path, 'linux-x64/provenance.json'),
+        );
+        final original = path.readAsBytesSync();
+        final record = jsonDecode(utf8.decode(original)) as Map;
+        row.$2(record);
+        path.writeAsStringSync(jsonEncode(record));
+        final result = await buildNativeFixture(fixture, 'refused-${row.$1}');
+        expect(result.exitCode, isNot(0));
+        expect(result.stderr, contains(row.$3));
+        expect(
+          Directory(p.join(fixture.root.path, 'refused-${row.$1}'))
+              .existsSync(),
+          false,
+        );
+        expect(
+          fixture.root.listSync().where(
+            (entry) => p.basename(entry.path).startsWith('.archway-native-'),
+          ),
+          isEmpty,
+        );
+      },
     );
-    final original = path.readAsBytesSync();
-    for (final row in <(String, void Function(Map), String)>[
-      (
-        'source',
-        (record) => (record['source'] as Map)['commit'] = '0' * 40,
-        'Transport source or target mismatch',
-      ),
-      (
-        'target',
-        (record) => record['target'] = 'windows-x64',
-        'Transport source or target mismatch',
-      ),
-      (
-        'archive',
-        (record) => (record['archive'] as Map)['sha256'] = '0' * 64,
-        'Archive identity mismatch',
-      ),
-      (
-        'missing-analysis',
-        (record) => (record['runtimes'] as Map).remove('analysis_dart'),
-        'Invalid transport runtime evidence',
-      ),
-      (
-        'runtime',
-        (record) => (record['runtimes'] as Map)['build_dart'] =
-            'Dart SDK version: 3.13.4 (stable)',
-        'Analysis Dart differs from build runtime',
-      ),
-    ]) {
-      final record = jsonDecode(utf8.decode(original)) as Map;
-      row.$2(record);
-      path.writeAsStringSync(jsonEncode(record));
-      final result = await buildNativeFixture(fixture, 'refused-${row.$1}');
-      expect(result.exitCode, isNot(0));
-      expect(result.stderr, contains(row.$3));
-      expect(
-        Directory(p.join(fixture.root.path, 'refused-${row.$1}')).existsSync(),
-        false,
-      );
-      expect(
-        fixture.root.listSync().where(
-          (entry) => p.basename(entry.path).startsWith('.archway-native-'),
-        ),
-        isEmpty,
-      );
-      path.writeAsBytesSync(original);
-    }
-    final existing = Directory(p.join(fixture.root.path, 'existing'))
-      ..createSync();
-    final sentinel = File(p.join(existing.path, 'keep'))
-      ..writeAsStringSync('unchanged');
-    final refusal = await buildNativeFixture(fixture, 'existing');
-    expect(refusal.exitCode, isNot(0));
-    expect(refusal.stderr, contains('Native output already exists'));
-    expect(sentinel.readAsStringSync(), 'unchanged');
-  });
+  }
+  test(
+    'native producer refuses an existing output without changing it',
+    () async {
+      final fixture = await prepareNativeReleaseFixture();
+      addTearDown(() => fixture.root.deleteSync(recursive: true));
+      final existing = Directory(p.join(fixture.root.path, 'existing'))
+        ..createSync();
+      final sentinel = File(p.join(existing.path, 'keep'))
+        ..writeAsStringSync('unchanged');
+      final refusal = await buildNativeFixture(fixture, 'existing');
+      expect(refusal.exitCode, isNot(0));
+      expect(refusal.stderr, contains('Native output already exists'));
+      expect(sentinel.readAsStringSync(), 'unchanged');
+    },
+  );
   test(
     'rejects prepared compiler version that differs from the source lock',
     () async {
