@@ -13,7 +13,7 @@ paths and independently verified identities.
   and supports manual dispatch. It calls both native workflows with export enabled,
   adds Ubuntu 24.04 x64 / glibc 2.39, audits same-source transports, packs npm once,
   and runs installed consumers on all three hosts.
-- [macOS source and AOT](../../.github/workflows/macos-first-red.yml) supports
+- [macOS source and AOT](../../.github/workflows/macos-native-probe.yml) supports
   reusable calls and manual dispatch on macOS 15 arm64. It records APFS temp-root
   and case behavior, canonical paths and Apple SDK/clang readiness. Successful init
   is required.
@@ -31,10 +31,9 @@ dart --suppress-analytics pub get --enforce-lockfile
 bash tool/prepare_typescript.sh
 ```
 
-Use the workflow's pinned Python/PyYAML/jsonschema setup for the selected probe.
-Windows assembly requires native Python 3.9+, PowerShell, explicit pinned Dart,
-and verified Git for Windows Bash with pinned Node/npm first on PATH. Windows
-init-only needs no jsonschema. Source policy/init controls need no Node.
+Windows assembly requires PowerShell, explicit pinned Dart, and verified Git for
+Windows Bash with pinned Node/npm first on PATH. Source policy/init controls
+need no Node.
 
 Jobs use bounded timeouts, `contents: read`, pinned actions and nonpersistent
 checkout credentials. Native export/probe runs have separate cancellation groups.
@@ -48,7 +47,7 @@ Standard hosted runners can consume billable private-repository minutes.
 
 Source policy/init, export and alias controls precede owned asset preparation,
 compiler readiness/suites and genuine maintainer assembly. Setup failures and
-non-native skips are not semantic results. The [shared init oracle](aot_init_assertions.py)
+non-native skips are not semantic results. The [shared init oracle](aot_init_assertions.dart)
 requires exit 0, `ok`/`created`, correct streams/JSON and exactly two bootstrap
 files for fresh-root mixed init, from foreign Unicode/spaced paths without
 Dart/Node on PATH. Windows OS essentials remain available.
@@ -63,15 +62,15 @@ link-only cleanup; a junction or skip cannot substitute. Pinned runtime resoluti
 and actual NTFS TEMP/TMP are checked, with environment restoration in `finally`.
 Counts and results come from logs, not predicted test totals.
 
-[The assembly probe](native_assembly_init_probe.py) invokes the real assembler,
+[The assembly probe](native_assembly_init_probe.dart) invokes the real assembler,
 checks fixed layout/exact owned assets, relocates the installation and runs the
 shared init oracle. Profiles:
 
 ```sh
 # Linux/macOS: asset and CLI process regressions, plus mixed compiler/alias checks.
-python3 tool/ci/native_assembly_init_probe.py --dart-sdk "$DART_SDK" --node "$NODE"
+dart --suppress-analytics run tool/ci/native_assembly_init_probe.dart --dart-sdk "$DART_SDK" --node "$NODE"
 # Windows: real assembly, guards, relocation and init only.
-python tool/ci/native_assembly_init_probe.py --init-only --dart "$DART_EXE"
+dart --suppress-analytics run tool/ci/native_assembly_init_probe.dart --init-only --dart "$DART_EXE"
 ```
 
 Omit both Unix runtime arguments for the asset/CLI-only profile; supply them
@@ -86,8 +85,8 @@ all selected checks pass. Export requires a clean tracked checkout, verifies a
 controlled extraction and repeats init at a fresh relocated path before exposing
 `installation.tar` and external `provenance.json`.
 
-[Export](installation_artifact.py), [transport audit](audit_installation_transports.py)
-and [combination](combine_installations.py) bind exact source commit/tree, both
+[Export](../release/installation_artifact.dart), [transport audit](audit_installation_transports.dart)
+and [native archive production](../release/build_native_archives.dart) bind exact source commit/tree, both
 lock hashes, per-file bytes/sizes/modes, archive digest, actual target/runtimes and
 selected suites. Tracked identity does not attest ignored tools/caches; manifests
 identify the actual installation bytes. Windows transport modes do not attest
@@ -99,8 +98,9 @@ failed export cleans only owned staging. The single-writer transport is not an
 adversarial atomic no-replace or general untrusted-archive API.
 
 Follow the [package workflow](../../.github/workflows/package-delivery-probe.yml)
-for the audit/combine/pack commands. It audits opaque transports before execution,
-then produces one all-target npm tarball with scripts disabled and offline mode.
+for the native-first producer commands. It audits opaque transports before
+execution, produces three native archives and one shared acquisition descriptor,
+then stages thin npm/pub wrappers against that exact descriptor.
 Consumers require the exact source SHA and current run ID/attempt; rerun all jobs
 rather than mix attempts. Successful producer dependencies and `github.sha`
 checkout establish the source relationship. Adjacent downloaded JSON alone does
@@ -108,24 +108,32 @@ not establish authenticity.
 
 ## Installed npm routes and termination limits
 
-[The npm probe](npm_local_install_probe.py) takes one verified tarball, checks its
-filename/length/SHA-256 and installed manifest, and runs all nine native OS/route
-cells: local devDependency, isolated global prefix and cache-only npm exec.
-Consumers never rebuild, repack or manually extract it. Each uses scripts-disabled,
-offline installation, isolated cache/config and an unreachable registry.
-
-The standalone command below is diagnostic, not release evidence. Finalizable
-reports require the matching Actions consumer job's `GITHUB_SHA`, `GITHUB_RUN_ID`
-and `GITHUB_RUN_ATTEMPT`; omitted identity fields are null and rejected at finalization.
+[The npm probe](../npm/installed_probe.dart) consumes the exact packed receipt and
+tarball from [staging](../npm/stage.dart) and [packing](../npm/pack.dart). The matrix
+covers local devDependency, isolated global prefix and cache-only npm exec on all
+three supported targets. Installation disables scripts and uses an isolated,
+offline npm cache/config. Consumers do not rebuild or repack the wrapper.
 
 ```sh
-python3 tool/ci/npm_local_install_probe.py --packed-directory PACKED --target TARGET \
-  --route local --wrong-node PREPARED_NODE_24_19 --runner-label RUNNER --report REPORT
+dart run tool/ci/setup_npm_wrong_node.dart --target TARGET --output WRONG_RUNTIME
+dart run tool/npm/installed_probe.dart --packed-directory PACKED \
+  --expected-commit COMMIT --target TARGET --route local --npm-cli NPM_CLI_JS \
+  --wrong-node PREPARED_NODE_24_19 --native-archive MATCHING_NATIVE_ARCHIVE \
+  --output FRESH_OUTPUT --ci-host
 ```
 
-Use `global` or `cache` for the other routes. [Wrong-Node preparation](setup_npm_wrong_node.py)
-verifies official Node 24.19.0 separately; normal launchers remain on
-Node 24.21.0/npm 11.19.0. Reports require the negative runtime and its digest.
+Use `global` or `cache` for the other routes. The wrong-Node preparation verifies
+the official Node 24.19.0 archive; ordinary execution uses Node 24.21.0/npm 11.19.0.
+`--native-archive` selects maintainer-only `ci-verified-native` preparation. The
+probe authenticates descriptor/archive/manifest/executable identities before
+using its exclusively owned cache. Reports explicitly retain
+`public_cold_verified: false`. This does not establish public HTTPS availability;
+public-cold acceptance is a separate gate after matching native assets exist.
+
+Finalizable reports require the matching Actions source/run/attempt and actual
+host. Local diagnostics or synthetic CI headers cannot replace those receipts.
+Retain `WRONG_RUNTIME/runtime.json` beside the probe report before final admission;
+the workflow performs this bounded projection even when the probe fails.
 
 The real generated shim/npm-exec route exercises help/version/init, policy/export,
 clean and violating TypeScript analysis, usage errors and installed asset/payload
@@ -134,9 +142,11 @@ mutations are restored and hash-checked. File symlink readiness is mandatory.
 Cache invocations retain the 120-second npm preparation ceiling, including init
 and pre-stimulus helper readiness when execution is actually through npm exec.
 An explicit tarball makes npm 11.19.0 extract its manifest on every invocation.
-Windows-cache alone has a 20-minute aggregate job limit for its 33 npm-exec invocations, setup and fixture
-checks. Other cells retain ten minutes. Direct/native readiness remains 15 seconds;
-post-stimulus termination remains five seconds. No correctness assertion is relaxed.
+Every installed cell has a 20-minute aggregate workflow limit. Ordinary
+local/global commands retain 30 seconds; first native acquisition allows 150
+seconds and wrong-Node identity allows 30. Direct/native readiness remains 15
+seconds; post-stimulus termination remains five seconds. These process budgets
+are checked against the original recorder evidence.
 
 Explicit in-root corpus inclusion/exclusion applies to local installation; global
 and cache report their outside-root applicability. Local/global checks repeat after
@@ -147,7 +157,7 @@ covered. npm augments child PATH, so cache is not a Node-only child-PATH claim.
 Incompatible Node must yield core `NODE_UNAVAILABLE`/2. Missing Node must fail
 through the real route with no core JSON. Direct installed-native missing-Node
 checks are labeled supplements. Unsupported-platform selection is fault injection,
-not execution on an unsupported OS. [Shared route controls](npm_installed_acceptance.py)
+not execution on an unsupported OS. [Shared route controls](../npm/installed_assets.dart)
 and the probe retain actual exits, streams, artifact/source/run identity and host.
 
 Termination compares a readiness-confirmed genuine native core with the route:
@@ -167,112 +177,111 @@ Termination compares a readiness-confirmed genuine native core with the route:
 
 Fixture cleanup never establishes a product process-tree guarantee. Helper bytes
 and readiness markers are restored/removed on failures too. See [termination
-controls](npm_termination_controls.py); every platform still requires native
+controls](../npm/installed_termination.dart); every platform still requires native
 measurements. Unit checks and historical packed bytes cannot certify a new revision.
 
-## Private pub stage and installed snapshot
+## Thin pub stage and installed snapshot
 
-The [file-set gate](../../test/pub_package_process_smoke.py) needs the clean exact
-source that produced the three original transports and their combined result:
-
-```sh
-python3 test/pub_package_process_smoke.py "$DART" "$SOURCE" "$COMBINED" \
-  "$TRANSPORTS" "$EXPECTED_SOURCE_COMMIT" "$NEW_EVIDENCE_DIRECTORY"
-```
-
-It binds source/tree/locks and native/shared assets, compares the exact private
-all-target stage inventory to pub's `--dry-run --skip-validation` listing and
-rejects subsequent drift. This proves file-set inclusion, not emitted pub archive
-bytes, publication readiness, hosted installation or activation.
-
-The Linux producer then runs the [stage identity controls](../../test/pub_stage_identity_test.py)
-against that genuine stage before writing its transport. They reject partial,
-target and privacy manifest edits, missing native bridges, altered
-source/license/schema/pubspec, extra entries, source aliases and wrong commits.
-They restore each change and recheck the valid stage.
-The transport writer requires the restored inventory to match the original
-stage identity and dry-run report. Any control failure stops transport production;
-`build/pub-producer/identity-controls.log` is retained even on failure.
-
-[The snapshot probe](pub_snapshot_probe.py) consumes that persisted evidence:
+[Staging](../pub/stage.dart) regenerates the exact thin wrapper from the canonical
+source and shared `acquisition.json`. It does not copy the core/analyzer or an
+all-target native bundle into pub. The stage inventory binds source/tree/locks,
+version, descriptor and every wrapper file. Existing outputs are refused.
 
 ```sh
-python3 tool/ci/pub_snapshot_probe.py --dart "$DART" --node "$NODE" \
-  --stage-evidence "$STAGE_EVIDENCE" --source "$SOURCE" --combined "$COMBINED" \
-  --transports "$TRANSPORTS" --expected-source "$EXPECTED_SOURCE_COMMIT" \
-  --expected-digest "$STAGE_DIGEST" --prepared-cache "$PREPARED_CACHE" \
-  --target "$TARGET" --output "$NEW_SPACE_FREE_DIRECTORY"
+dart run tool/pub/stage.dart --source SOURCE --descriptor ACQUISITION_JSON \
+  --expected-commit COMMIT --output FRESH_STAGE
+dart run tool/ci/pub_stage_transport.dart write --stage-evidence FRESH_STAGE \
+  --source SOURCE --expected-source COMMIT --run-id RUN --run-attempt ATTEMPT \
+  --output FRESH_TRANSPORT
 ```
 
-The caller independently binds source/digest. The source checkout may differ from
-the harness checkout; never substitute a newer harness commit for artifact identity.
-The probe verifies original source/transports, stages a disposable Unicode/spaced
-Git fixture and activates using an isolated lock-matched cache. Git user config,
-hooks/signing/templates are disabled. Dart 3.13.3 Git activation requires official
-pub.dev metadata: it is not offline installation. Archive requests or changed
-prepared dependencies fail; resolution logs/hashes and the fixture commit survive.
+The producer's successful compact JSON is an independent same-attempt input.
+Pass it through an environment variable, never interpolate it into shell source
+or trust an adjacent downloaded record alone. Transport contains exactly
+`installation.tar` and `transport.json`; its private envelope is not a pub upload.
 
-The probe explicitly runs `dart pub global run archway:setup` before invoking the
-installed launcher with Dart and required launcher tools but no Node. It repeats
-help/version/shared init after removing the disposable Git source and poisoning
-the still-present installed `bin/archway.dart`. A direct-source failure control and
-successful pub global run establish snapshot use without an invalid file-removal
-oracle. Policy/export, real TypeScript with pinned Node, missing Node, helper
-aliases/decoys and bridge failures are checked afterward. Generated and repaired
-launcher hashes are recorded separately; repaired launcher/snapshot hashes remain
-unchanged during inspection. Dead-loopback runtime proxies are not an OS sandbox.
+[SDK preparation](setup_pub_dart.dart) authenticates the official Dart 3.13.3
+archive/checksum before extraction and prepares an isolated lock-enforced cache.
+The CI-only bootstrap first obtains that pinned SDK so the preparation owner can
+run. Reused local SDK archives still require the official digest. Preparation
+retains original version, extraction and dependency commands and source identity.
 
-PUB_CACHE includes spaces/Unicode. The [analysis smoke](../../test/pub_snapshot_analysis_process_smoke.py)
-also verifies repeat setup and reactivation regenerating the SDK launcher before
-setup restores the repair. Unknown launcher templates are rejected unchanged.
-This gate covers isolated Git activation/snapshots, not hosted or dependency-local
-installation. Reports preserve actual host/edition; Linux cloud or Windows Server
-results cannot certify a different required OS or source revision.
+```sh
+dart run tool/ci/setup_pub_dart.dart --target TARGET --source SOURCE \
+  --expected-commit COMMIT --output FRESH_SDK --prepare-cache --ci-host
+dart run tool/ci/pub_installed_route.dart --source SOURCE --expected-source COMMIT \
+  --run-id RUN --run-attempt ATTEMPT --target TARGET \
+  --transport INSTALLATION_TAR --expected-json "$EXPECTED_PUB_TRANSPORT" \
+  --descriptor ACQUISITION_JSON --native-archive MATCHING_NATIVE_ARCHIVE \
+  --wrong-node PREPARED_NODE_24_19 --prepared-cache PREPARED_PUB_CACHE \
+  --output FRESH_OUTPUT --ci-host
+```
 
-### Same-run pub transport
+Use the prepared SDK executable for the installed command. The owner authenticates
+all inputs before actual private hosted activation with `--no-executables`.
+Every installed command uses `dart pub global run archway:archway`; there is no
+setup executable, generated alias or launcher-repair step. The probe-owned native
+cache receives only the independently pinned native artifact. No user launcher
+URL override or cache-seeding option exists.
 
-By default, [the transport writer/reader](pub_stage_transport.py) carries the verified
-stage and identity/report, never the full native transports/combined installation.
-Its gzip/tar is private transport, not a pub-generated archive. The successful
-producer's compact JSON output binds source/tree/locks, stage digest, archive
-SHA/size and exact run ID/attempt. Pass it through an environment variable, never
-interpolate JSON into shell source or trust an adjacent download by itself.
+The complete original observations cover core/policy/export and TypeScript,
+command/native parity, missing bridge init, helper/compiler/native/manifest
+absence/alias/corruption, genuine wrong/missing Node, and SDK snapshot behavior.
+Snapshot checks preserve the installed source and snapshot hashes, poison source,
+exercise stale/missing snapshot failures, then restore and recheck the baseline.
+Private activation uses a local hosted fixture; it is not a live pub.dev install.
 
-For the snapshot transport route, replace local `--stage-evidence`, `--combined`,
-`--transports` and `--expected-digest` with `--transport-archive`,
-`--expected-transport-json`, `--run-id` and `--run-attempt`. Keep explicit
-`--expected-source` plus runtime/source/cache/target/output arguments. Consumers
-verify current SHA/run/attempt and clean checkout, bound archive/member sizes,
-reject noncanonical/alias entries and revalidate exact extracted bytes/inventory.
-Cross-host identity uses bytes/sizes rather than requiring Unix modes on Windows.
-Reports retain both the transport record and extraction receipt.
+Keep only `report.json`, `activation/`, `execution/`, applicable `private-export/`,
+`runtime.json`, renamed original `sdk-preparation.json`, original
+`sdk-preparation-execution/`, the official SDK checksum, and the bounded
+`sdk-setup.log`, `runtime-setup.log` and `probe.log` diagnostics in installed
+artifacts. Do not upload prepared caches, SDKs, native payloads or disposable
+projects.
+Readers bind every original command, exit and stream hash to the canonical source,
+version, target, descriptor, transport and workflow attempt.
+
+After changing Dart SDK, prewarm with `dart pub global run archway:archway
+--version` before machine-readable commands: the SDK can print dependency/snapshot
+rebuild progress on the first invocation. Warm native output is not filtered.
+A genuine distinct compatible SDK switch is a separate measured release check.
 
 ### Explicit registry-candidate intent
 
-`--registry-ready` must match across staging, packed verification, release wrapping,
-`pub_package_process_smoke.py`, pub identity controls, transport writer/reader,
-`npm_local_install_probe.py`, `pub_snapshot_probe.py` and finalization. Omission
-preserves private metadata and schema-1 receipts; mismatched intent is refused.
-Candidate pub snapshot checks require authenticated schema-2 archive transport,
-not the local-stage shortcut. The outer envelope carries the sole pub-exported
-`pub-package.tar.gz` plus stage identity/report; consumers verify and extract those
-exact archive bytes before the existing Git activation and snapshot checks.
+`--registry-ready` must agree across npm/pub staging, packing/export, transport,
+installed consumers and finalization. Omission selects private schema-1 pub
+transport; explicit intent requires schema-2 carrying the exact SDK upload. The
+private route uses SDK archive export with `--skip-validation` solely for private
+qualification. It cannot substitute for registry validation.
 
-Candidate validation retains full dry-run/export logs and raw statuses. The
-pinned validator must report precisely the seven reviewed tight-pin advisories:
-dry-run exits 65 and separate archive export exits 0. This means validated with
-seven expected advisories, not zero warnings. Unknown, missing or duplicate
-advisories fail. No skip-validation or ignore-warnings option applies.
+[Registry export](../pub/export.dart) pins the official pub.dev endpoint and runs
+the real SDK dry-run and archive export with separate original stdout/stderr and
+exit receipts. Dart 3.13.3 must report precisely the seven reviewed tight-pin
+advisories: dry-run 65, archive export 0. Unknown, missing or duplicate diagnostics
+fail; no warning filtering or skip-validation applies to this route.
 
-Candidate finalization requires matching installed receipts, including the exact
-pub upload-archive identity, and still checks every native installer receipt.
-It does not rebuild payloads. Offline intent and synthetic transport tests do not
-establish real package export or hosted installation. Publication and account
-actions require separate authorization.
+[Native-first finalization](finalize_native_first_release.dart) independently
+regenerates the descriptor and canonical npm/pub stages, verifies complete packed
+inventories, and admits all nine npm, three pub and three native host receipts.
+It preserves tested archive bytes and original evidence, emits complete checksums
+and publishes only into a fresh local output directory. Registry-ready metadata
+and private candidate qualification do not establish public cold availability.
+Publication and account actions require separate authorization.
+
+New npm stage receipts sort file keys before the unchanged schema-1 JSON inventory
+hash. Older producer receipts can reflect filesystem enumeration order. Maintenance
+replay may explicitly supply `--legacy-npm-packed-receipt-sha256` from an independently
+authenticated original producer artifact. This is a trusted caller assertion, not
+self-authentication: do not calculate a replacement pin from an untrusted input.
+Both receipt admissions verify the exact pinned bytes. Only rebuilt inventory-hash
+equality is relaxed; source identity, descriptor, archive pins and every canonical
+archive member remain mandatory. Final evidence preserves the original receipt and
+discloses both inventory digests and the legacy reason; it does not claim to have
+reproduced the producer's order-dependent digest. Without the option, strict
+inventory-digest comparison remains required.
 
 ## Release fixtures and regression checks
 
-[Native fixture preparation](prepare_native_acceptance.py) is a separate networked
+[Native fixture preparation](prepare_native_acceptance.dart) is a separate networked
 step: `--target TARGET --output NEW_DIRECTORY`. It verifies official Flutter
 3.47.4 / embedded Dart 3.13.3 and Node 24.19.0 archives, then prepares real locked
 hosted collection 1.19.1, path, workspace, pinned Git `pkgs/path` and Flutter pub
@@ -280,17 +289,27 @@ projects in an isolated cache. Windows uses embedded Dart directly. Reused Flutt
 archives still require byte and live official-index verification.
 
 Pass the resulting `acceptance-fixtures.json` to
-`release_native_smoke.py --acceptance-fixtures MANIFEST`. CI requires preparation;
+`dart --suppress-analytics run tool/ci/release_native_smoke.dart --acceptance-fixtures MANIFEST`. CI requires preparation;
 missing fixtures fail instead of silently skipping coverage. Logs and readiness
 hashes are retained. A development Linux preparation run is not three-host release
 acceptance.
 
-The release probe also runs [the complete Dart source suite](native_source_acceptance.py)
+The three loopback HTTPS suites require an existing OpenSSL executable. Hosted
+preparation verifies it and exports its absolute path as `ARCHWAY_TEST_OPENSSL`;
+local tests use that override or `openssl` from PATH. Missing tooling fails the
+tests. Each fixture generates a one-day localhost/127.0.0.1 certificate in its
+owned temporary directory, loads and immediately deletes the private key, and
+removes the remaining certificate at teardown. Trust is local to the fixture;
+no static private key, system trust change or product dependency is required.
+
+The release probe also runs [the complete Dart source suite](native_source_acceptance.dart)
 from an exact tracked-source snapshot using the verified archive's bridge/vendor
 assets. It requires every tracked `test/*_test.dart` suite, complete successful
 terminal results and only the explicitly allowed host/filesystem fixture skips.
 Evidence retains original Dart JSON output, source-file hashes and archive asset
-identity; a reduced source selection cannot substitute for this gate.
+identity; a reduced source selection cannot substitute for this gate. The complete
+source suite has a 25-minute aggregate CI wall budget; this does not change
+product deadlines or the 10-minute native-suite and dependency-preparation budgets.
 
 Completed nonzero process-suite exits are collected so later isolated process
 fixtures and the full source gate can still expose independent failures in the
@@ -300,7 +319,7 @@ failures and suite timeouts stop immediately because shared bytes or descendant
 cleanup cannot be assumed safe. Source dependency preparation remains fail-fast.
 
 
-[Release finalization](finalize_release_evidence.py) validates those source/native
+[Release finalization](finalize_native_first_release.dart) validates those source/native
 receipts and every required npm/pub route against exact source, run/attempt,
 transport and archive identities. It appends accepted evidence and updates
 checksums without rebuilding the tested payloads; missing or mismatched receipts
@@ -309,16 +328,15 @@ block finalization.
 Focused deterministic controls (distinct from genuine native route acceptance):
 
 ```sh
-python3 test/native_export_workflow_test.py
-python3 test/package_delivery_workflow_test.py
-python3 test/installation_artifact_test.py
-python3 test/npm_local_install_probe_test.py
-python3 test/npm_local_analysis_test.py
-python3 test/npm_cache_exec_test.py
-python3 test/pub_snapshot_workflow_test.py
-python3 test/pub_snapshot_probe_test.py
-python3 test/pub_snapshot_launch_test.py
+dart test test/package_delivery_workflow_test.dart test/package_delivery_dispatch_test.dart
+dart test test/pub_stage_transport_test.dart test/pub_candidate_transport_test.dart
+dart test test/release_native_input_test.dart test/release_pub_input_test.dart
+dart test test/release_pub_thin_identity_test.dart test/release_pub_sdk_receipts_test.dart
 ```
+
+Windows npm cells additionally require `dart run test/windows_job_capability.dart`
+and the readiness suite. The capability entry refuses non-Windows execution;
+a skipped platform test cannot certify this gate.
 
 ### Native installer lifecycle gate
 
@@ -331,7 +349,7 @@ Compiler bytes and host identity, input manifest, installer bytes and original
 lifecycle/installed-command logs are bound to the source/archive report.
 
 A temporary, explicitly test-only `0.0.0` bundle adds an obsolete file; upgrade
-installs the exact `0.1.0` verified payload and proves removal of that file. The
+installs the verified current-version payload and proves removal of that file. The
 old test artifact is never included in the release. Linux uses an isolated dpkg
 root; macOS uses native Installer and the owned shell uninstaller; Windows uses
 its disposable runner account. Root-owned Unix payloads stay root-owned, while

@@ -1,0 +1,90 @@
+Resolving dependencies in `/fixture/package`...
+Downloading packages...
+  unorm_dart 0.3.2 (0.3.3 available)
+Got dependencies in `/fixture/package`!
+1 package has newer versions incompatible with dependency constraints.
+Try `dart pub outdated` for more information.
+Publishing archway 0.2.0 to https://pub.dev:
+├── CHANGELOG.md (<1 KB)
+├── LICENSE (<1 KB)
+├── README.md (<1 KB)
+├── bin
+│   └── archway.dart (1 KB)
+├── pubspec.yaml (<1 KB)
+└── tool
+    ├── pub
+    │   ├── download.dart (4 KB)
+    │   ├── launcher.dart (2 KB)
+    │   └── native_cache.dart (6 KB)
+    ├── release
+    │   ├── archive_extraction.dart (2 KB)
+    │   ├── archive_input.dart (6 KB)
+    │   ├── gzip_input.dart (4 KB)
+    │   ├── native_archive.dart (2 KB)
+    │   ├── native_manifest.dart (2 KB)
+    │   ├── publish_directory.dart (4 KB)
+    │   ├── strict_json.dart (2 KB)
+    │   ├── tar_input.dart (11 KB)
+    │   └── zip_input.dart (10 KB)
+    └── validation
+        └── json_values.dart (<1 KB)
+
+Total compressed archive size: 17 KB.
+Validating package...
+Package validation found the following 7 potential issues:
+* Your dependency on "archive" should allow more than one version. For example:
+  
+  dependencies:
+    archive: ^4.5.2
+  
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "archive".
+
+* Your dependency on "crypto" should allow more than one version. For example:
+  
+  dependencies:
+    crypto: ^3.0.7
+  
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "crypto".
+
+* Your dependency on "ffi" should allow more than one version. For example:
+  
+  dependencies:
+    ffi: ^2.2.0
+  
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "ffi".
+
+* Your dependency on "path" should allow more than one version. For example:
+  
+  dependencies:
+    path: ^1.9.1
+  
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "path".
+
+* Your dependency on "posix" should allow more than one version. For example:
+  
+  dependencies:
+    posix: ^6.5.2
+  
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "posix".
+
+* Your dependency on "tar" should allow more than one version. For example:
+  
+  dependencies:
+    tar: ^2.0.3
+  
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "tar".
+
+* Your dependency on "unorm_dart" should allow more than one version. For example:
+  
+  dependencies:
+    unorm_dart: ^0.3.2
+  
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "unorm_dart".
+Wrote package archive at /fixture/pub-package.tar.gz

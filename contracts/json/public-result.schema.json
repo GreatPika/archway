@@ -1468,7 +1468,7 @@
         "planned_paths": {
           "const": [
             "architecture.yaml",
-            "ARCHITECTURE_AGENT.md"
+            "ARCHITECTURE.md"
           ]
         },
         "planned_files": {
@@ -1479,7 +1479,7 @@
               "path": {
                 "enum": [
                   "architecture.yaml",
-                  "ARCHITECTURE_AGENT.md"
+                  "ARCHITECTURE.md"
                 ]
               },
               "content": {
@@ -1499,7 +1499,7 @@
           "items": {
             "enum": [
               "architecture.yaml",
-              "ARCHITECTURE_AGENT.md"
+              "ARCHITECTURE.md"
             ]
           }
         },
@@ -1509,7 +1509,7 @@
           "items": {
             "enum": [
               "architecture.yaml",
-              "ARCHITECTURE_AGENT.md"
+              "ARCHITECTURE.md"
             ]
           }
         },
@@ -1519,7 +1519,7 @@
           "items": {
             "enum": [
               "architecture.yaml",
-              "ARCHITECTURE_AGENT.md"
+              "ARCHITECTURE.md"
             ]
           }
         }
@@ -2953,7 +2953,7 @@
               "created_paths": {
                 "const": [
                   "architecture.yaml",
-                  "ARCHITECTURE_AGENT.md"
+                  "ARCHITECTURE.md"
                 ]
               },
               "residual_paths": {

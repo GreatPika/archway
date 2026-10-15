@@ -72,6 +72,7 @@ import {value} from '../core/private.js';
         true,
       );
       final edges = (report.payload['facts'] as Map)['edges'] as List;
+      expect(edges, hasLength(1));
       expect(
         edges.any(
           (e) =>

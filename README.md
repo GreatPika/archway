@@ -35,10 +35,13 @@ Ownership queries work for future files too. For Dart projects, use
 
 ## Get Archway
 
-Archway 0.1.0 is an unsigned preview. Check the
-[GitHub releases page](https://github.com/GreatPika/archway/releases) for downloadable
-artifacts and `SHA256SUMS`. npm and pub registry packages are not published.
-You can also run Archway from source.
+Archway 0.2.0 is an unsigned preview with thin npm/pub launchers, a pinned
+first-use native download and offline warm use. Check the
+[GitHub releases page](https://github.com/GreatPika/archway/releases) for available
+artifacts, `SHA256SUMS` and registry installation instructions. Use a registry
+package only when that release lists it as published. You can also run Archway
+from source. See the [delivery contract](contracts/compatibility/delivery.md)
+for package requirements.
 
 ### Run from source
 
@@ -86,21 +89,23 @@ Prepared Flutter projects use their compatible embedded SDK; see the
 ### Prepared packages
 
 Developers can [stage packages locally](docs/implementation/installation-layout.md#stage-packages).
-The [package guide](tool/npm/README.md) covers installation from a verified npm
-tarball and activation of a prepared Dart package.
+The [package guide](tool/npm/README.md) describes the 0.2.0 thin-wrapper routes
+and installation requirements.
 
 Portable bundles and unsigned native installers target Linux x64, macOS arm64
 and Windows x64. Use the [bundle guide](tool/release/QUICKSTART.txt) only with
 matching artifacts and checksums. Do not substitute a similarly named npm or pub
 registry package.
 
-Windows CI uses Windows Server 2025; Windows 11 desktop installation and
-downloaded-file GUI installation on the target desktops have not been verified.
-Installers are unsigned, and the macOS installer is not notarized.
+Installation routes were tested in CI on Ubuntu 24.04 x64, macOS 15 arm64 and
+Windows Server 2025 x64. CI tests do not establish public download or registry
+availability; consult the release notes for public-download verification and
+published packages. Windows 11 and downloaded-file GUI installation have not
+been verified. Installers are unsigned, and the macOS installer is not notarized.
 
 ## Set up each project
 
-The installation is shared; `architecture.yaml` and `ARCHITECTURE_AGENT.md` belong
+The installation is shared; `architecture.yaml` and `ARCHITECTURE.md` belong
 in each project. Run from that project's directory, or select it with `--root`.
 From source, run from the Archway checkout and replace `archway` below with
 `dart --suppress-analytics run bin/archway.dart`.
@@ -111,7 +116,8 @@ archway --root /path/to/project init --template mixed
 ```
 
 Preview first, then create the starter policy and agent guide. Init refuses to
-overwrite either file. Edit the policy to match the project's modules and use the
+overwrite either file, including ASCII-case variants on every OS. It leaves a
+legacy ARCHITECTURE_AGENT.md untouched without migration. Edit the policy to match the project's modules and use the
 agent guide when working on that project. Without `--root`, the current directory
 selects the project; the installer location never selects it.
 
@@ -147,12 +153,15 @@ can prevent complete analysis. Filesystem rechecks do not provide an atomic snap
 - With `npm exec`, signalling only the outer npm process may leave the CLI running.
   See [platform-specific process behavior](tool/ci/README.md#installed-npm-routes-and-termination-limits).
 - Windows testing used Windows Server 2025 x64; Windows 11 has not been verified.
-- Pub global installations require explicit `dart pub global run archway:setup`
-  after every activation/update to repair POSIX quoting or Windows fallback exit
-  propagation in Dart 3.13.3's generated launcher.
+- The pub route uses `dart pub global activate --no-executables archway VERSION`
+  then `dart pub global run archway:archway <args>`, without an alias or setup step.
+  Offline use needs the prepared snapshot under the same SDK and verified native
+  cache. After an SDK change, run `dart pub global run archway:archway --version`
+  once before capturing JSON: SDK snapshot preparation can print dependency
+  progress on the first invocation.
 
 See the [installation guide](docs/implementation/installation-layout.md) for
-platform evidence and the [pub setup step](docs/implementation/installation-layout.md#explicit-pub-launcher-setup).
+platform requirements and installation limitations.
 
 ## Development
 

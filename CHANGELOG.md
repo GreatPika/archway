@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- Add thin npm and pub launchers with verified native downloads and offline reuse.
+- Generate ARCHITECTURE.md as the architecture guide.
+- Use Dart for maintainer tooling and regression tests.
+
 ## 0.1.0
 
 - Define flat architecture policies for TypeScript and Dart projects.

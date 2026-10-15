@@ -43,12 +43,32 @@ Every cell must build, extract and run the complete archive in a clean machine/V
 - macos-arm64: macOS 15, APFS.
 - windows-x64: Windows 11 24H2, NTFS.
 
-Each includes another cwd, spaces/Unicode in paths, relocating the extracted directory, missing Node/SDK, offline operation, no project-code execution, real compiler fixtures including Flutter, process/fault behavior and exact assets/version manifests. Native query/init/export must work without either external runtime; npm requires its Node launcher and pub its Dart launcher, with no additional analysis runtime for these commands. This specification alone does not certify any target. Release is blocked until all three pass or the user explicitly approves a narrower release scope.
+Each includes another cwd, spaces/Unicode in paths, relocating the extracted directory, missing Node/SDK, offline operation, no project-code execution, real compiler fixtures including Flutter, process/fault behavior and exact assets/version manifests. Native query/init/export must work without either external runtime; npm requires Node; pub requires pinned Dart to invoke its activated snapshot explicitly through global run. Neither route starts an additional analysis runtime for these commands. This specification alone does not certify any target. Release is blocked until all three pass or the user explicitly approves a narrower release scope.
 
 ## Required package-route acceptance
 
-Execute the [package delivery acceptance](../../contracts/compatibility/delivery.md) for actual packed npm local `-D`, global and cache/exec routes with scripts disabled and offline execution, plus pub publishable-content inspection and isolated staged activation. Assert the same core behavior and fixed vendor assets, in-root installations, explicit corpus/exclusion behavior, missing assets/runtime failures and native writes. Record the exact route: staged/path pub activation is not hosted-registry verification. No publication is authorized or implied by passing local tests.
+Execute the [package delivery acceptance](../../contracts/compatibility/delivery.md)
+for actual packed npm local/global/cache routes and the 0.2.0 thin pub launcher
+activated using --no-executables and invoked with dart pub global run
+archway:archway. Keep script-disabled npm installation and offline warm use;
+for pub this requires a prepared activated snapshot under the same SDK plus
+verified native cache. Test SDK-switch and missing/stale-snapshot behavior
+separately, including SDK recompilation and possible network access. Prove bounded one-target cold acquisition, safe archive extraction,
+full pre-publication inventory verification, independent caches, concurrent atomic
+publication, corruption refusal and manifest/executable warm hashing. Exercise
+real installed commands and exact artifact inventories; injected transport/cache/
+extraction seams remain private fixture controls. Native invocation retains the
+existing compiler, runtime, filesystem and platform gates.
+
+A genuine private hosted Linux fixture on Dart 3.13.3 passes activation without
+generated aliases, explicit global-run snapshot dispatch, exact argv/streams/exit
+propagation and offline execution with no HTTP. Actual Archway thin-wrapper
+acceptance on all three platforms and hosted public installation remain gates.
+No alias generation, launcher repair or setup/bootstrap workaround is allowed. Local injected
+transport is not hosted-URL evidence. Native upload, real pinned hosted-URL cold
+fetch, and registry publication are distinct ordered gates, with separate upload
+and publication authorization. No local test authorizes publication.
 
 ## Scope boundaries
 
-No hierarchy, HTML viewer/editor, symbol/dataflow control, new language, multiple assigned contexts per file, persistent cache, daemon/server, MCP, plugin system, public embedding API, brew installer, custom dependency/bootstrap installer, automatic AGENTS/CI/editor changes, or automatically weakened policy. Application tests remain separate from architecture checks.
+No hierarchy, HTML viewer/editor, symbol/dataflow control, new language, multiple assigned contexts per file, persistent inspection/result cache, daemon/server, MCP, plugin system, public embedding API, brew installer, custom dependency/bootstrap installer, automatic AGENTS/CI/editor changes, or automatically weakened policy. The pinned native installation caches required by the thin wrappers are permitted. Application tests remain separate from architecture checks.

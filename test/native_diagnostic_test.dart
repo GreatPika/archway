@@ -59,7 +59,7 @@ void main() {
         zoneValues: {
           #archwayNativeAfterCall: clobberNativeError,
           #archwayBootstrapFault: (String stage, String name) {
-            if (stage == 'beforeCreate' && name == 'ARCHITECTURE_AGENT.md') {
+            if (stage == 'beforeCreate' && name == 'ARCHITECTURE.md') {
               File('${root.path}/architecture.yaml').deleteSync();
               throw const FileSystemException('Injected second create failure');
             }

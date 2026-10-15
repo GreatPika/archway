@@ -21,7 +21,7 @@
     "outcome": "planned",
     "planned_paths": [
       "architecture.yaml",
-      "ARCHITECTURE_AGENT.md"
+      "ARCHITECTURE.md"
     ],
     "planned_files": [],
     "created_paths": [],

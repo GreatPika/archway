@@ -37,7 +37,7 @@ void main() {
     expect(value['exit_code'], 0);
     expect(value['payload']['outcome'], 'created');
     expect(await File('${root.path}/architecture.yaml').exists(), isTrue);
-    expect(await File('${root.path}/ARCHITECTURE_AGENT.md').exists(), isTrue);
+    expect(await File('${root.path}/ARCHITECTURE.md').exists(), isTrue);
     expect(await root.list().length, 2);
   }, skip: !Platform.isWindows ? 'Requires a real Windows runner.' : false);
 }

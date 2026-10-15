@@ -21,12 +21,12 @@
     "outcome": "created",
     "planned_paths": [
       "architecture.yaml",
-      "ARCHITECTURE_AGENT.md"
+      "ARCHITECTURE.md"
     ],
     "planned_files": [],
     "created_paths": [
       "architecture.yaml",
-      "ARCHITECTURE_AGENT.md"
+      "ARCHITECTURE.md"
     ],
     "residual_paths": [],
     "conflicting_paths": []

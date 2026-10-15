@@ -2,11 +2,6 @@
 # Maintainer-only assembly. Package channels reuse the prepared native layout.
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-case "${1:-}" in
-  npm|npm-private-linux|pub|pub-private-linux)
-    exec python3 "$root/tool/package_delivery.py" "$@"
-    ;;
-esac
 case "$(uname -s)/$(uname -m)" in
   Linux/x86_64)
     getconf GNU_LIBC_VERSION >/dev/null 2>&1 || {

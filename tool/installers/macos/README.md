@@ -9,7 +9,7 @@ certify the downloaded-file GUI experience.
 
 ## Build (maintainer only)
 
-Pass the unpacked macOS release bundle produced by `tool/release_bundles.py`,
+Pass the unpacked macOS release bundle produced by `tool/release/build_native_archives.dart`,
 including its original manifest, assets, schemas, notices and guide. The caller
 must verify source/transport provenance before this step; the builder rechecks
 its complete file inventory and copies payload bytes/modes unchanged. Fresh
@@ -18,12 +18,11 @@ ownership metadata and `uninstall.sh` are separate from that original manifest.
 Do not pass the bare assembly directory or fabricate missing assets.
 
 ```sh
-python3 tool/installers/macos/build.py --bundle /absolute/verified-bundle --output /absolute/fresh-output
+dart run tool/installers/macos/build.dart --bundle /absolute/verified-bundle --output /absolute/fresh-output
 ```
 
-Native builds require macOS arm64 and Apple's `/usr/bin/pkgbuild`; Python is only
-a maintainer build prerequisite. The resulting installer requires no Python,
-Node, Dart, compiler, download or project preparation. `--stage-only` permits
+Native builds require Dart, macOS arm64 and Apple's `/usr/bin/pkgbuild`.
+The resulting installer requires no Node, Dart, compiler, download or project preparation. `--stage-only` permits
 synthetic/Linux packaging tests; it does not produce a `.pkg` or acceptance proof.
 The build writes `installer-evidence.json` with original source identity,
 manifest hash, build host and final unsigned package hash. Shared release wiring
@@ -72,7 +71,7 @@ reports failure; there is no full-transaction rollback promise.
 
 ## Verification still required
 
-`python3 -m unittest discover -s test -p macos_installer_test.py` exercises
+`dart test test/macos_installer_builder_test.dart` exercises
 synthetic payloads and staged lifecycle scripts in isolated filesystem fixtures.
 On Linux these tests substitute the host check, receipt lookup and BSD stat's
 mode-field query with GNU stat, and simulate

@@ -13,7 +13,7 @@ import '../native/physical_paths.dart';
 
 part 'export_file.dart';
 
-const archwayVersion = '0.1.0';
+const archwayVersion = '0.2.0';
 
 class CliStreams {
   final StringSink stdout;
@@ -660,7 +660,7 @@ class _Invocation {
 }
 
 String _help(String? command) => switch (command) {
-  'init' => 'archway [--root ROOT] init --template dart|typescript|mixed [--dry-run]\nCreates architecture.yaml and ARCHITECTURE_AGENT.md without overwrite.',
+  'init' => 'archway [--root ROOT] init --template dart|typescript|mixed [--dry-run]\nCreates architecture.yaml and ARCHITECTURE.md without overwrite.',
   'validate' => 'archway [--root ROOT] validate [--policy PATH]\nValidates the declared flat policy without compiler runtimes.',
   'owner' => 'archway [--root ROOT] owner [--policy PATH] PATH\nReturns lexical ownership for an existing or future path.',
   'node' => 'archway [--root ROOT] node [--policy PATH] [--limit N] [--offset N]\narchway [--root ROOT] node [--policy PATH] ID\narchway [--root ROOT] node [--policy PATH] --path PATH\nReturns the complete sorted catalogue or full direct module context. Only explicit pagination omits entries.',

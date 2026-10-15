@@ -65,7 +65,7 @@ Future<void> main(List<String> args) async {
       names.sort();
       require(
         jsonEncode(names) ==
-            jsonEncode(['ARCHITECTURE_AGENT.md', 'architecture.yaml']),
+            jsonEncode(['ARCHITECTURE.md', 'architecture.yaml']),
         'Expected exactly the two contractual init files.',
       );
       require(

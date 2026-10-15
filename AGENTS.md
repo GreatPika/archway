@@ -53,4 +53,3 @@ warranted before changing the decision.
 
 After preparation, run `dart --suppress-analytics analyze` and
 `dart --suppress-analytics test`. Fixture prerequisites are in the inspection guides.
-Python process/schema checks need `jsonschema`.

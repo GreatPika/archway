@@ -51,6 +51,10 @@ try {
       throw "Unexpected Dart runtime: $version"
     }
     Write-Output $version
+    if ($env:EXPORT_INSTALLATION -eq 'true') {
+      & $dart tool/ci/verify_export_sources.dart $env:GITHUB_SHA
+      if ($LASTEXITCODE -ne 0) { throw 'Export source-byte verification failed.' }
+    }
     & $dart --suppress-analytics pub get --enforce-lockfile
     if ($LASTEXITCODE -ne 0) { throw 'Dependency preparation failed; NOT a semantic red.' }
     git diff --exit-code -- pubspec.lock
@@ -212,16 +216,9 @@ try {
     }
   } else {
     if (!(Test-Path "$evidence/aot-assets-passed.txt")) { throw 'Owned AOT asset preparation evidence missing.' }
-    # PATH may contain both hosted Python and a WindowsApps alias. Select one
-    # executable in command precedence order; never invoke an array of paths.
-    $python = (Get-Command python -CommandType Application -ErrorAction Stop |
-      Select-Object -First 1).Source
-    Write-Output "Selected native Python: $python"
-    & $python -c 'import platform, sys; assert sys.version_info >= (3, 9); assert (platform.system(), platform.machine()) == ("Windows", "AMD64"); print(sys.executable, sys.version, platform.platform())'
-    if ($LASTEXITCODE -ne 0) { throw 'Native Windows x64 Python prerequisite failed.' }
-    $arguments = @('-u', 'tool/ci/native_assembly_init_probe.py', '--init-only', '--dart', $dart)
+    $arguments = @('--suppress-analytics', 'run', 'tool/ci/native_assembly_init_probe.dart', '--init-only', '--dart', $dart)
     if ($ArtifactDirectory) { $arguments += @('--artifact-directory', $ArtifactDirectory) }
-    & $python @arguments
+    & $dart @arguments
     if ($LASTEXITCODE -ne 0) { throw 'Maintainer assembly/init assertion failed; inspect missing assembler versus setup or CLI result.' }
   }
 } catch {

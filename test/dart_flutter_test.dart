@@ -43,7 +43,7 @@ void main() {
         : false,
   );
   test(
-    'real Flutter URI parts and generated Dart sources retain physical ownership',
+    'real Flutter URI parts and generated Dart sources remain fully analyzed',
     () async {
       final root = await flutterFixture(
         "library app; import 'package:flutter/foundation.dart'; import 'dart:ui'; import '../core/value.g.dart'; part 'part.g.dart';",

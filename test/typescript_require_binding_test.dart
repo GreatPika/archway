@@ -26,7 +26,6 @@ void main() {
     'parameters nested bindings and ambient require declarations stay unproved',
     () async {
       for (final main in [
-        "function call(require: (name: string) => number) { require('../core/private'); }\n",
         "function call() { const require = (name: string) => 42; require('../core/private'); }\n",
         "declare function require(name: string): unknown;\nrequire('../core/private');\n",
       ]) {

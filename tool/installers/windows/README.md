@@ -7,11 +7,12 @@ must first verify the archive and source provenance. The
 converter reuses the release inventory and manifest reader; it only emits Inno syntax
 and an installed owned-file inventory. It never changes input bytes.
 
-On a provisioned Windows x64 build host with Python and Inno Setup 6.3 or newer:
+On a provisioned Windows x64 build host with Dart and Inno Setup 6.3 or newer:
 
 ```powershell
-python tool/installers/windows/prepare.py C:\verified\bundle C:\build\inno-input
-& 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' /DAppVersion=0.1.0 /DOutputDir=C:\build\unsigned C:\build\inno-input\archway.iss
+dart run tool/installers/windows/prepare.dart C:\verified\bundle C:\build\inno-input
+$version = (Get-Content -Raw C:\verified\bundle\manifest.json | ConvertFrom-Json).version
+& 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' "/DAppVersion=$version" /DOutputDir=C:\build\unsigned C:\build\inno-input\archway.iss
 ```
 
 Use fresh build/output directories. Provision the official compiler separately;
@@ -52,12 +53,11 @@ cases must be measured before acceptance.
 
 ## Verification
 
-`python -m unittest discover -s test -p windows_installer_prepare_test.py` verifies
-build-input behavior on any host. On an explicitly disposable Windows account:
-
-```powershell
-python test/windows_installer_lifecycle.py --installer C:\artifacts\old.exe --upgrade C:\artifacts\new.exe --stale-file obsolete/installer-probe..txt --disposable-account
-```
+`dart test test/windows_installer_prepare_test.dart` verifies build-input behavior
+on any host. The [native release gate](../../ci/README.md#release-fixtures-and-regression-checks)
+runs the real installer lifecycle with `--installer-checks` on an explicitly
+disposable Windows account. Its old/new fixture bundles use the stale file
+`obsolete/installer-probe..txt`.
 
 The old installer must contain the named stale file and the upgrade must omit it;
 the harness fails rather than counting an empty inventory difference as coverage.
@@ -94,7 +94,7 @@ Official semantics: [registry writer](https://jrsoftware.org/ishelp/topic_isxfun
 [per-user privileges](https://jrsoftware.org/ishelp/topic_setup_privilegesrequired.htm),
 [installation order](https://jrsoftware.org/ishelp/topic_installorder.htm).
 
-The release workflow invokes `run_windows` in `tool/ci/native_windows_installer_probe.py`
+The release workflow invokes `runWindowsInstallerProbe` in `tool/ci/native_windows_installer_probe.dart`
 on the verified immutable bundle and a fresh output directory. It requires the
 already-provisioned compiler at `%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe`,
 requires its engine self-report to identify version 6.3 or newer, and records its

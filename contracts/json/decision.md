@@ -44,11 +44,26 @@ The identity aliases array records each followed mapping as observed_file_uri/ca
 
 Recheck every recorded input and every traversed corpus inventory before returning. Changed/appeared/disappeared entries are changed_inputs, and INPUT_CHANGED makes analysis incomplete. If rechecking cannot finish, rechecked false plus a tool error makes incomplete. This is observed consistency, never an atomic snapshot; atomic_snapshot is always false. Tracking only positive reads is insufficient because newly created missing targets and corpus files change the outcome. Hashing uses exact bytes and filesystem names, not reserialized YAML or edited policy normalization.
 
-Normalized output paths use /, no empty/. /.. segments, with ./ as the sole root-prefix exception, in accordance with the path matrix. File source/input positions cannot use a directory prefix. Canonical URI encoding and case/Unicode rules follow the matrix. Node catalogues/neighbors and projects sort by ID, path sets by normalized path, candidate pairs by project then context, facts by source then range then kind/specifier/target, diagnostics by path/range/code/rule_pointer/project/message (null before strings). Ties deduplicate exactly identical values, not distinct edges. Init paths keep fixed architecture.yaml then ARCHITECTURE_AGENT.md order. Sets in the plan normalize duplicate entries; deterministic ordering does not authorize truncation.
+Normalized output paths use /, no empty/. /.. segments, with ./ as the sole root-prefix exception, in accordance with the path matrix. File source/input positions cannot use a directory prefix. Canonical URI encoding and case/Unicode rules follow the matrix. Node catalogues/neighbors and projects sort by ID, path sets by normalized path, candidate pairs by project then context, facts by source then range then kind/specifier/target, diagnostics by path/range/code/rule_pointer/project/message (null before strings). Ties deduplicate exactly identical values, not distinct edges. Init paths keep fixed architecture.yaml then ARCHITECTURE.md order. Sets in the plan normalize duplicate entries; deterministic ordering does not authorize truncation.
 
 ## Safe init, including partial outcomes
 
---template dart|typescript|mixed is required; --dry-run is a boolean, --policy is forbidden. Other writes/overwrite options are unsupported. planned_paths always lists exactly architecture.yaml then ARCHITECTURE_AGENT.md. dry-run includes both complete planned_files contents in that order; normal invocation uses an empty planned_files array. The template changes comments, not semantic policy fields.
+--template dart|typescript|mixed is required; --dry-run is a boolean, --policy is forbidden. Other writes/overwrite options are unsupported. planned_paths always lists exactly architecture.yaml then ARCHITECTURE.md. dry-run includes both complete planned_files contents in that order; normal invocation uses an empty planned_files array. The template changes comments, not semantic policy fields.
+
+The 0.2.0 preview amends the schema_version 1 init filename enum from
+ARCHITECTURE_AGENT.md to ARCHITECTURE.md. The envelope fields and shape remain
+unchanged; this is an observable contract change, not backward compatibility
+with the 0.1.0 filename enum. Published 0.1.0 artifacts remain unchanged.
+
+Before writing, list the selected root without following child links and check
+both fixed output names using ASCII-case-insensitive comparison on every OS.
+Any matching entry (file, directory or link, including a dangling link) is a
+conflict. This conservative init-only rule also refuses architecture.md on Linux;
+it does not change case-sensitive policy paths or corpus identity. Return the
+canonical planned target in conflicting_paths and diagnostic path; identify the
+actual existing entry spelling in the diagnostic message. Dry-run performs these
+checks without loading the native bridge. Existing ARCHITECTURE_AGENT.md is not
+an output alias: leave it untouched, without migration, deletion or merging.
 
 outcome planned: dry-run true, no created/residual/conflicting paths. outcome created: dry-run false, created_paths contains both files, residual_paths empty. created_paths means files whose exclusive creation succeeded during this invocation, even if they were subsequently removed. residual_paths means only this invocation's files remaining after a failed rollback; successful output files are not "residual".
 
@@ -72,7 +87,7 @@ Read one UTF-8 YAML 1.2 document only. Reject duplicate mapping keys at every le
 
 Diagnostics always carry code/severity/message/rule_pointer/source_range/project_id/path/recovery_hints; inapplicable contextual fields are null. rule_pointer is RFC6901 over the parsed policy. recovery_hints are literal display strings, never executable instructions. Typical stable codes: USAGE_ERROR, UNKNOWN_NODE_ID, POLICY_READ_FAILED, POLICY_PARSE_ERROR, POLICY_SCHEMA_INVALID, POLICY_VERSION_UNSUPPORTED, EMPTY_PLAN, CONTRACT_NOT_FOUND, POLICY_CYCLE, DEPENDENCY_NOT_ALLOWED, TARGET_NOT_PUBLIC, PUBLIC_PATH_NOT_FILE, PUBLIC_PATH_EXCLUDED, PUBLIC_PATH_OUTSIDE_SCOPE, PUBLIC_PATH_NOT_OWNED, POLICY_PATH_INVALID, LOCAL_TARGET_EXCLUDED, LOCAL_TARGET_OUTSIDE_SCOPE, LOCAL_TARGET_UNOWNED, SOURCE_UNOWNED, UNRESOLVED_IMPORT, UNSUPPORTED_SOURCE_KIND, ANALYSIS_CONTEXT_MISSING, ANALYSIS_CONTEXT_AMBIGUOUS, UNSUPPORTED_ANALYSIS_CONFIGURATION, ANALYSIS_CONTEXT_DISCOVERY_FAILED, SOURCE_SYMLINK, INPUT_CHANGED, NODE_UNAVAILABLE, DART_SDK_UNAVAILABLE, INIT_TARGET_EXISTS, INIT_WRITE_FAILED, INIT_ROLLBACK_FAILED, EXPORT_TARGET_EXISTS, EXPORT_WRITE_FAILED. Later specific codes can be added without deleting these meanings.
 
-JSON Schema validates shape, enums and expressible implications. Cross-field arithmetic, sortedness, uniqueness by key, range ordering, candidate identity, residual subsets and direct policy predicates additionally require semantic conformance checks; the schema alone cannot certify them. verify_contract.py runs illustrative semantic checks and adversarial fixtures, not a complete validator for Archway implementations. The actual implementation acceptance suite must enforce every normative requirement here, the assignment/path matrix and private protocol. Passing these contract fixtures closes a design-consistency gate only; it is not evidence that Dart, TypeScript, paths or process handling work on real platforms.
+JSON Schema validates shape, enums and expressible implications. Cross-field arithmetic, sortedness, uniqueness by key, range ordering, candidate identity, residual subsets and direct policy predicates additionally require semantic conformance checks; the schema alone cannot certify them. `test/contracts/public_contract_test.dart` exercises `validate_contract.dart` with illustrative semantic checks and adversarial fixtures, not a complete validator for Archway implementations. The actual implementation acceptance suite must enforce every normative requirement here, the assignment/path matrix and private protocol. Passing these contract fixtures closes a design-consistency gate only; it is not evidence that Dart, TypeScript, paths or process handling work on real platforms.
 
 ## CLI grammar
 
@@ -114,7 +129,7 @@ The predicate applies uniformly to reliable import/export/import_type/require/dy
 
 ## Executable coverage of the extension
 
-entrypoint_oracle.py is a finite policy-only reference used by verify_contract.py and test_entrypoint_oracle.py. Linked fixtures bind an allows result or owned-source resolved-edge report to a policy, validating decisions and boundary diagnostic evidence. Its check comparison deliberately covers owned-source edge fixtures only; file-level source ownership and compiler/discovery diagnostics are outside that comparator. Dedicated unit tests verify target classification is retained with an unowned source. This suite neither implements Archway nor certifies compiler extraction, CLI argument parsing, filesystem behavior or platform compatibility.
+entrypoint_oracle.dart is a finite policy-only reference exercised by test/contracts/public_contract_test.dart and test/contracts/public_boundary_test.dart. Linked fixtures bind an allows result or owned-source resolved-edge report to a policy, validating decisions and boundary diagnostic evidence. Its check comparison deliberately covers owned-source edge fixtures only; file-level source ownership and compiler/discovery diagnostics are outside that comparator. Dedicated unit tests verify target classification is retained with an unowned source. This suite neither implements Archway nor certifies compiler extraction, CLI argument parsing, filesystem behavior or platform compatibility.
 
 ## Cross-project observation conflicts
 

@@ -58,15 +58,11 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
-      - name: Verify export source bytes before any build
-        if: ${{ inputs.export-installation }}
-        run: |
-          $python = (Get-Command python -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
-          & $python tool/ci/verify_export_sources.py $env:GITHUB_SHA
-          if ($LASTEXITCODE -ne 0) { throw 'Export source-byte verification failed.' }
       - name: Inspect installed C toolchain (no installation)
         run: ./tool/ci/windows-native-probe.ps1 -Phase toolchain
       - name: Checksum-verify Dart 3.13.3 and prepare locked dependencies
+        env:
+          EXPORT_INSTALLATION: ${{ inputs.export-installation }}
         run: ./tool/ci/windows-native-probe.ps1 -Phase setup
       - name: Independent policy-only baseline
         run: ./tool/ci/windows-native-probe.ps1 -Phase policy

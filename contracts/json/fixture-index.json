@@ -45,11 +45,6 @@
     "valid": true
   },
   {
-    "file": "fixtures/allows-ids-allowed.json",
-    "schema": "public-result",
-    "valid": true
-  },
-  {
     "file": "fixtures/allows-ids-denied.json",
     "schema": "public-result",
     "valid": true
@@ -185,7 +180,7 @@
     "valid": true
   },
   {
-    "file": "fixtures/None-usage.json",
+    "file": "fixtures/unknown-command-usage.json",
     "schema": "public-result",
     "valid": true
   },

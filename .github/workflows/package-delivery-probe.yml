@@ -25,6 +25,7 @@ on:
         default: false
 
 env:
+  PUB_HOSTED_URL: https://pub.dev
   ARCHWAY_REGISTRY_READY: ${{ github.event_name == 'workflow_dispatch' && toJSON(inputs.registry-ready) || 'false' }}
 
 permissions:
@@ -32,7 +33,7 @@ permissions:
 
 jobs:
   macos:
-    uses: ./.github/workflows/macos-first-red.yml
+    uses: ./.github/workflows/macos-native-probe.yml
     with:
       export-installation: true
   windows:
@@ -59,7 +60,6 @@ jobs:
         run: |
           mkdir -p build/delivery-probe
           {
-            python3 tool/ci/verify_export_sources.py "$GITHUB_SHA"
             source /etc/os-release
             test "$ID:$VERSION_ID:$(uname -m)" = ubuntu:24.04:x86_64
             cat /etc/os-release
@@ -81,6 +81,7 @@ jobs:
             # Official sibling dartsdk-linux-x64-release.zip.sha256sum
             (cd "$sdk" && echo '549c182cffbdc6864df7509c16fec646c73fe6cb8a18c2cb572db1292f300cd7  sdk.zip' | sha256sum -c -)
             unzip -q "$sdk/sdk.zip" -d "$sdk"
+            "$sdk/dart-sdk/bin/dart" tool/ci/verify_export_sources.dart "$GITHUB_SHA"
             curl --fail --show-error --silent --location --retry 2 --max-time 180 \
               https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-x64.tar.gz \
               -o "$node_root/node.tar.gz"
@@ -97,25 +98,38 @@ jobs:
             git diff --exit-code -- pubspec.lock
             bash tool/prepare_typescript.sh
             git diff --exit-code -- assets/typescript/package-lock.json
-            python3 -m venv "$RUNNER_TEMP/archway-schema-venv"
-            "$RUNNER_TEMP/archway-schema-venv/bin/python" -m pip install --index-url https://pypi.org/simple 'jsonschema==4.26.0' 'PyYAML==6.0.3'
-            echo "$RUNNER_TEMP/archway-schema-venv/bin" >> "$GITHUB_PATH"
           } 2>&1 | tee build/delivery-probe/setup.log
-      - name: Python regression suite with pinned runtime fixtures
-        env:
-          ARCHWAY_TEST_DART_SDK: ${{ runner.temp }}/archway-dart/dart-sdk
-          ARCHWAY_TEST_NODE: ${{ runner.temp }}/archway-node/node-v24.21.0-linux-x64/bin/node
-        run: |
-          set -euo pipefail
-          python3 -m unittest discover -s test -p '*_test.py' 2>&1 | tee build/delivery-probe/python-regression.log
       - name: Genuine assembled and transported Linux init plus mixed process checks
         run: |
-          python3 -u tool/ci/native_assembly_init_probe.py \
+          dart --suppress-analytics run tool/ci/native_assembly_init_probe.dart \
             --log-directory build/delivery-probe \
             --dart-sdk "$RUNNER_TEMP/archway-dart/dart-sdk" \
             --node "$RUNNER_TEMP/archway-node/node-v24.21.0-linux-x64/bin/node" \
             --artifact-directory "$RUNNER_TEMP/archway-native-export-linux-x64" \
             2>&1 | tee build/delivery-probe/assembly.log
+      - name: Dart installed CLI and resource acceptance
+        run: |
+          set -euo pipefail
+          dart --suppress-analytics test -r expanded test/linux_unprivileged_cli_test.dart \
+            test/posix_file_limit_test.dart \
+            test/installation_staging_test.dart \
+            test/installation_transport_audit_test.dart test/export_source_verifier_test.dart \
+            2>&1 | tee build/delivery-probe/dart-cli-child.log
+          installation="$RUNNER_TEMP/archway-dart-cli-linux-x64"
+          mkdir "$installation"
+          tar -xf "$RUNNER_TEMP/archway-native-export-linux-x64/installation.tar" -C "$installation"
+          dart --suppress-analytics run test/cli_process_smoke.dart \
+            "$installation/bin/linux-x64/archway" \
+            2>&1 | tee build/delivery-probe/dart-cli.log
+          dart --suppress-analytics run test/catalogue_export_process_smoke.dart \
+            "$installation/bin/linux-x64/archway" \
+            2>&1 | tee build/delivery-probe/dart-catalogue-export.log
+          dart --suppress-analytics run test/dart_resource_process_smoke.dart \
+            "$installation/bin/linux-x64/archway" "$RUNNER_TEMP/archway-dart/dart-sdk" \
+            2>&1 | tee build/delivery-probe/dart-resource.log
+          dart --suppress-analytics run test/alias_hop_recheck_process_smoke.dart \
+            "$installation/bin/linux-x64/archway" "$RUNNER_TEMP/archway-node/node-v24.21.0-linux-x64/bin/node" \
+            2>&1 | tee build/delivery-probe/dart-alias-hop-recheck.log
       - name: Retain verified native installation
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -161,10 +175,23 @@ jobs:
         with:
           name: native-installation-windows-x64-${{ github.run_id }}-${{ github.run_attempt }}
           path: transports/windows-x64
+      - name: Prepare checksum-verified Dart transport auditor
+        shell: bash
+        run: |
+          sdk="$RUNNER_TEMP/archway-audit-dart"
+          mkdir -p "$sdk"
+          curl --fail --show-error --silent --location --retry 2 --max-time 180 \
+            https://storage.googleapis.com/dart-archive/channels/stable/release/3.13.3/sdk/dartsdk-linux-x64-release.zip \
+            -o "$sdk/sdk.zip"
+          (cd "$sdk" && echo '549c182cffbdc6864df7509c16fec646c73fe6cb8a18c2cb572db1292f300cd7  sdk.zip' | sha256sum -c -)
+          unzip -q "$sdk/sdk.zip" -d "$sdk"
+          "$sdk/dart-sdk/bin/dart" tool/ci/verify_export_sources.dart "$GITHUB_SHA"
+          echo "$sdk/dart-sdk/bin" >> "$GITHUB_PATH"
+          "$sdk/dart-sdk/bin/dart" --suppress-analytics pub get --enforce-lockfile
+          git diff --exit-code -- pubspec.lock
       - name: Audit opaque transports without extracting or executing their contents
         run: |
-          python3 tool/ci/verify_export_sources.py "$GITHUB_SHA"
-          python3 tool/ci/audit_installation_transports.py --expected-commit "$GITHUB_SHA" \
+          dart --suppress-analytics run tool/ci/audit_installation_transports.dart --expected-commit "$GITHUB_SHA" \
             --report transport-audit.json transports/linux-x64 transports/macos-arm64 transports/windows-x64
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -183,133 +210,131 @@ jobs:
           (cd "$node_root" && echo '6e1db87ef58b8819e5d5402eff1536491b18edd8eb7bee5ef7897876e88dc5ff  node.tar.gz' | sha256sum -c -)
           tar -xzf "$node_root/node.tar.gz" -C "$node_root"
           echo "$node_root/node-v24.21.0-linux-x64/bin" >> "$GITHUB_PATH"
-      - name: Combine verified installations and pack once without install scripts
+      - name: Build native archives before either wrapper
         shell: bash
         run: |
-          source tool/ci/registry_candidate_arguments.sh
+          set -euo pipefail
           test "$(node --version)" = v24.21.0
           test "$(npm --version)" = 11.19.0
-          python3 tool/ci/combine_installations.py combine --expected-commit "$GITHUB_SHA" \
-            --output combined transports/linux-x64 transports/macos-arm64 transports/windows-x64
-          python3 tool/package_delivery.py npm package combined/installation ${registry_args[@]+"${registry_args[@]}"}
-          mkdir packed
-          node --version > packed/node-version.txt
-          npm --version > packed/npm-version.txt
-          (cd package && npm pack --ignore-scripts --offline --json --pack-destination ../packed) > packed/npm-pack.json
-          python3 tool/ci/combine_installations.py verify-pack --package package --packed-directory packed ${registry_args[@]+"${registry_args[@]}"}
-          python3 tool/ci/verify_export_sources.py "$GITHUB_SHA"
-      - name: Wrap exact verified payloads into final portable preview archives
+          bash tool/prepare_typescript.sh
+          git diff --exit-code -- assets/typescript/package-lock.json
+          dart run tool/release/build_native_archives.dart --source "$GITHUB_WORKSPACE" \
+            --expected-commit "$GITHUB_SHA" --transports transports \
+            --guide tool/release/QUICKSTART.txt --output "$RUNNER_TEMP/archway-native-bundles"
+          dart run tool/release/generate_descriptor.dart --source "$GITHUB_WORKSPACE" \
+            --native "$RUNNER_TEMP/archway-native-bundles" --expected-commit "$GITHUB_SHA" \
+            --output "$RUNNER_TEMP/archway-acquisition"
+      - name: Stage and pack the canonical thin npm wrapper
         shell: bash
         run: |
           set -euo pipefail
           source tool/ci/registry_candidate_arguments.sh
-          test -f LICENSE
-          mkdir -p build/release-producer
-          python3 -c 'import json,os; print(json.dumps({k:os.environ[k] for k in ["GITHUB_REPOSITORY","GITHUB_SHA","GITHUB_RUN_ID","GITHUB_RUN_ATTEMPT"]},sort_keys=True))' > build/release-producer/run.json
-          python3 tool/release_bundles.py --source "$GITHUB_WORKSPACE" --expected-commit "$GITHUB_SHA" \
-            --transports transports --packed packed --guide tool/release/QUICKSTART.txt \
-            --ci-evidence build/release-producer --output "$RUNNER_TEMP/archway-release-bundles" ${registry_args[@]+"${registry_args[@]}"}
-      - name: Retain one immutable set of final portable archives
-        if: success()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: release-bundles-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/archway-release-bundles/
-          retention-days: 1
-          if-no-files-found: error
-          compression-level: 0
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: '3.13.7'
-      - name: Prepare explicit Python and official pinned pub producer Dart
+          test "$(node --version)" = v24.21.0
+          test "$(npm --version)" = 11.19.0
+          export npm_config_cache="$RUNNER_TEMP/archway-npm-cache"
+          npm ci --ignore-scripts --prefix tool/npm --no-audit --no-fund
+          dart run tool/npm/stage.dart --source "$GITHUB_WORKSPACE" \
+            --descriptor "$RUNNER_TEMP/archway-acquisition/acquisition.json" \
+            --expected-commit "$GITHUB_SHA" --output "$RUNNER_TEMP/archway-npm-stage" ${registry_args[@]+"${registry_args[@]}"}
+          dart run tool/npm/pack.dart --stage "$RUNNER_TEMP/archway-npm-stage" \
+            --output "$RUNNER_TEMP/archway-npm-packed"
+          dart tool/ci/verify_export_sources.dart "$GITHUB_SHA"
+      - name: Prepare the official pub SDK and locked cache
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p build/pub-producer
-          python -m pip --isolated install --index-url https://pypi.org/simple 'PyYAML==6.0.3' 2>&1 | tee build/pub-producer/python-setup.log
-          source tool/ci/registry_candidate_arguments.sh
-          setup_args=()
-          if [[ "$ARCHWAY_REGISTRY_READY" == true ]]; then
-            setup_args+=(--prepare-cache)
-          fi
-          python -u tool/ci/setup_pub_dart.py --target linux-x64 --source "$GITHUB_WORKSPACE" \
-            --output "$RUNNER_TEMP/archway-pub-setup" ${setup_args[@]+"${setup_args[@]}"} 2>&1 | tee build/pub-producer/dart-setup.log
-      - name: Produce exact-source pub dry-run stage and authenticated transport once
-        id: pub-transport
+          dart run tool/ci/setup_pub_dart.dart --target linux-x64 --source "$GITHUB_WORKSPACE" \
+            --expected-commit "$GITHUB_SHA" --output "$RUNNER_TEMP/archway-pub-setup" \
+            --sdk-archive "$RUNNER_TEMP/archway-audit-dart/sdk.zip" --prepare-cache --ci-host \
+            2>&1 | tee build/pub-producer/sdk-setup.log
+          node - "$RUNNER_TEMP/archway-pub-setup/report.json" <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          fs.appendFileSync(process.env.GITHUB_ENV, `PUB_DART=${report.dart}\nPUB_PREPARED_CACHE=${report.prepared_cache}\n`);
+          NODE
+      - name: Stage exact pub bytes and preserve explicit registry intent
         shell: bash
         run: |
           set -euo pipefail
           source tool/ci/registry_candidate_arguments.sh
-          pub_args=(${registry_args[@]+"${registry_args[@]}"})
+          "$PUB_DART" run tool/pub/stage.dart --source "$GITHUB_WORKSPACE" \
+            --descriptor "$RUNNER_TEMP/archway-acquisition/acquisition.json" --expected-commit "$GITHUB_SHA" \
+            --output "$RUNNER_TEMP/archway-pub-stage" ${registry_args[@]+"${registry_args[@]}"}
+          stage="$RUNNER_TEMP/archway-pub-stage"
           if [[ "$ARCHWAY_REGISTRY_READY" == true ]]; then
-            pub_args+=(--prepared-cache "$PUB_PREPARED_CACHE")
+            "$PUB_DART" run tool/pub/export.dart --stage "$stage" --source "$GITHUB_WORKSPACE" \
+              --pub-cache "$PUB_PREPARED_CACHE" --expected-commit "$GITHUB_SHA" \
+              --evidence "$RUNNER_TEMP/archway-pub-export-execution" --output "$RUNNER_TEMP/archway-pub-candidate" \
+              2>&1 | tee build/pub-producer/export.log
+            stage="$RUNNER_TEMP/archway-pub-candidate"
           fi
-          python -u test/pub_package_process_smoke.py \
-            "$PUB_DART" "$GITHUB_WORKSPACE" combined transports "$GITHUB_SHA" \
-            "$RUNNER_TEMP/archway-pub-stage" ${pub_args[@]+"${pub_args[@]}"} 2>&1 | tee build/pub-producer/stage.log
-          python -u test/pub_stage_identity_test.py \
-            "$RUNNER_TEMP/archway-pub-stage/pub source café" "$GITHUB_WORKSPACE" \
-            combined transports "$GITHUB_SHA" ${registry_args[@]+"${registry_args[@]}"} 2>&1 | tee build/pub-producer/identity-controls.log
-          python -u tool/ci/pub_stage_transport.py write \
-            --stage-evidence "$RUNNER_TEMP/archway-pub-stage" --source "$GITHUB_WORKSPACE" \
-            --expected-source "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
-            --run-attempt "$GITHUB_RUN_ATTEMPT" --output "$RUNNER_TEMP/archway-pub-transport" ${registry_args[@]+"${registry_args[@]}"} \
+          "$PUB_DART" run tool/ci/pub_stage_transport.dart write --stage-evidence "$stage" \
+            --source "$GITHUB_WORKSPACE" --expected-source "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --output "$RUNNER_TEMP/archway-pub-transport" ${registry_args[@]+"${registry_args[@]}"} \
             > build/pub-producer/identity.json
-          git diff HEAD --exit-code
-          identity="$(python -c 'import json; print(json.dumps(json.load(open("build/pub-producer/identity.json")), separators=(",", ":")))')"
+          "$PUB_DART" tool/ci/verify_export_sources.dart "$GITHUB_SHA"
+      - name: Bind the successful pub transport to this workflow attempt
+        id: pub-transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          identity="$(node -p 'JSON.stringify(require("./build/pub-producer/identity.json"))')"
           printf 'identity=%s\n' "$identity" >> "$GITHUB_OUTPUT"
-      - name: Retain one verified private pub transport
+      - name: Retain immutable native archives and original producer evidence
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-bundles-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/archway-native-bundles/
+          retention-days: 1
+          if-no-files-found: error
+          compression-level: 0
+      - name: Retain the shared acquisition descriptor
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: acquisition-descriptor-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/archway-acquisition/acquisition.json
+          retention-days: 1
+          if-no-files-found: error
+      - name: Retain the exact pub transport
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: private-pub-stage-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/archway-pub-transport/pub-stage.tar.gz
+          path: |
+            ${{ runner.temp }}/archway-pub-transport/installation.tar
+            ${{ runner.temp }}/archway-pub-transport/transport.json
           retention-days: 1
           if-no-files-found: error
           compression-level: 0
-      - name: Retain bounded pub producer evidence even on failure
+      - name: Retain bounded pub producer diagnostics even on failure
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pub-producer-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            build/pub-producer/*.log
-            build/pub-producer/identity.json
-            ${{ runner.temp }}/archway-pub-setup/host.json
-            ${{ runner.temp }}/archway-pub-setup/dart-integrity.json
-            ${{ runner.temp }}/archway-pub-setup/dart-version.log
-            ${{ runner.temp }}/archway-pub-stage/report.json
-            ${{ runner.temp }}/archway-pub-stage/dry-run.log
-            ${{ runner.temp }}/archway-pub-stage/stage-identity.json
-            ${{ runner.temp }}/archway-pub-stage/dry-run-command.json
-            ${{ runner.temp }}/archway-pub-stage/dry-run-status.json
-            ${{ runner.temp }}/archway-pub-stage/dry-run-stdout.log
-            ${{ runner.temp }}/archway-pub-stage/dry-run-stderr.log
-            ${{ runner.temp }}/archway-pub-stage/archive-export-command.json
-            ${{ runner.temp }}/archway-pub-stage/archive-export-status.json
-            ${{ runner.temp }}/archway-pub-stage/archive-export-stdout.log
-            ${{ runner.temp }}/archway-pub-stage/archive-export-stderr.log
+            build/pub-producer/
+            ${{ runner.temp }}/archway-pub-export-execution/
+            ${{ runner.temp }}/archway-pub-setup/report.json
+            ${{ runner.temp }}/archway-pub-setup/execution/
           retention-days: 1
           if-no-files-found: warn
-      - name: Retain the one private all-target tarball and verified evidence
+      - name: Retain the exact thin npm packed candidate
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: private-npm-pack-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            packed/*.tgz
-            packed/packed-evidence.json
-            packed/npm-pack.json
-            packed/*-version.txt
-            combined/transport-audit.json
-            combined/provenance/*.json
+          path: ${{ runner.temp }}/archway-npm-packed/
           retention-days: 1
           if-no-files-found: error
           compression-level: 0
   npm-installed:
     needs: [audit]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ matrix.os == 'windows-2025' && matrix.route == 'cache' && 20 || 10 }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -322,7 +347,12 @@ jobs:
             target: macos-arm64
           - os: windows-2025
             target: windows-x64
+    defaults:
+      run:
+        shell: bash
     steps:
+      - name: Preserve tracked source bytes on ephemeral runner
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
@@ -334,35 +364,54 @@ jobs:
         with:
           name: private-npm-pack-${{ github.run_id }}-${{ github.run_attempt }}
           path: npm-input
-      - name: Prepare checksum-verified negative-control Node before inspection
-        shell: bash
-        env:
-          PYTHONUTF8: '1'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-bundles-${{ github.run_id }}-${{ github.run_attempt }}
+          path: native-input
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: acquisition-descriptor-${{ github.run_id }}-${{ github.run_attempt }}
+          path: acquisition-input
+      - name: Bootstrap checksum-pinned Dart for the npm inspection owner
+        run: bash tool/ci/bootstrap_pub_dart.sh '${{ matrix.target }}' "$RUNNER_TEMP/archway-bootstrap-dart"
+      - name: Prepare locked harness dependencies and genuine wrong Node
         run: |
           set -euo pipefail
           mkdir -p build/npm-local
-          python -u tool/ci/setup_npm_wrong_node.py --target '${{ matrix.target }}' \
-            --output "$RUNNER_TEMP/archway-npm-wrong-node" 2>&1 | tee build/npm-local/runtime-setup.log
-          cp "$RUNNER_TEMP/archway-npm-wrong-node/runtime.json" build/npm-local/runtime.json
-      - name: Prove owned Windows fixture cleanup before route acceptance
-        if: matrix.target == 'windows-x64'
-        shell: bash
+          export PUB_CACHE="$RUNNER_TEMP/archway-bootstrap-cache"
+          "$PUB_BOOTSTRAP_DART" --suppress-analytics pub get --enforce-lockfile
+          "$PUB_BOOTSTRAP_DART" tool/ci/verify_export_sources.dart "$GITHUB_SHA"
+          wrong="$(node -p 'require("node:path").join(process.env.RUNNER_TEMP,"archway-wrong-node")')"
+          "$PUB_BOOTSTRAP_DART" run tool/ci/setup_npm_wrong_node.dart --target '${{ matrix.target }}' \
+            --output "$wrong" 2>&1 | tee build/npm-local/runtime-setup.log
+      - name: Require Windows Job failure and readiness controls
+        if: runner.os == 'Windows'
         run: |
           set -euo pipefail
-          python -u test/npm_windows_job_test.py --require-windows 2>&1 | tee build/npm-local/windows-cleanup.log
-      - name: Genuine npm route checks with local/global relocation or cache-only exec
-        shell: bash
-        env:
-          PYTHONUTF8: '1'
+          "$PUB_BOOTSTRAP_DART" run test/windows_job_capability.dart
+          "$PUB_BOOTSTRAP_DART" test test/windows_job_readiness_test.dart
+      - name: Inspect actual npm routes with private verified-native acquisition
         run: |
           set -euo pipefail
           source tool/ci/registry_candidate_arguments.sh
-          mkdir -p build/npm-local
-          python -u tool/ci/npm_local_install_probe.py \
-            --packed-directory npm-input/packed --target '${{ matrix.target }}' \
-            --route '${{ matrix.route }}' --wrong-node "$ARCHWAY_WRONG_NODE" --runner-label '${{ matrix.os }}' --report build/npm-local/report.json ${registry_args[@]+"${registry_args[@]}"} \
+          absolute() { node -p 'require("node:path").resolve(process.argv[1])' "$1"; }
+          npm_cli="$(node -p '(()=>{const p=require("node:path"),f=require("node:fs"),r=p.dirname(process.execPath);return f.realpathSync([p.join(r,"node_modules/npm/bin/npm-cli.js"),p.join(r,"../lib/node_modules/npm/bin/npm-cli.js")].find(x=>f.existsSync(x)));})()')"
+          archive="$(node -p 'const d=require("./acquisition-input/acquisition.json"); "archway-"+d.version+"-${{ matrix.target }}"+("${{ matrix.target }}"==="windows-x64"?".zip":".tar.gz")')"
+          "$PUB_BOOTSTRAP_DART" run tool/npm/installed_probe.dart --packed-directory "$(absolute npm-input)" \
+            --expected-commit "$GITHUB_SHA" --target '${{ matrix.target }}' --route '${{ matrix.route }}' \
+            --npm-cli "$npm_cli" --wrong-node "$ARCHWAY_WRONG_NODE" \
+            --native-archive "$(absolute "native-input/$archive")" --ci-host \
+            --output "$(absolute "$RUNNER_TEMP/archway-npm-probe")" ${registry_args[@]+"${registry_args[@]}"} \
             2>&1 | tee build/npm-local/probe.log
-      - name: Retain installed-route evidence even on failure
+      - name: Project original npm evidence even on failure
+        if: always()
+        run: |
+          mkdir -p build/npm-local
+          probe="$RUNNER_TEMP/archway-npm-probe"
+          if [[ -f "$probe/report.json" ]]; then cp "$probe/report.json" build/npm-local/; fi
+          if [[ -d "$probe/processes" ]]; then cp -R "$probe/processes" build/npm-local/; fi
+          if [[ -f "$RUNNER_TEMP/archway-wrong-node/runtime.json" ]]; then cp "$RUNNER_TEMP/archway-wrong-node/runtime.json" build/npm-local/; fi
+      - name: Retain bounded installed npm evidence even on failure
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -373,7 +422,7 @@ jobs:
   pub-installed:
     needs: [audit]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -387,8 +436,6 @@ jobs:
     defaults:
       run:
         shell: bash
-    env:
-      PYTHONUTF8: '1'
     steps:
       - name: Preserve tracked source bytes on ephemeral runner
         run: git config --global core.autocrlf false
@@ -399,55 +446,77 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '24.21.0'
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: '3.13.7'
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: private-pub-stage-${{ github.run_id }}-${{ github.run_attempt }}
           path: pub-input
-      - name: Verify actual host and prepare checksum-verified Dart with locked host cache
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-bundles-${{ github.run_id }}-${{ github.run_attempt }}
+          path: native-input
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: acquisition-descriptor-${{ github.run_id }}-${{ github.run_attempt }}
+          path: acquisition-input
+      - name: Bootstrap official checksum-pinned Dart
+        run: bash tool/ci/bootstrap_pub_dart.sh '${{ matrix.target }}' "$RUNNER_TEMP/archway-bootstrap-dart"
+      - name: Prepare official SDK, isolated locked cache and genuine wrong Node
         run: |
           set -euo pipefail
           mkdir -p build/pub-installed
-          python -m pip --isolated install --index-url https://pypi.org/simple 'PyYAML==6.0.3' 'jsonschema==4.26.0' 2>&1 | tee build/pub-installed/python-setup.log
-          python tool/ci/verify_export_sources.py "$GITHUB_SHA"
-          python -u tool/ci/setup_pub_dart.py --target '${{ matrix.target }}' --source "$GITHUB_WORKSPACE" \
-            --output "$RUNNER_TEMP/archway-pub-setup" --prepare-cache 2>&1 | tee build/pub-installed/dart-setup.log
-      - name: Check disposable source cleanup on native host
-        run: python test/pub_snapshot_cleanup_test.py
-      - name: Check explicit pub launcher setup on native host
-        run: python test/pub_launcher_setup_test.py
-      - name: Genuine pub launcher before and after disposable source deletion
+          export PUB_CACHE="$RUNNER_TEMP/archway-bootstrap-cache"
+          "$PUB_BOOTSTRAP_DART" --suppress-analytics pub get --enforce-lockfile
+          "$PUB_BOOTSTRAP_DART" tool/ci/verify_export_sources.dart "$GITHUB_SHA"
+          setup="$(node -p 'require("node:path").join(process.env.RUNNER_TEMP,"archway-pub-setup")')"
+          "$PUB_BOOTSTRAP_DART" run tool/ci/setup_pub_dart.dart --target '${{ matrix.target }}' \
+            --source "$GITHUB_WORKSPACE" --expected-commit "$GITHUB_SHA" --output "$setup" \
+            --sdk-archive "$PUB_BOOTSTRAP_ARCHIVE" --prepare-cache --ci-host \
+            2>&1 | tee build/pub-installed/sdk-setup.log
+          node - "$setup/report.json" <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          fs.appendFileSync(process.env.GITHUB_ENV, `PUB_DART=${report.dart}\nPUB_PREPARED_CACHE=${report.prepared_cache}\n`);
+          NODE
+          wrong="$(node -p 'require("node:path").join(process.env.RUNNER_TEMP,"archway-wrong-node")')"
+          "$PUB_BOOTSTRAP_DART" run tool/ci/setup_npm_wrong_node.dart --target '${{ matrix.target }}' \
+            --output "$wrong" 2>&1 | tee build/pub-installed/runtime-setup.log
+      - name: Exercise private SDK activation and original installed controls
         env:
           EXPECTED_PUB_TRANSPORT: ${{ needs.audit.outputs.pub-transport }}
         run: |
           set -euo pipefail
           source tool/ci/registry_candidate_arguments.sh
-          python -u tool/ci/pub_snapshot_probe.py \
-            --dart "$PUB_DART" --node "$(node -p process.execPath)" --source "$GITHUB_WORKSPACE" --prepared-cache "$PUB_PREPARED_CACHE" \
-            --target '${{ matrix.target }}' --output "$PUB_PROBE_OUTPUT" \
-            --transport-archive pub-input/pub-stage.tar.gz --expected-transport-json "$EXPECTED_PUB_TRANSPORT" \
-            --expected-source "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" ${registry_args[@]+"${registry_args[@]}"} \
-            2>&1 | tee build/pub-installed/probe.log
-          git diff HEAD --exit-code
+          absolute() { node -p 'require("node:path").resolve(process.argv[1])' "$1"; }
+          archive="$(node -p 'const d=require("./acquisition-input/acquisition.json"); "archway-"+d.version+"-${{ matrix.target }}"+("${{ matrix.target }}"==="windows-x64"?".zip":".tar.gz")')"
+          PUB_CACHE="$PUB_PREPARED_CACHE" "$PUB_DART" run tool/ci/pub_installed_route.dart \
+            --source "$GITHUB_WORKSPACE" --expected-source "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --target '${{ matrix.target }}' \
+            --transport "$(absolute pub-input/installation.tar)" --expected-json "$EXPECTED_PUB_TRANSPORT" \
+            --descriptor "$(absolute acquisition-input/acquisition.json)" \
+            --native-archive "$(absolute "native-input/$archive")" --wrong-node "$ARCHWAY_WRONG_NODE" \
+            --prepared-cache "$PUB_PREPARED_CACHE" --output "$(absolute "$RUNNER_TEMP/archway-pub-probe")" \
+            --ci-host ${registry_args[@]+"${registry_args[@]}"} 2>&1 | tee build/pub-installed/probe.log
+          "$PUB_DART" tool/ci/verify_export_sources.dart "$GITHUB_SHA"
+      - name: Project original pub evidence even on failure
+        if: always()
+        run: |
+          mkdir -p build/pub-installed
+          probe="$RUNNER_TEMP/archway-pub-probe"
+          if [[ -f "$probe/report.json" ]]; then cp "$probe/report.json" build/pub-installed/; fi
+          for directory in activation execution private-export; do
+            if [[ -d "$probe/$directory" ]]; then cp -R "$probe/$directory" build/pub-installed/; fi
+          done
+          setup="$RUNNER_TEMP/archway-pub-setup"
+          if [[ -f "$setup/report.json" ]]; then cp "$setup/report.json" build/pub-installed/sdk-preparation.json; fi
+          if [[ -d "$setup/execution" ]]; then cp -R "$setup/execution" build/pub-installed/sdk-preparation-execution; fi
+          if [[ -f "$setup/dartsdk-${{ matrix.target }}-release.zip.sha256sum" ]]; then cp "$setup/dartsdk-${{ matrix.target }}-release.zip.sha256sum" build/pub-installed/; fi
+          if [[ -f "$RUNNER_TEMP/archway-wrong-node/runtime.json" ]]; then cp "$RUNNER_TEMP/archway-wrong-node/runtime.json" build/pub-installed/; fi
       - name: Retain bounded installed pub evidence even on failure
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pub-installed-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            build/pub-installed/*.log
-            ${{ runner.temp }}/archway-pub-setup/host.json
-            ${{ runner.temp }}/archway-pub-setup/dart-integrity.json
-            ${{ runner.temp }}/archway-pub-setup/dart-version.log
-            ${{ runner.temp }}/archway-pub-setup/pub-get.log
-            ${{ runner.temp }}/archway-pub-setup/probe/analysis/*.log
-            ${{ runner.temp }}/archway-pub-setup/probe/transport-receipt.json
-            ${{ runner.temp }}/archway-pub-setup/probe/report.json
-            ${{ runner.temp }}/archway-pub-setup/probe/*.log
-            ${{ runner.temp }}/archway-pub-setup/probe/installed/*.log
-            ${{ runner.temp }}/archway-pub-setup/probe/snapshot-only/*.log
+          path: build/pub-installed/
           retention-days: 1
           if-no-files-found: warn
 
@@ -468,8 +537,6 @@ jobs:
     defaults:
       run:
         shell: bash
-    env:
-      PYTHONUTF8: '1'
     steps:
       - name: Preserve tracked source bytes on ephemeral runner
         run: git config --global core.autocrlf false
@@ -477,9 +544,6 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: '3.13.7'
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '24.21.0'
@@ -487,46 +551,45 @@ jobs:
         with:
           name: release-bundles-${{ github.run_id }}-${{ github.run_attempt }}
           path: release-input
-      - name: Prepare real pinned compiler and dependency fixtures separately from checks
+      - name: Bootstrap official checksum-pinned preparation Dart
+        run: bash tool/ci/bootstrap_pub_dart.sh '${{ matrix.target }}' "$RUNNER_TEMP/archway-native-bootstrap"
+      - name: Prepare locked checkout dependencies separately from checks
         run: |
           set -euo pipefail
           mkdir -p build/release-native
-          python -m pip --isolated install --index-url https://pypi.org/simple 'jsonschema==4.26.0' \
-            2>&1 | tee build/release-native/python-setup.log
-          python -u tool/ci/prepare_native_acceptance.py --target '${{ matrix.target }}' \
-            --output "$RUNNER_TEMP/archway-native-fixtures" \
-            2>&1 | tee build/release-native/fixture-preparation.log
-      - name: Verify native acceptance fixture controls without skips
+          "$PUB_BOOTSTRAP_DART" tool/ci/prepare_locked_checkout.dart \
+            2>&1 | tee build/release-native/checkout-preparation.log
+          git diff --exit-code -- pubspec.lock
+          "$PUB_BOOTSTRAP_DART" tool/ci/verify_export_sources.dart "$GITHUB_SHA"
+      - name: Prepare real pinned compiler and dependency fixtures separately from checks
         run: |
           set -euo pipefail
-          python - <<'PYTHON' 2>&1 | tee build/release-native/fixture-controls.log
-          import json, os, pathlib, shutil, subprocess, sys
-          manifest = pathlib.Path(os.environ['RUNNER_TEMP']) / 'archway-native-fixtures/acceptance-fixtures.json'
-          fixtures = json.loads(manifest.read_text(encoding='utf-8'))
-          sdk = pathlib.Path(fixtures['dart_sdk']).resolve(strict=True)
-          dart = sdk / 'bin' / ('dart.exe' if os.name == 'nt' else 'dart')
-          assert dart.is_file(), dart
-          node = shutil.which('node')
-          assert node, 'Pinned Node is unavailable'
-          assert subprocess.check_output([node, '--version']).strip() == b'v24.21.0'
-          environment = {**os.environ, 'ARCHWAY_TEST_DART_SDK': str(sdk),
-                         'ARCHWAY_TEST_NODE': node, 'PYTHONPATH': str(pathlib.Path('test').resolve())}
-          subprocess.run([sys.executable, '-m', 'unittest', 'installation_staging_test',
-                          'process_fixture_support_test', 'node_preflight_fixture_test',
-                          'raw_path_fixture_test', 'process_lifecycle_support_test',
-                          'resource_type_fixture_test', 'long_path_fixture_test',
-                          'node_package_fixture_support_test'],
-                         env=environment, check=True)
-          if os.name == 'nt':
-              subprocess.run([sys.executable, '-m', 'unittest', 'windows_output_lock_test'],
-                             env=environment, check=True)
-          PYTHON
+          "$PUB_BOOTSTRAP_DART" --suppress-analytics run tool/ci/prepare_native_acceptance.dart \
+            --target '${{ matrix.target }}' --output "$RUNNER_TEMP/archway-native-fixtures" \
+            2>&1 | tee build/release-native/fixture-preparation.log
+      - name: Verify native acceptance fixture controls
+        run: |
+          set -euo pipefail
+          "$PUB_BOOTSTRAP_DART" --suppress-analytics run tool/ci/native_fixture_controls.dart fixtures \
+            2>&1 | tee build/release-native/fixture-controls.log
+      - name: Verify existing OpenSSL for ephemeral loopback TLS tests
+        run: |
+          set -euo pipefail
+          "$PUB_BOOTSTRAP_DART" --suppress-analytics run tool/ci/native_fixture_controls.dart openssl \
+            2>&1 | tee build/release-native/openssl-setup.log
+      - name: Prepare locked npm wrapper cache for copied-source tests
+        run: |
+          set -euo pipefail
+          mkdir -p build/release-native
+          export npm_config_cache="$RUNNER_TEMP/archway-source-npm-cache"
+          npm ci --ignore-scripts --prefix tool/npm --no-audit --no-fund \
+            2>&1 | tee build/release-native/npm-setup.log
+          printf 'npm_config_cache=%s\n' "$npm_config_cache" >> "$GITHUB_ENV"
       - name: Execute the final native archive on its actual host
         run: |
           set -euo pipefail
           mkdir -p build/release-native
-          python tool/ci/verify_export_sources.py "$GITHUB_SHA"
-          python -u tool/ci/release_native_smoke.py --release-directory release-input \
+          "$NATIVE_DART" --suppress-analytics run tool/ci/release_native_smoke.dart --release-directory release-input \
             --expected-commit "$GITHUB_SHA" --target '${{ matrix.target }}' --ci-host --installer-checks \
             --acceptance-fixtures "$RUNNER_TEMP/archway-native-fixtures/acceptance-fixtures.json" \
             --report build/release-native/report.json 2>&1 | tee build/release-native/probe.log
@@ -545,17 +608,26 @@ jobs:
   release-finalize:
     needs: [audit, release-native, npm-installed, pub-installed]
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          python-version: '3.13.7'
-      - name: Install pinned original-output schema validator
-        run: python -m pip --isolated install --index-url https://pypi.org/simple 'jsonschema==4.26.0'
+          node-version: '24.21.0'
+      - name: Bootstrap official checksum-pinned finalizer Dart
+        run: bash tool/ci/bootstrap_pub_dart.sh linux-x64 "$RUNNER_TEMP/archway-finalizer-dart"
+      - name: Prepare locked finalizer dependencies and offline npm stage cache
+        run: |
+          set -euo pipefail
+          export PUB_CACHE="$RUNNER_TEMP/archway-finalizer-pub-cache"
+          "$PUB_BOOTSTRAP_DART" --suppress-analytics pub get --enforce-lockfile
+          "$PUB_BOOTSTRAP_DART" tool/ci/verify_export_sources.dart "$GITHUB_SHA"
+          export npm_config_cache="$RUNNER_TEMP/archway-finalizer-npm-cache"
+          npm ci --ignore-scripts --prefix tool/npm --no-audit --no-fund
+          printf 'npm_config_cache=%s\n' "$npm_config_cache" >> "$GITHUB_ENV"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-bundles-${{ github.run_id }}-${{ github.run_attempt }}
@@ -580,14 +652,29 @@ jobs:
         with:
           pattern: pub-installed-*-${{ github.run_id }}-${{ github.run_attempt }}
           path: installed-routes/pub
-      - name: Add host receipts without rebuilding tested archives
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: acquisition-descriptor-${{ github.run_id }}-${{ github.run_attempt }}
+          path: acquisition-input
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: private-npm-pack-${{ github.run_id }}-${{ github.run_attempt }}
+          path: npm-input
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: private-pub-stage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: pub-input
+      - name: Aggregate independently verified artifacts and original host receipts
         env:
           EXPECTED_PUB_TRANSPORT: ${{ needs.audit.outputs.pub-transport }}
         run: |
+          set -euo pipefail
           source tool/ci/registry_candidate_arguments.sh
-          python3 tool/ci/finalize_release_evidence.py --release-directory release-input \
-            --reports reports --expected-commit "$GITHUB_SHA" --installed-evidence installed-routes \
-            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+          "$PUB_BOOTSTRAP_DART" run tool/ci/finalize_native_first_release.dart \
+            --source "$GITHUB_WORKSPACE" --expected-commit "$GITHUB_SHA" \
+            --native-directory release-input --descriptor acquisition-input/acquisition.json \
+            --npm-packed npm-input --pub-transport pub-input --reports reports \
+            --installed-evidence installed-routes --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
             --expected-pub-transport-json "$EXPECTED_PUB_TRANSPORT" --output release-final ${registry_args[@]+"${registry_args[@]}"}
       - name: Retain final verified release files without publishing
         if: success()

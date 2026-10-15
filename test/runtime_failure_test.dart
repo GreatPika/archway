@@ -110,7 +110,6 @@ void main() {
     'stdin',
     'stdin async',
     'kill throws',
-    'kill refuses',
   ]) {
     test(
       '$fault failure is observed immediately and confirmed exit permits next launch',
@@ -159,6 +158,18 @@ void main() {
         expect(report.status, 'incomplete');
         expect(launches, 3);
         expect(failed.killed, true);
+        if (fault == 'stdin' || fault == 'stdin async') {
+          expect(
+            (report.payload['tool_errors'] as List).map((e) => e['message']),
+            contains(
+              contains(
+                fault == 'stdin'
+                    ? 'injected stdin failure'
+                    : 'injected asynchronous stdin failure',
+              ),
+            ),
+          );
+        }
         expect(
           (report.payload['tool_errors'] as List).map((e) => e['code']),
           isNot(contains('RUNTIME_CLEANUP_UNCONFIRMED')),

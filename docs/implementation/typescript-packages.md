@@ -79,8 +79,8 @@ not installed-byte authenticity or complete compiler-feature coverage.
 ## Fixtures and reproduction
 
 Preparation used npm 11.19.0 and pnpm 9.15.9 with scripts disabled and pnpmfile
-hooks disabled. [Base preparation](../../test/fixtures/node-packages/PREPARATION.md)
-and [additive fixtures](../../test/fixtures/node-packages/ADDON.md) retain regeneration,
+hooks disabled. [Base preparation](../../test/fixtures/node-packages/fixture-preparation.md)
+and [additive fixtures](../../test/fixtures/node-packages/addon-fixtures.md) retain regeneration,
 official URLs, integrity records, licenses and file/link manifests. Their scripts
 are maintainer-only and never run by check. Committed archive identities:
 
@@ -93,12 +93,12 @@ Coverage includes npm v2/v3, aliases, shrinkwrap, workspace/local/HTTPS/Git, pnp
 full/hashed peers and filename truncation, copied/injected local packages, moved
 store, parent snapshots, missing/conflicting metadata and input mutations.
 Same-byte lock symlink retargeting still produces INPUT_CHANGED.
-Package tests require Python 3.12+ for shared offline extraction. Native CI
-binds its current interpreter through `ARCHWAY_TEST_PYTHON` without expanding
-PATH. Local runs may set that test-only variable to an absolute interpreter path;
-otherwise they use `python` on Windows or `python3` on POSIX from PATH. It preserves
-archive bytes and hardlinks, creates native relative directory symlinks last,
-and verifies their traversal before inspection, including on Windows.
+Source package tests use the shared Dart offline extractor in
+`test/support/node_package_fixtures.dart`. It preserves archive bytes and actual
+hardlinks, creates native relative directory symlinks last, and verifies their
+traversal before inspection, including on Windows. Process suites use the same
+Dart extractor.
+Local extractor results do not establish native platform acceptance.
 
 From repository root, with prepared dependencies/assets and native bridge:
 

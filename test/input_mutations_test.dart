@@ -195,17 +195,13 @@ void main() {
   });
 
   test('a recheck I/O failure remains incomplete while later changed inputs and findings survive', () async {
-    final root = await ts.fixture(
-      config: '{"extends":"./config.alias.json","include":["src/**/*.ts"]}',
-    );
-    await File('${root.path}/base.json').writeAsString('{}');
-    final alias = Link('${root.path}/config.alias.json');
-    await alias.create('base.json');
+    final root = await ts.fixture();
     final report = await runZoned(
       () => checkPhysical(root, 2),
       zoneValues: {
         #archwayBeforeInputRecheck: () {
-          alias.updateSync('config.alias.json');
+          File('${root.path}/src/app/main.ts').deleteSync();
+          Link('${root.path}/src/app/main.ts').createSync('main.ts');
           File('${root.path}/src/core/private.ts')
               .writeAsStringSync('export const value = 2;');
         },

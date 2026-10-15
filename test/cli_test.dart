@@ -45,7 +45,7 @@ void main() {
       expect(value['exit_code'], exit);
       expect(value['diagnostics'], isEmpty);
       expect(value['tool_versions'], {
-        'archway': '0.1.0',
+        'archway': '0.2.0',
         'dart_adapter': null,
         'typescript_adapter': null,
         'dart_sdk': null,
@@ -56,9 +56,9 @@ void main() {
         'template': 'mixed',
         'dry_run': false,
         'outcome': 'created',
-        'planned_paths': ['architecture.yaml', 'ARCHITECTURE_AGENT.md'],
+        'planned_paths': ['architecture.yaml', 'ARCHITECTURE.md'],
         'planned_files': [],
-        'created_paths': ['architecture.yaml', 'ARCHITECTURE_AGENT.md'],
+        'created_paths': ['architecture.yaml', 'ARCHITECTURE.md'],
         'residual_paths': [],
         'conflicting_paths': [],
       });
@@ -249,22 +249,6 @@ void main() {
     }
   });
 
-  test('export help describes output without platform restrictions', () async {
-    final out = StringBuffer();
-    final err = StringBuffer();
-    final exit = await CLI().run(['export', '--help'], CliStreams(out, err));
-
-    expect(exit, 0);
-    expect(
-      out.toString(),
-      'archway [--root ROOT] export [--policy PATH] --format mermaid '
-      '[--out PATH [--overwrite]]\n'
-      'Exports the complete declared graph. Mermaid goes to stdout or the file; '
-      'JSON diagnostics go to stderr.\n',
-    );
-    expect(err.toString(), '');
-  });
-
   test(
     'selected policy is normalized inside exactly the selected root',
     () async {
@@ -419,7 +403,7 @@ void main() {
       final root = await Directory.systemTemp.createTemp('archway-cli-sort-');
       addTearDown(() => root.delete(recursive: true));
       await File('${root.path}/architecture.yaml').writeAsString('policy');
-      await File('${root.path}/ARCHITECTURE_AGENT.md').writeAsString('guide');
+      await File('${root.path}/ARCHITECTURE.md').writeAsString('guide');
       final out = StringBuffer();
       expect(
         await CLI().run([
@@ -433,33 +417,20 @@ void main() {
       );
       final value = jsonDecode(out.toString());
       expect((value['diagnostics'] as List).map((d) => d['path']), [
-        'ARCHITECTURE_AGENT.md',
+        'ARCHITECTURE.md',
         'architecture.yaml',
       ]);
       expect(value['payload']['conflicting_paths'], [
         'architecture.yaml',
-        'ARCHITECTURE_AGENT.md',
+        'ARCHITECTURE.md',
       ]);
     },
   );
 
-  test('export missing format retains its separate error transport', () async {
-    final out = StringBuffer();
-    final err = StringBuffer();
-    final exit = await CLI().run(['export'], CliStreams(out, err));
-    expect(exit, 64);
-    expect(out.toString(), '');
-    final value = jsonDecode(err.toString());
-    expect(value['command'], 'export');
-    expect(value['status'], 'usage_error');
-    expect(value['payload'], {'format': null, 'out': null});
-    expect(value['diagnostics'][0]['message'], contains('--format mermaid'));
-  });
-
   test(
     'CLI retains full first and second write-failure outcomes and exit streams',
     () async {
-      for (final target in ['architecture.yaml', 'ARCHITECTURE_AGENT.md']) {
+      for (final target in ['architecture.yaml', 'ARCHITECTURE.md']) {
         final root = await Directory.systemTemp.createTemp(
           'archway-cli-write-fail-',
         );
@@ -484,7 +455,7 @@ void main() {
         final value = jsonDecode(out.toString());
         final expected = target == 'architecture.yaml'
             ? ['architecture.yaml']
-            : ['architecture.yaml', 'ARCHITECTURE_AGENT.md'];
+            : ['architecture.yaml', 'ARCHITECTURE.md'];
         expect(exit, 2);
         expect(value['exit_code'], exit);
         expect(value['status'], 'error');
