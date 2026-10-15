@@ -150,6 +150,12 @@ Never _fail(String operation) => throw OSError(operation, _error());
 final class WindowsPipeTimeout extends TimeoutException {
   WindowsPipeTimeout(Duration timeout, this.stdout, this.stderr)
     : super('Native process/pipe completion unconfirmed', timeout);
+  WindowsPipeTimeout._withState(
+    Duration timeout,
+    this.stdout,
+    this.stderr,
+    String state,
+  ) : super('Native process/pipe completion unconfirmed ($state)', timeout);
   final Uint8List stdout;
   final Uint8List stderr;
 }
@@ -351,10 +357,13 @@ final class WindowsProcessPipes {
           );
         }
         if (elapsed.elapsed >= timeout) {
-          throw WindowsPipeTimeout(
+          throw WindowsPipeTimeout._withState(
             timeout,
             _buffers[0].toBytes(),
             _buffers[1].toBytes(),
+            'completion_observed=${code != null}, '
+            'stdout_eof=${_handles[2] == null}, '
+            'stderr_eof=${_handles[4] == null}',
           );
         }
         await Future<void>.delayed(const Duration(milliseconds: 2));

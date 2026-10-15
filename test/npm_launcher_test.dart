@@ -44,6 +44,7 @@ void main() {
   });
   tearDownAll(() => compilation.deleteSync(recursive: true));
   test('identical packed local global and cache routes preserve native transport cold and offline', () async {
+    final fixtureElapsed = Stopwatch()..start();
     final fixture = await prepareNpmStageFixture();
     final root = fixture.root;
     HttpServer? server;
@@ -275,10 +276,12 @@ https.get=function(url,...args){if(url.href!==${jsonEncode(descriptor['targets']
         );
         await installedRoute.install();
         Future<void> launch({
+          String phase = 'cold',
           String? failure,
           Map<String, String> extra = const {},
           Directory? cwd,
         }) async {
+          final elapsed = Stopwatch()..start();
           final invocation = installedRoute.invocation([
             'space argument',
             'café',
@@ -287,34 +290,77 @@ https.get=function(url,...args){if(url.href!==${jsonEncode(descriptor['targets']
           late String output;
           late String errors;
           if (Platform.isWindows) {
+            print(
+              jsonEncode({
+                'npm_launch_start': true,
+                'route': route,
+                'phase': failure == null ? phase : 'expected-failure',
+                'expected_failure': failure,
+                'test_elapsed_ms': fixtureElapsed.elapsedMilliseconds,
+              }),
+            );
             final input = File(p.join(base.path, 'launch.stdin'))
               ..writeAsStringSync('inherited input\n');
             final outFile = File(p.join(base.path, 'launch.stdout'));
             final errFile = File(p.join(base.path, 'launch.stderr'));
-            final out = outFile.openSync(mode: FileMode.write);
-            RandomAccessFile? err;
             try {
-              err = errFile.openSync(mode: FileMode.write);
-              code = await captureAcceptanceProcess(
-                invocation,
-                (cwd ?? foreign).path,
-                {...environment, ...extra},
-                out,
-                err,
-                const Duration(seconds: 30),
-                windowsStdinFile: input,
-                windowsCommand: installedRoute.windowsCommandFor(invocation),
-                waitForWindowsJobEmpty: true,
-              );
-            } finally {
+              final out = outFile.openSync(mode: FileMode.write);
+              RandomAccessFile? err;
               try {
-                out.closeSync();
+                err = errFile.openSync(mode: FileMode.write);
+                code = await captureAcceptanceProcess(
+                  invocation,
+                  (cwd ?? foreign).path,
+                  {...environment, ...extra},
+                  out,
+                  err,
+                  const Duration(seconds: 30),
+                  windowsStdinFile: input,
+                  windowsCommand: installedRoute.windowsCommandFor(invocation),
+                  waitForWindowsJobEmpty: true,
+                );
               } finally {
-                err?.closeSync();
+                try {
+                  out.closeSync();
+                } finally {
+                  err?.closeSync();
+                }
               }
+              output = outFile.readAsStringSync();
+              errors = errFile.readAsStringSync();
+            } catch (error) {
+              // The fixture root is deleted in finally; preserve raw evidence
+              // in the test reporter before cleanup, without replacing failure.
+              Object? captured(File file) {
+                try {
+                  return file.existsSync()
+                      ? {'base64': base64Encode(file.readAsBytesSync())}
+                      : null;
+                } catch (readError) {
+                  return {'read_error': readError.toString()};
+                }
+              }
+
+              try {
+                print(
+                  jsonEncode({
+                    'npm_launch_failure': true,
+                    'route': route,
+                    'phase': failure == null ? phase : 'expected-failure',
+                    'expected_failure': failure,
+                    'elapsed_ms': elapsed.elapsedMilliseconds,
+                    'test_elapsed_ms': fixtureElapsed.elapsedMilliseconds,
+                    'requests': requests,
+                    'stdout': captured(outFile),
+                    'stderr': captured(errFile),
+                    'error': error.toString(),
+                  }),
+                );
+              } catch (_) {
+                // Diagnostic reads must never replace the original failure.
+              }
+              rethrow;
             }
-            output = outFile.readAsStringSync();
-            errors = errFile.readAsStringSync();
           } else {
             final child = await Process.start(
               invocation.first,
@@ -369,7 +415,7 @@ https.get=function(url,...args){if(url.href!==${jsonEncode(descriptor['targets']
         server = null;
         final otherCwd = Directory(p.join(base.path, 'second cwd ü'))
           ..createSync();
-        await launch(cwd: otherCwd);
+        await launch(phase: 'warm-relocated', cwd: otherCwd);
         expect(foreign.listSync(), isEmpty);
         expect(otherCwd.listSync(), isEmpty);
         expect(requests, 1, reason: route);
@@ -418,7 +464,7 @@ https.get=function(url,...args){if(url.href!==${jsonEncode(descriptor['targets']
           nativeCache.deleteSync(recursive: true);
           savedCache.renameSync(nativeCache.path);
         }
-        await launch();
+        await launch(phase: 'warm-recovery');
         expect(requests, 1, reason: route);
       }
     } finally {
