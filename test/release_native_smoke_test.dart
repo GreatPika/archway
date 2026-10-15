@@ -116,6 +116,25 @@ void main() {
             : sha256.convert(bytes).toString();
         File(p.join(release.path, 'SHA256SUMS'))
             .writeAsStringSync('$digest  $name\n');
+        if (Platform.isWindows) {
+          // The CLI runs in this synthetic repository, so prepare its own
+          // test-support location from the already built, owned harness DLL.
+          final prepared = File('build/windows-process/archway_process.dll');
+          final copied = File(
+            p.join(
+              source.path,
+              'build',
+              'windows-process',
+              'archway_process.dll',
+            ),
+          );
+          copied.parent.createSync(recursive: true);
+          prepared.copySync(copied.path);
+          expect(
+            sha256.convert(copied.readAsBytesSync()).toString(),
+            sha256.convert(prepared.readAsBytesSync()).toString(),
+          );
+        }
         final report = File(
           p.join(temporary.path, 'must-not-exist/report.json'),
         );

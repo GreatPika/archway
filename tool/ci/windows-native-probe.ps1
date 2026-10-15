@@ -139,6 +139,9 @@ try {
     $env:PATH = "$nodeBin;$env:PATH"
     & "$nodeBin/node.exe" -e 'const a = require("node:assert/strict"); a.equal(process.version, "v24.21.0"); a.equal(process.platform, "win32"); a.equal(process.arch, "x64"); console.log(process.version, process.platform, process.arch)'
     if ($LASTEXITCODE -ne 0) { throw 'Unexpected pinned Node runtime.' }
+    # Harness boundaries require the already prepared native bridge and pinned Node.
+    & $dart --suppress-analytics test test/native_acceptance_windows_capture_test.dart test/release_native_smoke_test.dart --reporter expanded
+    if ($LASTEXITCODE -ne 0) { throw 'Windows process harness boundary controls failed.' }
     & "$nodeBin/npm.cmd" --version
     if ($LASTEXITCODE -ne 0) { throw 'Pinned npm unavailable.' }
     # Fixed Git for Windows installation, never a PATH-selected WSL bash shim.

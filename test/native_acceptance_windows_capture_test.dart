@@ -24,7 +24,6 @@ void main() {
             "void main() { WindowsSuspendedProcess.start([r'C:\\missing.exe']); }",
           );
         final result = await Process.run(Platform.resolvedExecutable, [
-          '--suppress-analytics',
           '--packages=${File('.dart_tool/package_config.json').absolute.path}',
           child.path,
         ], workingDirectory: root.path).timeout(const Duration(seconds: 30));
