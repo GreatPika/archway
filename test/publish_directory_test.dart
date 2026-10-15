@@ -40,8 +40,8 @@ void main() {
           throwsA(
             isA<FileSystemException>().having(
               (e) => e.osError?.errorCode,
-              'reported native error',
-              isNotNull,
+              'native collision error',
+              Platform.isWindows ? isIn([80, 183]) : equals(17),
             ),
           ),
         );
@@ -261,7 +261,12 @@ Future<void> main(List<String> args) async {
       final winner = codes.indexOf(0), loser = codes.indexOf(23);
       expect(await outputs[winner], 'published');
       expect(await errors[winner], isEmpty);
-      expect(int.tryParse(await errors[loser]), isNotNull);
+      // Each child makes its first publication call, so the losing reader
+      // must preserve the native collision even before its FFI stub is warm.
+      expect(
+        int.tryParse(await errors[loser]),
+        Platform.isWindows ? isIn([80, 183]) : equals(17),
+      );
       expect(
         FileSystemEntity.typeSync(target.path, followLinks: false),
         FileSystemEntityType.directory,

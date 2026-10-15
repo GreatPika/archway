@@ -29,6 +29,7 @@ void publishDirectory(Directory stage, Directory destination) {
     final kernel = DynamicLibrary.open('kernel32.dll');
     final error = kernel.lookupFunction<Uint32 Function(), int Function()>(
       'GetLastError',
+      isLeaf: true,
     );
     final move = kernel
         .lookupFunction<
@@ -38,6 +39,9 @@ void publishDirectory(Directory stage, Directory destination) {
     using((arena) {
       final from = _windowsPath(source).toNativeUtf16(allocator: arena);
       final to = _windowsPath(target).toNativeUtf16(allocator: arena);
+      // Warm the leaf reader before MoveFileExW sets thread-local last-error.
+      // A cold/non-leaf FFI transition can overwrite the native collision code.
+      error();
       if (move(from, to, 0) == 0) {
         final code = error();
         throw FileSystemException(
