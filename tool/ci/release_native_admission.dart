@@ -1,6 +1,9 @@
 // Admit one final native archive and all original host evidence before copying.
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
+import '../release/archive_input.dart';
 import '../release/native_archive.dart';
 import '../validation/json_values.dart';
 import 'release_execution_receipts.dart';
@@ -10,7 +13,14 @@ import 'release_source_receipts.dart';
 
 /// Original paths and byte identities. Publication must recheck copied bytes.
 final class AdmittedNativeReceipt {
-  AdmittedNativeReceipt._(this.report, this.installer, this.installerSha256);
+  AdmittedNativeReceipt._(
+    this.report,
+    this.installer,
+    this.installerSha256,
+    this.provenanceExecutable,
+  );
+  // Only this retained smoke-test executable may resemble an installer filename.
+  final ({File file, ArchiveFileIdentity identity})? provenanceExecutable;
   final File report;
   final File installer;
   final String installerSha256;
@@ -95,9 +105,27 @@ Future<AdmittedNativeReceipt> admitNativeReceipt({
     repository: repository,
     version: version,
   );
+  final executable =
+      verified.completeArchiveInventory.files['bin/windows-x64/archway.exe'];
   return AdmittedNativeReceipt._(
     report,
     installer,
     proof['installer']['artifact']['sha256'] as String,
+    target == 'windows-x64' && executable != null
+        ? (
+            file: File(
+              p.join(
+                report.parent.path,
+                'acceptance',
+                'package-provenance',
+                'installation',
+                'bin',
+                'windows-x64',
+                'archway.exe',
+              ),
+            ),
+            identity: executable,
+          )
+        : null,
   );
 }

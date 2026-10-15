@@ -170,6 +170,8 @@ void main() {
     ) as Map;
     expect(receipt['source'], identity);
     expect(receipt['registry_ready'], false);
+    final names = (receipt['files'] as Map).keys.cast<String>().toList();
+    expect(names, orderedEquals([...names]..sort()));
     const dependencies = {
       '@isaacs/fs-minipass': ('4.0.1', 'LICENSE'),
       'chownr': ('3.0.0', 'LICENSE.md'),

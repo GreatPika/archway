@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import '../tool/ci/finalize_release_evidence.dart';
+import '../tool/ci/release_final_assembly.dart';
 import '../tool/release/archive_input.dart';
 import '../tool/release/zip_input.dart';
 import 'release_finalizer_fixtures.dart';
@@ -37,7 +39,7 @@ void main() {
       expect(f.output.existsSync(), isFalse);
     },
   );
-  test('combined evidence rejects portable collisions and aggregate entry overflow', () async {
+  test('combined evidence rejects portable collisions but admits composed inventories', () async {
     final f = ReleaseFinalizerFixture();
     addTearDown(f.close);
     await f.prepare();
@@ -68,28 +70,34 @@ void main() {
           ReleaseFinalizerFixture.hash(evidence.readAsBytesSync()),
         ),
       );
-      // Each original is independently valid; only the combined inventory fails.
+      // Valid inputs may compose beyond one input limit; cross-input aliases fail.
       await withArchiveInput(evidence.absolute, readZipFiles);
-      await expectLater(
-        finalizeRelease(
-          release: f.release,
-          reports: f.reports,
-          output: f.output,
-          expectedCommit: f.source['commit'] as String,
-          repository: f.repository,
-        ),
-        throwsA(
-          isA<FormatException>().having(
-            (e) => e.message,
-            'combined inventory',
-            contains(
-              collision == 'entry-bound'
-                  ? 'entry bound'
-                  : 'Aliased or colliding archive path',
+      final operation = finalizeRelease(
+        release: f.release,
+        reports: f.reports,
+        output: f.output,
+        expectedCommit: f.source['commit'] as String,
+        repository: f.repository,
+      );
+      if (collision == 'entry-bound') {
+        await operation;
+        final combined = ZipDecoder().decodeBytes(
+          File(p.join(f.output.path, name)).readAsBytesSync(),
+        );
+        expect(combined.files.length, greaterThan(maxArchiveEntries));
+        f.output.deleteSync(recursive: true);
+      } else {
+        await expectLater(
+          operation,
+          throwsA(
+            isA<FormatException>().having(
+              (e) => e.message,
+              'combined inventory',
+              contains('Aliased or colliding archive path'),
             ),
           ),
-        ),
-      );
+        );
+      }
       expect(f.output.existsSync(), isFalse);
       expect(
         f.root.listSync().where(
@@ -99,6 +107,148 @@ void main() {
       );
     }
   });
+  test(
+    'composed output admits 8192 entries and rejects the next original',
+    () async {
+      final f = ReleaseFinalizerFixture();
+      addTearDown(f.close);
+      await f.prepare();
+      final producer = Directory(p.join(f.root.path, 'producer'))..createSync();
+      final originals = {
+        for (var i = 0; i < maxArchiveEntries; i++)
+          'original-$i': (bytes: Uint8List(0), mode: 0x1a4),
+      };
+      for (var i = 0; i < maxArchiveEntries - 1; i++) {
+        File(p.join(producer.path, 'proof-$i')).writeAsStringSync('');
+      }
+      Future<void> run() => assembleFinalRelease(
+        output: f.output,
+        reports: f.reports,
+        repository: f.repository,
+        source: f.source,
+        assets: {},
+        sums: {},
+        evidenceName: 'evidence.zip',
+        originals: originals,
+        accepted: {},
+        producerEvidence: {'producer': producer},
+      );
+      await run();
+      expect(
+        ZipDecoder()
+            .decodeBytes(
+              File(p.join(f.output.path, 'evidence.zip')).readAsBytesSync(),
+            )
+            .files,
+        hasLength(maxFinalEvidenceEntries),
+      );
+      f.output.deleteSync(recursive: true);
+      File(p.join(producer.path, 'last-proof')).writeAsStringSync('');
+      await expectLater(
+        run(),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'aggregate bound',
+            contains('Combined evidence exceeds'),
+          ),
+        ),
+      );
+      expect(f.output.existsSync(), isFalse);
+      // The general import API still cannot opt into the output-only bound.
+      expect(
+        () => ArchiveInventory({}, maxEntries: maxFinalEvidenceEntries),
+        throwsArgumentError,
+      );
+      originals['one-too-many'] = (bytes: Uint8List(0), mode: 0x1a4);
+      await expectLater(
+        run(),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'input bound',
+            'Archive inventory exceeds entry bound',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('retained Windows provenance executable requires exact admitted path and bytes', () async {
+    final f = ReleaseFinalizerFixture();
+    addTearDown(f.close);
+    await f.prepare();
+    final archive = ZipDecoder().decodeBytes(
+      File(p.join(f.release.path, 'archway-0.1.0-windows-x64.zip'))
+          .readAsBytesSync(),
+    );
+    final binary = archive.files.singleWhere(
+      (file) => file.name == 'bin/windows-x64/archway.exe',
+    );
+    final retained = File(
+      p.join(
+        f.reports.path,
+        'windows-x64',
+        'acceptance',
+        'package-provenance',
+        'installation',
+        'bin',
+        'windows-x64',
+        'archway.exe',
+      ),
+    );
+    retained.parent.createSync(recursive: true);
+    retained.writeAsBytesSync(binary.content);
+    Future<void> run() => finalizeRelease(
+      release: f.release,
+      reports: f.reports,
+      output: f.output,
+      expectedCommit: f.source['commit'] as String,
+      repository: f.repository,
+    );
+    await run();
+    final evidence = ZipDecoder().decodeBytes(
+      File(p.join(f.output.path, 'archway-0.1.0-evidence.zip'))
+          .readAsBytesSync(),
+    );
+    expect(
+      evidence.files
+          .singleWhere(
+            (file) => file.name.endsWith(
+              '/package-provenance/installation/bin/windows-x64/archway.exe',
+            ),
+          )
+          .content,
+      binary.content,
+    );
+    f.output.deleteSync(recursive: true);
+    retained.writeAsBytesSync(List<int>.filled(binary.content.length, 42));
+    await expectLater(
+      run(),
+      throwsA(
+        isA<FormatException>().having(
+          (e) => e.message,
+          'identity refusal',
+          contains('Unexpected installer binary'),
+        ),
+      ),
+    );
+    expect(f.output.existsSync(), isFalse);
+    retained.writeAsBytesSync(binary.content);
+    retained.renameSync(p.join(retained.parent.path, 'other.exe'));
+    await expectLater(
+      run(),
+      throwsA(
+        isA<FormatException>().having(
+          (e) => e.message,
+          'path refusal',
+          contains('Unexpected installer binary'),
+        ),
+      ),
+    );
+    expect(f.output.existsSync(), isFalse);
+  });
+
   test(
     'finalization preserves payloads and emits complete unique byte checksums',
     () async {

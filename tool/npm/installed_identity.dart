@@ -25,6 +25,7 @@ Future<T> withNpmPackedCandidate<T>(
   Directory packed, {
   required String expectedCommit,
   required bool registryReady,
+  String? legacyPackedReceiptSha256,
   required Future<T> Function(File archive, Map<String, Object?> receipt)
   inspect,
 }) async {
@@ -32,8 +33,23 @@ Future<T> withNpmPackedCandidate<T>(
     packed.resolveSymbolicLinksSync() == packed.path,
     'Packed npm directory must be canonical',
   );
-  final receipt = await readNativeJson(
+  _require(
+    legacyPackedReceiptSha256 == null || _digest(legacyPackedReceiptSha256),
+    'Invalid legacy npm packed receipt pin',
+  );
+  final receipt = await withArchiveInput(
     File(p.join(packed.path, 'npm-packed.json')),
+    (input) async {
+      _require(
+        legacyPackedReceiptSha256 == null ||
+            input.sha256 == legacyPackedReceiptSha256,
+        'Legacy npm packed receipt pin differs',
+      );
+      // Hash and parse the same bounded owned snapshot, never reopen the input.
+      return decodeEvidenceJson(await input.file.readAsString())
+          as Map<String, Object?>;
+    },
+    maxBytes: maxArchiveJsonBytes,
   );
   final source = receipt['source'];
   final name = receipt['filename'];

@@ -323,8 +323,11 @@ Future<void> stageNpm(
       sameJson(await sourceIdentity(source), identity),
       'Source changed during npm staging',
     );
+    final orderedFiles = {
+      for (final name in files.keys.toList()..sort()) name: files[name],
+    };
     File(p.join(candidate.path, 'npm-stage.json')).writeAsStringSync(
-      '${jsonEncode({'schema_version': 1, 'version': version, 'source': identity, 'descriptor_sha256': sha256.convert(descriptorBytes).toString(), 'registry_ready': registryReady, 'files': files})}\n',
+      '${jsonEncode({'schema_version': 1, 'version': version, 'source': identity, 'descriptor_sha256': sha256.convert(descriptorBytes).toString(), 'registry_ready': registryReady, 'files': orderedFiles})}\n',
     );
     publishDirectory(package.parent, output);
     published = true;

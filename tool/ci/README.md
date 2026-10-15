@@ -267,6 +267,18 @@ and publishes only into a fresh local output directory. Registry-ready metadata
 and private candidate qualification do not establish public cold availability.
 Publication and account actions require separate authorization.
 
+New npm stage receipts sort file keys before the unchanged schema-1 JSON inventory
+hash. Older producer receipts can reflect filesystem enumeration order. Maintenance
+replay may explicitly supply `--legacy-npm-packed-receipt-sha256` from an independently
+authenticated original producer artifact. This is a trusted caller assertion, not
+self-authentication: do not calculate a replacement pin from an untrusted input.
+Both receipt admissions verify the exact pinned bytes. Only rebuilt inventory-hash
+equality is relaxed; source identity, descriptor, archive pins and every canonical
+archive member remain mandatory. Final evidence preserves the original receipt and
+discloses both inventory digests and the legacy reason; it does not claim to have
+reproduced the producer's order-dependent digest. Without the option, strict
+inventory-digest comparison remains required.
+
 ## Release fixtures and regression checks
 
 [Native fixture preparation](prepare_native_acceptance.dart) is a separate networked

@@ -14,6 +14,10 @@ import 'release_execution_receipts.dart';
 import 'release_native_admission.dart';
 import 'release_receipt_values.dart';
 
+// Compose admitted route evidence under a separate output entry limit.
+// Keep every per-input bound and the 512 MiB aggregate byte cap.
+const maxFinalEvidenceEntries = 8192;
+
 String _hash(List<int> bytes) => sha256.convert(bytes).toString();
 bool _exists(String path) =>
     FileSystemEntity.typeSync(path, followLinks: false) !=
@@ -49,24 +53,37 @@ Future<void> assembleFinalRelease({
     }
     final archiveEntries = archive.Archive();
     final names = <String>{};
-    final combined = <String, ArchiveFileIdentity>{};
     var combinedBytes = 0;
     void append(String name, List<int> bytes, [int mode = 0x1a4]) {
       requireReceipt(names.add(name), 'Duplicate finalized evidence member');
       combinedBytes += bytes.length;
       requireReceipt(
-        combinedBytes <= maxArchiveBytes && names.length <= maxArchiveEntries,
+        bytes.length <= maxArchiveFileBytes &&
+            combinedBytes <= maxArchiveBytes &&
+            names.length <= maxFinalEvidenceEntries,
         'Combined evidence exceeds byte or entry bound',
       );
-      combined[name] = (size: bytes.length, mode: mode, sha256: _hash(bytes));
       archiveEntries.addFile(
         archive.ArchiveFile.bytes(name, bytes)..mode = 0x8000 | mode,
       );
     }
 
+    ArchiveInventory({
+      for (final original in originals.entries)
+        original.key: (
+          size: original.value.bytes.length,
+          mode: original.value.mode,
+          sha256: _hash(original.value.bytes),
+        ),
+    });
     for (final original in originals.entries)
       append(original.key, original.value.bytes, original.value.mode);
-    void appendFiles(Directory directory, String prefix, {File? installer}) {
+    void appendFiles(
+      Directory directory,
+      String prefix, {
+      File? installer,
+      ({File file, ArchiveFileIdentity identity})? provenanceExecutable,
+    }) {
       final inventory = <String, ArchiveFileIdentity>{};
       var totalBytes = 0;
       final entries = directory.listSync(recursive: true, followLinks: false)
@@ -74,7 +91,15 @@ Future<void> assembleFinalRelease({
       for (final entity in entries) {
         if (entity is Directory) continue;
         if (installer != null && entity.path == installer.path) continue;
+        final file = File(entity.path);
+        final bytes = readOrdinaryBytes(file);
+        final admittedExecutable =
+            provenanceExecutable != null &&
+            entity.path == provenanceExecutable.file.path &&
+            bytes.length == provenanceExecutable.identity.size &&
+            _hash(bytes) == provenanceExecutable.identity.sha256;
         if (installer != null &&
+            !admittedExecutable &&
             [
               '.deb',
               '.pkg',
@@ -84,8 +109,6 @@ Future<void> assembleFinalRelease({
             'Unexpected installer binary in native evidence: ${p.basename(entity.path)}',
           );
         }
-        final file = File(entity.path);
-        final bytes = readOrdinaryBytes(file);
         totalBytes += bytes.length;
         requireReceipt(
           totalBytes <= maxArchiveBytes && inventory.length < maxArchiveEntries,
@@ -131,6 +154,7 @@ Future<void> assembleFinalRelease({
         Directory(p.join(reports.path, entry.key)),
         'native-smoke/${entry.key}',
         installer: installer,
+        provenanceExecutable: entry.value.provenanceExecutable,
       );
     }
     append(
@@ -146,7 +170,7 @@ Future<void> assembleFinalRelease({
         })}\n',
       ),
     );
-    ArchiveInventory(combined);
+    validatePortableArchiveNames(names);
     File(p.join(stage.path, evidenceName))
         .writeAsBytesSync(archive.ZipEncoder().encode(archiveEntries));
     for (final name in assets.keys) {

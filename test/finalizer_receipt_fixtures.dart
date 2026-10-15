@@ -131,6 +131,8 @@ class FinalizerReceiptFixture {
     }
     release = Directory(p.join(root.path, 'release'))..createSync();
     final payloads = <String, List<int>>{
+      'bin/$target/${target == 'windows-x64' ? 'archway.exe' : 'archway'}': utf8
+          .encode('synthetic executable'),
       'assets/typescript/vendor/typescript.js': utf8.encode('vendor'),
       'native/$target/library': utf8.encode('native'),
     };

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
+import 'package:crypto/crypto.dart';
 import 'package:test/test.dart';
 
 import '../tool/npm/pack.dart';
@@ -31,6 +32,49 @@ void main() {
     expect(admitted['version'], '1.2.3');
     final receiptFile = File(p.join(packed.path, 'npm-packed.json'));
     final receipt = jsonDecode(receiptFile.readAsStringSync()) as Map;
+    String receiptPin() =>
+        sha256.convert(receiptFile.readAsBytesSync()).toString();
+    Future<Map<String, Object?>> pinned(String pin) => verifyNpmPackedCandidate(
+      regenerated,
+      packed,
+      expectedCommit: commit,
+      registryReady: false,
+      legacyPackedReceiptSha256: pin,
+    );
+    // A supplied pin is mandatory to validate even when strict equality holds.
+    for (final pin in ['invalid', '0' * 64]) {
+      await expectLater(pinned(pin), throwsFormatException);
+    }
+    final originalReceipt = receiptFile.readAsBytesSync();
+    final stageReceipt = jsonDecode(
+      File(p.join(stage.path, 'npm-stage.json')).readAsStringSync(),
+    ) as Map;
+    final rows = stageReceipt['files'] as Map;
+    final reversed = {
+      for (final key in rows.keys.toList().reversed) key: rows[key],
+    };
+    receipt['stage_inventory_sha256'] = sha256
+        .convert(utf8.encode(jsonEncode(reversed)))
+        .toString();
+    receiptFile.writeAsStringSync(jsonEncode(receipt));
+    await expectLater(admit(), throwsFormatException);
+    final legacyPin = receiptPin();
+    expect(await pinned(legacyPin), receipt);
+    receiptFile.writeAsStringSync('${jsonEncode(receipt)}\n');
+    await expectLater(pinned(legacyPin), throwsFormatException);
+    receiptFile.writeAsStringSync(
+      jsonEncode({...receipt, 'descriptor_sha256': '0' * 64}),
+    );
+    await expectLater(pinned(receiptPin()), throwsFormatException);
+    receiptFile.writeAsStringSync(jsonEncode(receipt));
+    final archiveFile = File(
+      p.join(packed.path, receipt['filename'] as String),
+    );
+    final archiveBytes = archiveFile.readAsBytesSync();
+    archiveFile.writeAsBytesSync([...archiveBytes]..[0] ^= 1);
+    await expectLater(pinned(receiptPin()), throwsFormatException);
+    archiveFile.writeAsBytesSync(archiveBytes);
+    receiptFile.writeAsBytesSync(originalReceipt);
     receipt['stage_inventory_sha256'] = '0' * 64;
     receiptFile.writeAsStringSync(jsonEncode(receipt));
     await expectLater(
@@ -65,20 +109,23 @@ void main() {
         'compressed_bytes': admitted['compressed_bytes'],
       }),
     );
-    await expectLater(
-      verifyNpmPackedCandidate(
-        readyStage,
-        packed,
-        expectedCommit: commit,
-        registryReady: true,
-      ),
-      throwsA(
-        isA<FormatException>().having(
-          (error) => error.message,
-          'actual packed member boundary',
-          startsWith('Unexpected TAR member metadata: '),
+    for (final pin in [null, receiptPin()]) {
+      await expectLater(
+        verifyNpmPackedCandidate(
+          readyStage,
+          packed,
+          expectedCommit: commit,
+          registryReady: true,
+          legacyPackedReceiptSha256: pin,
         ),
-      ),
-    );
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'actual packed member boundary',
+            startsWith('Unexpected TAR member metadata: '),
+          ),
+        ),
+      );
+    }
   }, timeout: const Timeout(Duration(minutes: 2)));
 }

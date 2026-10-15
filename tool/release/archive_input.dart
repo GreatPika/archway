@@ -138,22 +138,7 @@ final class ArchiveInventory {
         throw const FormatException('Archive inventory exceeds byte bound');
       }
     }
-    final aliases = <String, String>{};
-    final fileKeys = files.keys.map(_pathKey).toSet();
-    for (final name in files.keys) {
-      _checkName(name);
-      final parts = name.split('/');
-      for (var i = 1; i <= parts.length; i++) {
-        final prefix = parts.take(i).join('/');
-        final key = _pathKey(prefix);
-        final previous = aliases[key];
-        if ((previous != null && previous != prefix) ||
-            (i < parts.length && fileKeys.contains(key))) {
-          throw FormatException('Aliased or colliding archive path: $name');
-        }
-        aliases[key] = prefix;
-      }
-    }
+    validatePortableArchiveNames(files.keys);
   }
 
   final Map<String, ArchiveFileIdentity> files;
@@ -201,3 +186,23 @@ void _checkName(String name) {
 // final sigma. This does not implement full Unicode or filesystem case folding.
 String _pathKey(String name) =>
     unicode.nfc(unicode.nfc(name).toLowerCase().toUpperCase().toLowerCase());
+
+/// Validate names across independently bounded inventories without relaxing imports.
+void validatePortableArchiveNames(Iterable<String> names) {
+  final aliases = <String, String>{};
+  final fileKeys = names.map(_pathKey).toSet();
+  for (final name in names) {
+    _checkName(name);
+    final parts = name.split('/');
+    for (var i = 1; i <= parts.length; i++) {
+      final prefix = parts.take(i).join('/');
+      final key = _pathKey(prefix);
+      final previous = aliases[key];
+      if ((previous != null && previous != prefix) ||
+          (i < parts.length && fileKeys.contains(key))) {
+        throw FormatException('Aliased or colliding archive path: $name');
+      }
+      aliases[key] = prefix;
+    }
+  }
+}

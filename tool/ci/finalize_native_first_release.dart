@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 
 import '../npm/installed_identity.dart';
 import '../npm/packed_candidate.dart';
+import '../npm/packed_inventory.dart';
 import '../npm/stage.dart';
 import '../release/archive_input.dart';
 import '../release/native_payload.dart';
@@ -34,6 +35,7 @@ Future<void> finalizeNativeFirstRelease({
   required String runAttempt,
   required String expectedTransportJson,
   required bool registryReady,
+  String? legacyPackedReceiptSha256,
 }) async {
   requireReceipt(
     FileSystemEntity.typeSync(output.path, followLinks: false) ==
@@ -63,7 +65,23 @@ Future<void> finalizeNativeFirstRelease({
           npmPacked,
           expectedCommit: expectedCommit,
           registryReady: registryReady,
+          legacyPackedReceiptSha256: legacyPackedReceiptSha256,
         );
+        final legacyNpmAdmission = legacyPackedReceiptSha256 == null
+            ? null
+            : {
+                'mode': 'legacy-v1-producer-order',
+                'caller_pinned_receipt_sha256': legacyPackedReceiptSha256,
+                'producer_stage_inventory_sha256':
+                    npmReceipt['stage_inventory_sha256'],
+                'regenerated_stage_inventory_sha256': (await admitNpmStage(
+                  npmStage,
+                )).inventorySha256,
+                'reason':
+                    'Caller-pinned historical '
+                    'receipt is preserved; complete archive members were independently verified. '
+                    'The legacy inventory digest was not independently reproduced.',
+              };
         requireReceipt(
           exactReceipt(npmReceipt['source'], input.source) &&
               npmReceipt['version'] == input.version &&
@@ -126,6 +144,7 @@ Future<void> finalizeNativeFirstRelease({
               npmPacked,
               expectedCommit: expectedCommit,
               registryReady: registryReady,
+              legacyPackedReceiptSha256: legacyPackedReceiptSha256,
               inspect: (archive, receipt) async {
                 requireReceipt(
                   exactReceipt(receipt, npmReceipt),
@@ -169,6 +188,8 @@ Future<void> finalizeNativeFirstRelease({
                     decodeEvidenceJson(utf8.decode(input.packagingBytes)),
                   )['native_bundles'],
                   'npm_tarball': receipt,
+                  if (legacyNpmAdmission != null)
+                    'npm_inventory_admission': legacyNpmAdmission,
                   'pub_transport': pub.transport,
                 };
                 final originals = <String, ({Uint8List bytes, int mode})>{
@@ -216,7 +237,9 @@ Future<void> finalizeNativeFirstRelease({
 
 Future<void> main(List<String> arguments) async {
   try {
-    final parser = ArgParser()..addFlag('registry-ready', negatable: false);
+    final parser = ArgParser()
+      ..addFlag('registry-ready', negatable: false)
+      ..addOption('legacy-npm-packed-receipt-sha256');
     for (final name in [
       'source',
       'native-directory',
@@ -254,6 +277,8 @@ Future<void> main(List<String> arguments) async {
       runAttempt: args['run-attempt'] as String,
       expectedTransportJson: args['expected-pub-transport-json'] as String,
       registryReady: args['registry-ready'] as bool,
+      legacyPackedReceiptSha256:
+          args['legacy-npm-packed-receipt-sha256'] as String?,
     );
   } catch (error) {
     stderr.writeln('Native-first release finalization refused: $error');
