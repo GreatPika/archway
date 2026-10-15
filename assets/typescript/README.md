@@ -54,7 +54,7 @@ A changed or deleted manifest uses changed-input semantics. A fully forged helpe
 response with matching roles is not independently reclassified by the parent;
 the shipped, guarded helper owns the exact package-manager joins.
 
-See [compiler evidence](AUDIT.md), [licenses](licenses/), and the
+See [compiler evidence](compiler-notes.md), [licenses](licenses/), and the
 TypeScript inspection guide (source-checkout-only repository-root path:
 `docs/implementation/typescript-packages.md`)
 for source provenance and Linux development test commands. See the guide's linked

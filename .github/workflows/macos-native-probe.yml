@@ -1,4 +1,4 @@
-name: macOS source and AOT feasibility
+name: macOS native build and checks
 
 on:
   workflow_call:
@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: macos-first-red-${{ github.ref }}-${{ inputs.export-installation && 'export' || 'probe' }}
+  group: macos-native-probe-${{ github.ref }}-${{ inputs.export-installation && 'export' || 'probe' }}
   cancel-in-progress: true
 
 jobs:
@@ -173,7 +173,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: macos-first-red-${{ github.run_id }}-${{ github.run_attempt }}
+          name: macos-native-probe-${{ github.run_id }}-${{ github.run_attempt }}
           path: build/macos-probe/*.log
           if-no-files-found: warn
           retention-days: 1

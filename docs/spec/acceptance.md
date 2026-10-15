@@ -2,8 +2,6 @@
 
 Acceptance fixtures define expected behavior; they are not evidence of recorded Archway execution.
 
-Follow the [engineering workflow](../agents/workflow.md) for approvals, TDD, bounded delegation and fixed-base Standards and Spec reviews.
-
 ## Ordered gates
 
 1. Pin the declared dependencies and verify their availability. Before production expansion, complete the **compiler-host feasibility gate** on small real projects: positive reads, negative probes and directory inventories; prepared TS redirects; every supported Dart conditional URI branch; analyzer contexts; propagation to input identity and independent final revalidation. If trustworthy tracing cannot be achieved, stop dependent implementation and request a supported-boundary decision. A finite model cannot pass this gate.
