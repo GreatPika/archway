@@ -7,6 +7,8 @@ import 'package:path/path.dart' as p;
 import 'package:posix/posix.dart' as posix;
 import 'package:test/test.dart';
 
+import 'support/posix_executable_fixture.dart';
+
 const commit = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
@@ -353,7 +355,8 @@ void main() {
       ])).stdout.toString().trim();
       final commands = Directory(p.join(base.path, 'commands'))..createSync();
       final wrapper = File(p.join(commands.path, 'dpkg-deb'));
-      wrapper.writeAsStringSync(
+      await writePosixExecutableFixture(
+        wrapper,
         '#!/bin/sh\nset -eu\n' +
             (fault == 'command failure'
                 ? 'exit 42\n'

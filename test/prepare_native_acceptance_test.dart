@@ -8,6 +8,7 @@ import 'package:test/test.dart';
 import '../tool/ci/native_fixture_pins.dart';
 import 'prepare_package_process_pub.dart';
 import '../tool/ci/prepare_native_acceptance.dart';
+import 'support/posix_executable_fixture.dart';
 
 void main() {
   test(
@@ -458,7 +459,10 @@ void main() {
       final executable = File(p.join(root.path, 'executable', 'git'));
       for (final file in [blocked, executable]) {
         file.parent.createSync();
-        file.writeAsStringSync('#!/bin/sh\nprintf "selected-fixture\\n"\n');
+        await writePosixExecutableFixture(
+          file,
+          '#!/bin/sh\nprintf "selected-fixture\\n"\n',
+        );
       }
       posix.chmod(blocked.path, '0600'); // 0600: readable, not executable.
       posix.chmod(executable.path, '0700'); // 0700: owner executable.

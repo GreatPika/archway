@@ -8,6 +8,7 @@ import 'package:test/test.dart';
 
 import '../tool/release/installation_identity.dart';
 import 'support/process_lifecycle.dart';
+import 'support/posix_executable_fixture.dart';
 
 void main() {
   late Directory base;
@@ -115,10 +116,11 @@ void main() {
     'source identity times out and reaps its direct Git child',
     () async {
       final pidFile = File(p.join(base.path, 'git.pid'));
-      final executable = File(p.join(base.path, 'git'))
-        ..writeAsStringSync(
-          '#!/bin/sh\nprintf "\$\$" > "${pidFile.path}"\nexec /bin/sleep 120\n',
-        );
+      final executable = File(p.join(base.path, 'git'));
+      await writePosixExecutableFixture(
+        executable,
+        '#!/bin/sh\nprintf "\$\$" > "${pidFile.path}"\nexec /bin/sleep 120\n',
+      );
       posix.chmod(executable.path, '755');
       final watch = Stopwatch()..start();
       try {
@@ -161,14 +163,15 @@ void main() {
   test(
     'source identity preserves selected PATH and replacement environment',
     () async {
-      final executable = File(p.join(base.path, 'git'))
-        ..writeAsStringSync(
-          '#!/bin/sh\n'
-          'test "\$IDENTITY_TEST_VALUE" = "selected" || exit 91\n'
-          'test "\${HOME+x}" != x || exit 92\n'
-          'printf "captured output\n"\n'
-          'printf "selected Git failed\n" >&2\nexit 17\n',
-        );
+      final executable = File(p.join(base.path, 'git'));
+      await writePosixExecutableFixture(
+        executable,
+        '#!/bin/sh\n'
+        'test "\$IDENTITY_TEST_VALUE" = "selected" || exit 91\n'
+        'test "\${HOME+x}" != x || exit 92\n'
+        'printf "captured output\n"\n'
+        'printf "selected Git failed\n" >&2\nexit 17\n',
+      );
       posix.chmod(executable.path, '755');
       final environment = {
         'PATH': base.path,
@@ -205,8 +208,11 @@ void main() {
       (repo, 'build runtime'),
     ]) {
       final compiler = File(p.join(directory.path, 'compiler/runtime'))
-        ..parent.createSync(recursive: true)
-        ..writeAsStringSync('#!/bin/sh\nprintf "$identity\\n"\n');
+        ..parent.createSync(recursive: true);
+      await writePosixExecutableFixture(
+        compiler,
+        '#!/bin/sh\nprintf "$identity\\n"\n',
+      );
       posix.chmod(compiler.path, '755');
     }
     final child = File('test/support/installation_identity_child.dart')
@@ -230,13 +236,15 @@ void main() {
   });
 
   test('runtime identity combines streams and rejects nonzero exits', () async {
-    final executable = File(p.join(base.path, 'runtime'))
-      ..writeAsStringSync(
-        '#!/bin/sh\nprintf "output\\n"\nprintf "error\\n" >&2\n',
-      );
+    final executable = File(p.join(base.path, 'runtime'));
+    await writePosixExecutableFixture(
+      executable,
+      '#!/bin/sh\nprintf "output\\n"\nprintf "error\\n" >&2\n',
+    );
     posix.chmod(executable.path, '755');
     expect(await runtimeVersion(executable.path, base), 'output\nerror');
-    executable.writeAsStringSync(
+    await writePosixExecutableFixture(
+      executable,
       '#!/bin/sh\nprintf "failed\\n" >&2\nexit 17\n',
     );
     await expectLater(
@@ -248,11 +256,12 @@ void main() {
   test(
     'runtime identity normalizes newlines in each stream before joining',
     () async {
-      final executable = File(p.join(base.path, 'runtime'))
-        ..writeAsStringSync(
-          '#!/bin/sh\nprintf "  a\\r\\nb\\r\\n\\r\\nc\\r"\n'
-          'printf "\\nd\\re\\r\\n  " >&2\n',
-        );
+      final executable = File(p.join(base.path, 'runtime'));
+      await writePosixExecutableFixture(
+        executable,
+        '#!/bin/sh\nprintf "  a\\r\\nb\\r\\n\\r\\nc\\r"\n'
+        'printf "\\nd\\re\\r\\n  " >&2\n',
+      );
       posix.chmod(executable.path, '755');
       expect(await runtimeVersion(executable.path, base), 'a\nb\n\nc\n\nd\ne');
     },
@@ -263,10 +272,11 @@ void main() {
     'runtime identity times out and reaps its direct child',
     () async {
       final pidFile = File(p.join(base.path, 'runtime.pid'));
-      final executable = File(p.join(base.path, 'runtime'))
-        ..writeAsStringSync(
-          '#!/bin/sh\nprintf "\$\$" > runtime.pid\nexec /bin/sleep 120\n',
-        );
+      final executable = File(p.join(base.path, 'runtime'));
+      await writePosixExecutableFixture(
+        executable,
+        '#!/bin/sh\nprintf "\$\$" > runtime.pid\nexec /bin/sleep 120\n',
+      );
       posix.chmod(executable.path, '755');
       await expectLater(
         runtimeVersion(executable.path, base),

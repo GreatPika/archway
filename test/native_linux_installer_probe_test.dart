@@ -10,6 +10,8 @@ import '../tool/ci/native_linux_installer_probe.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
+import 'support/posix_executable_fixture.dart';
+
 void main() {
   void linuxTest(String name, dynamic Function() body) => test(
     name,
@@ -26,10 +28,11 @@ void main() {
     final inactive = File(p.join(inert.path, 'dpkg-deb'))
       ..writeAsStringSync('not executable');
     posix.chmod(inactive.path, '644');
-    final executable = File(p.join(valid.path, 'dpkg-deb'))
-      ..writeAsStringSync(
-        '#!/bin/sh\necho executable-compiler-selected\nexit 42\n',
-      );
+    final executable = File(p.join(valid.path, 'dpkg-deb'));
+    await writePosixExecutableFixture(
+      executable,
+      '#!/bin/sh\necho executable-compiler-selected\nexit 42\n',
+    );
     posix.chmod(executable.path, '755');
     final bundle = Directory(p.join(base.path, 'bundle'))..createSync();
     final driver = File(p.join(base.path, 'driver.dart'))

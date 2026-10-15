@@ -10,6 +10,7 @@ import 'package:test/test.dart';
 import 'alias_hop_recheck_process_smoke.dart' as alias;
 import '../tool/installers/macos/build.dart';
 import '../tool/release/native_manifest.dart';
+import 'support/posix_executable_fixture.dart';
 
 void main() {
   void posixTest(String name, dynamic Function() body, {Object? skip}) => test(
@@ -140,10 +141,11 @@ void main() {
     if (!Platform.isMacOS) {
       contents = contents.replaceAll("stat -f '%Op'", "stat -c '%a'");
     }
-    final pkgutil = File(p.join(base.path, 'pkgutil'))
-      ..writeAsStringSync(
-        '#!/bin/sh\n[ -f "${p.join(base.path, 'receipt')}" ]\n',
-      );
+    final pkgutil = File(p.join(base.path, 'pkgutil'));
+    await writePosixExecutableFixture(
+      pkgutil,
+      '#!/bin/sh\n[ -f "${p.join(base.path, 'receipt')}" ]\n',
+    );
     posix.chmod(pkgutil.path, '755');
     final fixture = File(p.join(output.path, 'scripts', 'fixture-$name'))
       ..writeAsStringSync(
