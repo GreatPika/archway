@@ -95,6 +95,13 @@ class Fixture {
         '--no-audit',
         '--no-fund',
       ], ''),
+      if (windows)
+        'process_preparation': execution('source-windows-process-support', [
+          dart,
+          '--suppress-analytics',
+          'run',
+          'tool/ci/prepare_windows_process_support.dart',
+        ], ''),
       'execution': execution(
         'source-tests',
         [dart, 'test', '--reporter=json', '--concurrency=2'],

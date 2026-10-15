@@ -57,6 +57,8 @@ try {
     }
     & $dart --suppress-analytics pub get --enforce-lockfile
     if ($LASTEXITCODE -ne 0) { throw 'Dependency preparation failed; NOT a semantic red.' }
+    & $dart --suppress-analytics run tool/ci/prepare_windows_process_support.dart
+    if ($LASTEXITCODE -ne 0) { throw 'Windows process test support preparation failed.' }
     git diff --exit-code -- pubspec.lock
     if ($LASTEXITCODE -ne 0) { throw 'Dependency lock changed; refusing probe.' }
     # Future backend owner supplies this fixed build entry point. Absent today:

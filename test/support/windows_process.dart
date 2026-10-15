@@ -74,7 +74,19 @@ final _exit = _kernel
       Int32 Function(Pointer<Void>, Pointer<Uint32>),
       int Function(Pointer<Void>, Pointer<Uint32>)
     >('GetExitCodeProcess');
-final _create = _kernel
+DynamicLibrary? _processBridge() {
+  if (!Platform.isWindows) return null;
+  final library = File('build/windows-process/archway_process.dll').absolute;
+  if (!library.existsSync()) {
+    throw StateError(
+      'Windows process test support is unprepared. From the repository root run '
+      'dart --suppress-analytics run tool/ci/prepare_windows_process_support.dart',
+    );
+  }
+  return DynamicLibrary.open(library.path);
+}
+
+final _create = _processBridge()
     ?.lookupFunction<
       Int32 Function(
         Pointer<Utf16>,
@@ -87,6 +99,7 @@ final _create = _kernel
         Pointer<Utf16>,
         Pointer<Void>,
         Pointer<Void>,
+        Pointer<Uint32>,
       ),
       int Function(
         Pointer<Utf16>,
@@ -99,8 +112,9 @@ final _create = _kernel
         Pointer<Utf16>,
         Pointer<Void>,
         Pointer<Void>,
+        Pointer<Uint32>,
       )
-    >('CreateProcessW');
+    >('archway_create_process');
 
 Never _fail(String operation) => throw OSError(operation, _error());
 void _closeHandle(Pointer<Void> handle) {
@@ -185,6 +199,7 @@ final class WindowsSuspendedProcess {
     // Native Windows x64 layouts: STARTUPINFOW104, PROCESS_INFORMATION24.
     final startup = calloc<Uint8>(output == null ? 104 : 112);
     final information = calloc<Uint8>(24);
+    final spawnError = calloc<Uint32>();
     WindowsSuspendedProcess? process;
     try {
       startup.cast<Uint32>().value = 104;
@@ -207,10 +222,11 @@ final class WindowsSuspendedProcess {
             directory,
             startup.cast(),
             information.cast(),
+            spawnError,
           ) ==
           0) {
-        // Capture before entering a cold Dart throw helper or allocating errors.
-        final error = _error();
+        // The native wrapper captures LastError before returning through FFI.
+        final error = spawnError.value;
         throw OSError('CreateProcessW', error);
       }
       process = WindowsSuspendedProcess._(
@@ -228,6 +244,7 @@ final class WindowsSuspendedProcess {
       }
       rethrow;
     } finally {
+      calloc.free(spawnError);
       calloc.free(information);
       calloc.free(startup);
       if (env != nullptr) malloc.free(env);

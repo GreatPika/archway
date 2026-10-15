@@ -177,6 +177,20 @@ Future<void> validateSource(
     paths,
     suite: 'source-npm-ci',
   );
+  if (target == 'windows-x64') {
+    validateExecution(
+      source['process_preparation'],
+      [
+        dart,
+        '--suppress-analytics',
+        'run',
+        'tool/ci/prepare_windows_process_support.dart',
+      ],
+      directory,
+      paths,
+      suite: 'source-windows-process-support',
+    );
+  }
   final logs = validateExecution(
     source['execution'],
     [dart, 'test', '--reporter=json', '--concurrency=2'],

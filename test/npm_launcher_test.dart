@@ -18,6 +18,14 @@ void main() {
   late String node;
   late Directory compilation;
   late File executable;
+  late Directory root;
+  late File descriptorFile;
+  late File nativeArchive;
+  late Map<String, Object> nativePin;
+  late Map descriptor;
+  late String target, archive, npmCli;
+  late SecurityContext context;
+  late File certificate;
   setUpAll(() async {
     final resolved = await Process.run(
       Platform.environment['ARCHWAY_TEST_NODE'] ?? 'node',
@@ -30,6 +38,7 @@ void main() {
           .createTempSync('npm payload ')
           .resolveSymbolicLinksSync(),
     );
+    addTearDown(() => compilation.deleteSync(recursive: true));
     executable = File(
       p.join(compilation.path, Platform.isWindows ? 'payload.exe' : 'payload'),
     );
@@ -41,81 +50,84 @@ void main() {
       executable.path,
     ]);
     expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
-  });
-  tearDownAll(() => compilation.deleteSync(recursive: true));
-  test('identical packed local global and cache routes preserve native transport cold and offline', () async {
-    final fixtureElapsed = Stopwatch()..start();
     final fixture = await prepareNpmStageFixture();
-    final root = fixture.root;
-    HttpServer? server;
-    try {
-      final target = Platform.isWindows
-          ? 'windows-x64'
-          : Platform.isMacOS
-          ? 'macos-arm64'
-          : 'linux-x64';
-      final native = await npmNativeFixture(
-        root,
-        Platform.isWindows ? 'zip' : 'tar.gz',
-        payload: executable.readAsBytesSync(),
-        executableMode: 0x1ed,
-        sourceIdentity: fixture.identity,
-        nativeTarget: target,
+    root = fixture.root;
+    addTearDown(() => root.deleteSync(recursive: true));
+    descriptorFile = fixture.descriptor;
+    target = Platform.isWindows
+        ? 'windows-x64'
+        : Platform.isMacOS
+        ? 'macos-arm64'
+        : 'linux-x64';
+    final native = await npmNativeFixture(
+      root,
+      Platform.isWindows ? 'zip' : 'tar.gz',
+      payload: executable.readAsBytesSync(),
+      executableMode: 0x1ed,
+      sourceIdentity: fixture.identity,
+      nativeTarget: target,
+    );
+    nativeArchive = native.archive;
+    nativePin = native.pin;
+    descriptor = jsonDecode(descriptorFile.readAsStringSync()) as Map;
+    descriptor['targets'][target] = {
+      ...native.pin,
+      'url': descriptor['targets'][target]['url'],
+    };
+    fixture.descriptor.writeAsStringSync(jsonEncode(descriptor));
+    Future<void> dart(List<String> args) async {
+      final result = await Process.run(Platform.resolvedExecutable, args);
+      expect(
+        result.exitCode,
+        0,
+        reason: '${result.stdout}\n${result.stderr}',
       );
-      final descriptor =
-          jsonDecode(fixture.descriptor.readAsStringSync()) as Map;
-      descriptor['targets'][target] = {
-        ...native.pin,
-        'url': descriptor['targets'][target]['url'],
-      };
-      fixture.descriptor.writeAsStringSync(jsonEncode(descriptor));
-      Future<void> dart(List<String> args) async {
-        final result = await Process.run(Platform.resolvedExecutable, args);
-        expect(
-          result.exitCode,
-          0,
-          reason: '${result.stdout}\n${result.stderr}',
-        );
-      }
+    }
 
-      await dart([
-        'tool/npm/stage.dart',
-        '--source',
-        fixture.source.path,
-        '--descriptor',
-        fixture.descriptor.path,
-        '--output',
-        p.join(root.path, 'stage'),
-        '--expected-commit',
-        fixture.identity['commit']! as String,
-      ]);
-      await dart([
-        'tool/npm/pack.dart',
-        '--stage',
-        p.join(root.path, 'stage'),
-        '--output',
-        p.join(root.path, 'packed'),
-      ]);
-      final packed = jsonDecode(
-        File(p.join(root.path, 'packed', 'npm-packed.json')).readAsStringSync(),
-      ) as Map;
-      final archive = p.join(root.path, 'packed', packed['filename'] as String);
-      final npmCli = Platform.isWindows
-          ? p.join(p.dirname(node), 'node_modules', 'npm', 'bin', 'npm-cli.js')
-          : p.join(
-              p.dirname(p.dirname(node)),
-              'lib',
-              'node_modules',
-              'npm',
-              'bin',
-              'npm-cli.js',
-            );
-      expect(File(npmCli).existsSync(), true);
-      final tls = await createLoopbackTls(root);
-      final context = tls.context;
-      for (final route in ['local', 'global', 'cache']) {
-        final base = Directory(p.join(root.path, '$route route café'))
-          ..createSync();
+    await dart([
+      'tool/npm/stage.dart',
+      '--source',
+      fixture.source.path,
+      '--descriptor',
+      fixture.descriptor.path,
+      '--output',
+      p.join(root.path, 'stage'),
+      '--expected-commit',
+      fixture.identity['commit']! as String,
+    ]);
+    await dart([
+      'tool/npm/pack.dart',
+      '--stage',
+      p.join(root.path, 'stage'),
+      '--output',
+      p.join(root.path, 'packed'),
+    ]);
+    final packed = jsonDecode(
+      File(p.join(root.path, 'packed', 'npm-packed.json')).readAsStringSync(),
+    ) as Map;
+    archive = p.join(root.path, 'packed', packed['filename'] as String);
+    npmCli = Platform.isWindows
+        ? p.join(p.dirname(node), 'node_modules', 'npm', 'bin', 'npm-cli.js')
+        : p.join(
+            p.dirname(p.dirname(node)),
+            'lib',
+            'node_modules',
+            'npm',
+            'bin',
+            'npm-cli.js',
+          );
+    expect(File(npmCli).existsSync(), true);
+    final tls = await createLoopbackTls(root);
+    context = tls.context;
+    certificate = tls.certificate;
+  });
+  for (final route in ['local', 'global', 'cache']) {
+    test('identical packed $route route preserves native transport cold and offline', () async {
+      final fixtureElapsed = Stopwatch()..start();
+      final base = Directory(p.join(root.path, '$route route café'))
+        ..createSync();
+      HttpServer? server;
+      try {
         final project = Directory(p.join(base.path, 'project'))..createSync();
         File(p.join(project.path, 'package.json'))
             .writeAsStringSync('{"private":true}');
@@ -207,8 +219,8 @@ void main() {
         var requests = 0;
         server.listen((request) async {
           requests++;
-          request.response.contentLength = native.archive.lengthSync();
-          await request.response.addStream(native.archive.openRead());
+          request.response.contentLength = nativeArchive.lengthSync();
+          await request.response.addStream(nativeArchive.openRead());
           await request.response.close();
         });
         // Fixture-only transport and invocation observation, no runtime URL option.
@@ -240,7 +252,7 @@ https.get=function(url,...args){if(url.href!==${jsonEncode(descriptor['targets']
           'USERPROFILE': home.path,
           'LOCALAPPDATA': localData,
           'XDG_CACHE_HOME': p.join(home.path, '.cache'),
-          'NODE_EXTRA_CA_CERTS': tls.certificate.path,
+          'NODE_EXTRA_CA_CERTS': certificate.path,
           'NODE_OPTIONS': '--require ${jsonEncode(preload.path)}',
           'PATH': [
             p.dirname(node),
@@ -398,7 +410,7 @@ https.get=function(url,...args){if(url.href!==${jsonEncode(descriptor['targets']
         expect(installedRoute.packageRoot.path, packageRoot);
         expect(
           File(p.join(packageRoot, 'acquisition.json')).readAsBytesSync(),
-          fixture.descriptor.readAsBytesSync(),
+          descriptorFile.readAsBytesSync(),
         );
         if (route == 'cache') {
           expect(p.isWithin(cache, origin), true);
@@ -439,7 +451,7 @@ https.get=function(url,...args){if(url.href!==${jsonEncode(descriptor['targets']
             nativeCache.path,
             descriptor['version'] as String,
             target,
-            native.pin['sha256'] as String,
+            nativePin['sha256'] as String,
           ),
         );
         final originalRecord = record.readAsBytesSync();
@@ -466,10 +478,10 @@ https.get=function(url,...args){if(url.href!==${jsonEncode(descriptor['targets']
         }
         await launch(phase: 'warm-recovery');
         expect(requests, 1, reason: route);
+      } finally {
+        await server?.close(force: true);
+        base.deleteSync(recursive: true);
       }
-    } finally {
-      await server?.close(force: true);
-      root.deleteSync(recursive: true);
-    }
-  }, timeout: const Timeout(Duration(minutes: 3)));
+    }, timeout: const Timeout(Duration(minutes: 3)));
+  }
 }

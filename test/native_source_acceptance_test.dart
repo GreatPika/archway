@@ -11,6 +11,25 @@ import '../tool/ci/native_source_acceptance.dart';
 
 void main() {
   test(
+    'Windows snapshot prepares its process bridge before source tests',
+    () async {
+      final fixture = SourceFixture(target: 'windows-x64');
+      addTearDown(fixture.close);
+      final proof = await fixture.run();
+      expect(fixture.calls, [
+        'source-pub-get',
+        'source-npm-ci',
+        'source-windows-process-support',
+        'source-tests',
+      ]);
+      expect(
+        (proof['process_preparation'] as Map)['suite'],
+        'source-windows-process-support',
+      );
+    },
+  );
+
+  test(
     'tracked snapshot and archive bytes bind original receipt fields',
     () async {
       final fixture = SourceFixture();
@@ -325,7 +344,7 @@ void main() {
 }
 
 final class SourceFixture {
-  SourceFixture() {
+  SourceFixture({this.target = 'linux-x64'}) {
     root = Directory.systemTemp.createTempSync('source-gate-');
     repo = Directory(p.join(root.path, 'repo'))..createSync();
     output = Directory(p.join(root.path, 'output'))..createSync();
@@ -346,13 +365,13 @@ final class SourceFixture {
     git(['config', 'user.name', 'Source fixture']);
     git(['add', '.']);
     git(['commit', '-qm', 'fixture']);
-    executable = p.join(bundle.path, 'bin', 'linux-x64', 'archway');
+    executable = p.join(bundle.path, 'bin', target, 'archway');
     write(
       bundle,
-      'bin/linux-x64/archway',
+      'bin/$target/archway',
       'not executed by injected source runner',
     );
-    write(bundle, 'native/linux-x64/libarchway_io.so', 'archive bridge');
+    write(bundle, 'native/$target/$library', 'archive bridge');
     write(
       bundle,
       'assets/typescript/vendor/package/index.js',
@@ -371,6 +390,10 @@ final class SourceFixture {
       }
     }
   }
+  final String target;
+  String get library =>
+      target == 'windows-x64' ? 'archway_io.dll' : 'libarchway_io.so';
+  String get dartName => target == 'windows-x64' ? 'dart.exe' : 'dart';
   late Directory root, repo, output, bundle;
   late String executable;
   late Map<String, String> fixtures;
@@ -402,7 +425,7 @@ final class SourceFixture {
       command,
       name == 'source-pub-get'
           ? [
-              p.join(fixtures['dart_sdk']!, 'bin', 'dart'),
+              p.join(fixtures['dart_sdk']!, 'bin', dartName),
               '--suppress-analytics',
               'pub',
               'get',
@@ -438,8 +461,15 @@ final class SourceFixture {
               '--no-audit',
               '--no-fund',
             ]
+          : name == 'source-windows-process-support'
+          ? [
+              p.join(fixtures['dart_sdk']!, 'bin', dartName),
+              '--suppress-analytics',
+              'run',
+              'tool/ci/prepare_windows_process_support.dart',
+            ]
           : [
-              p.join(fixtures['dart_sdk']!, 'bin', 'dart'),
+              p.join(fixtures['dart_sdk']!, 'bin', dartName),
               'test',
               '--reporter=json',
               '--concurrency=2',
@@ -450,7 +480,7 @@ final class SourceFixture {
     expect(env.containsKey('ARCHWAY_TEST_PYTHON'), isFalse);
     expect(env['npm_config_cache'], p.join(root.path, 'npm-cache'));
     expect(
-      File(p.join(cwd, 'native/linux-x64/libarchway_io.so')).readAsStringSync(),
+      File(p.join(cwd, 'native/$target/$library')).readAsStringSync(),
       'archive bridge',
     );
     expect(

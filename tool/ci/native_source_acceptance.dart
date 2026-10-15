@@ -257,6 +257,21 @@ Future<Map<String, Object?>> runSourceTests(
         );
       }
     }
+    final processPreparation = target == 'windows-x64'
+        ? await execute(
+            'source-windows-process-support',
+            [
+              dart,
+              '--suppress-analytics',
+              'run',
+              'tool/ci/prepare_windows_process_support.dart',
+            ],
+            source.path,
+            env,
+            output,
+            timeout: suiteTimeout,
+          )
+        : null;
     // Keep the same bounded suite parallelism on three- and four-core hosts.
     final execution = await execute(
       'source-tests',
@@ -292,6 +307,7 @@ Future<Map<String, Object?>> runSourceTests(
       'assets': assets,
       'preparation': preparation,
       'npm_preparation': npmPreparation,
+      if (processPreparation != null) 'process_preparation': processPreparation,
       'execution': execution,
       'tests': summary,
     };

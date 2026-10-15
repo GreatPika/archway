@@ -380,6 +380,7 @@ jobs:
           mkdir -p build/npm-local
           export PUB_CACHE="$RUNNER_TEMP/archway-bootstrap-cache"
           "$PUB_BOOTSTRAP_DART" --suppress-analytics pub get --enforce-lockfile
+          "$PUB_BOOTSTRAP_DART" --suppress-analytics run tool/ci/prepare_windows_process_support.dart
           "$PUB_BOOTSTRAP_DART" tool/ci/verify_export_sources.dart "$GITHUB_SHA"
           wrong="$(node -p 'require("node:path").join(process.env.RUNNER_TEMP,"archway-wrong-node")')"
           "$PUB_BOOTSTRAP_DART" run tool/ci/setup_npm_wrong_node.dart --target '${{ matrix.target }}' \
@@ -466,6 +467,7 @@ jobs:
           mkdir -p build/pub-installed
           export PUB_CACHE="$RUNNER_TEMP/archway-bootstrap-cache"
           "$PUB_BOOTSTRAP_DART" --suppress-analytics pub get --enforce-lockfile
+          "$PUB_BOOTSTRAP_DART" --suppress-analytics run tool/ci/prepare_windows_process_support.dart
           "$PUB_BOOTSTRAP_DART" tool/ci/verify_export_sources.dart "$GITHUB_SHA"
           setup="$(node -p 'require("node:path").join(process.env.RUNNER_TEMP,"archway-pub-setup")')"
           "$PUB_BOOTSTRAP_DART" run tool/ci/setup_pub_dart.dart --target '${{ matrix.target }}' \
@@ -559,6 +561,7 @@ jobs:
           mkdir -p build/release-native
           "$PUB_BOOTSTRAP_DART" tool/ci/prepare_locked_checkout.dart \
             2>&1 | tee build/release-native/checkout-preparation.log
+          "$PUB_BOOTSTRAP_DART" --suppress-analytics run tool/ci/prepare_windows_process_support.dart
           git diff --exit-code -- pubspec.lock
           "$PUB_BOOTSTRAP_DART" tool/ci/verify_export_sources.dart "$GITHUB_SHA"
       - name: Prepare real pinned compiler and dependency fixtures separately from checks

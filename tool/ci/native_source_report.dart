@@ -202,6 +202,16 @@ bool expectedSkip(String target, String path, String name, String? reason) {
   // matches its owning test's Platform guard; dependencies never qualify.
   const windowsOnly = {
     (
+      'test/native_acceptance_windows_capture_test.dart',
+      'Windows missing process bridge fails with a preparation command',
+    ): 'Native Windows error capture control.',
+
+    (
+      'test/native_acceptance_windows_capture_test.dart',
+      'Windows spawn error survives a later LastError overwrite',
+    ): 'Native Windows error capture control.',
+
+    (
       'test/npm_windows_shim_native_test.dart',
       'actual npm local global and exec Windows shims preserve literal argv under owned capture',
     ): 'Requires genuine Windows npm shims and owned raw-command execution.',

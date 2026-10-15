@@ -152,12 +152,23 @@ Future<NativeProcessResult> _checked(
   return result;
 }
 
-Future<void> buildNativeLibrary(File source, File destination) async {
+typedef NativeFixtureRunner = Future<NativeProcessResult> Function(
+  List<String> command, {
+  Duration timeout,
+  String? workingDirectory,
+  Map<String, String>? environment,
+});
+
+Future<void> buildNativeLibrary(
+  File source,
+  File destination, {
+  NativeFixtureRunner run = _checked,
+}) async {
   final repository = File.fromUri(Platform.script).parent.parent;
   final include = p.join(repository.path, 'native');
   final target = nativeTarget().target;
   if (target == 'windows-x64') {
-    return _buildWindowsLibrary(source, destination, include);
+    return _buildWindowsLibrary(source, destination, include, run);
   }
   final command = target == 'macos-arm64'
       ? [
@@ -191,6 +202,7 @@ Future<void> _buildWindowsLibrary(
   File source,
   File destination,
   String include,
+  NativeFixtureRunner run,
 ) async {
   String? value(String name) {
     for (final entry in Platform.environment.entries) {
@@ -203,6 +215,7 @@ Future<void> _buildWindowsLibrary(
   if (programFiles == null) throw StateError('ProgramFiles(x86) is missing');
   final installation = await visualStudioInstallation(
     p.join(programFiles, 'Microsoft Visual Studio', 'Installer', 'vswhere.exe'),
+    run: (command, {required timeout}) => run(command, timeout: timeout),
   );
   final msvc = p.join(installation, 'VC', 'Tools', 'MSVC', '14.44.35207');
   final sdk = p.join(programFiles, 'Windows Kits', '10');
@@ -245,7 +258,7 @@ Future<void> _buildWindowsLibrary(
   };
   final work = Directory.systemTemp.createTempSync('archway-native-compiler-');
   try {
-    await _checked(
+    await run(
       [
         p.join(binary, 'cl.exe'),
         '/nologo',

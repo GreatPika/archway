@@ -7,6 +7,23 @@ import 'package:test/test.dart';
 import 'source_receipt_fixtures.dart';
 
 void main() {
+  for (final mutation in ['missing', 'failed', 'different command']) {
+    test('Windows source support receipt rejects $mutation', () async {
+      final f = Fixture('windows-x64');
+      addTearDown(f.close);
+      final receipt = f.source['process_preparation'] as Map<String, dynamic>;
+      if (mutation == 'missing') {
+        f.source.remove('process_preparation');
+      } else {
+        if (mutation == 'failed') receipt['exit_code'] = 1;
+        if (mutation == 'different command') receipt['command'] = ['wrong'];
+        File(p.join(f.evidence.path, 'source-windows-process-support.json'))
+            .writeAsStringSync(jsonEncode(receipt));
+      }
+      await expectLater(f.validate(), throwsFormatException);
+    });
+  }
+
   for (final changed in [
     'missing',
     'command',

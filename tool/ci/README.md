@@ -31,6 +31,12 @@ dart --suppress-analytics pub get --enforce-lockfile
 bash tool/prepare_typescript.sh
 ```
 
+Before Windows tests or standalone capability probes, prepare the developer-only
+process bridge from the repository root with
+`dart --suppress-analytics run tool/ci/prepare_windows_process_support.dart`.
+It uses the pinned installed MSVC/Windows SDK and writes only under `build/`.
+Copied-source acceptance prepares its own bridge before running tests.
+
 Windows assembly requires PowerShell, explicit pinned Dart, and verified Git for
 Windows Bash with pinned Node/npm first on PATH. Source policy/init controls
 need no Node.
