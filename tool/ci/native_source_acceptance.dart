@@ -27,9 +27,9 @@ Map<String, String> sourceTestEnvironment(
     });
 }
 
-// The complete growing source inventory has its own aggregate wall budget.
+// The complete source inventory has a 25-minute aggregate CI wall budget.
 // Native process suites and source dependency preparation retain 600 seconds.
-const sourceSuiteTimeout = Duration(seconds: 900);
+const sourceSuiteTimeout = Duration(seconds: 1500);
 
 typedef SourceExecute = Future<Map<String, Object?>> Function(
   String name,

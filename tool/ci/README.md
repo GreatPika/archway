@@ -295,7 +295,9 @@ from an exact tracked-source snapshot using the verified archive's bridge/vendor
 assets. It requires every tracked `test/*_test.dart` suite, complete successful
 terminal results and only the explicitly allowed host/filesystem fixture skips.
 Evidence retains original Dart JSON output, source-file hashes and archive asset
-identity; a reduced source selection cannot substitute for this gate.
+identity; a reduced source selection cannot substitute for this gate. The complete
+source suite has a 25-minute aggregate CI wall budget; this does not change
+product deadlines or the 10-minute native-suite and dependency-preparation budgets.
 
 Completed nonzero process-suite exits are collected so later isolated process
 fixtures and the full source gate can still expose independent failures in the

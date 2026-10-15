@@ -99,7 +99,7 @@ class Fixture {
         'source-tests',
         [dart, 'test', '--reporter=json', '--concurrency=2'],
         eventLog(),
-        timeout: 900,
+        timeout: 1500,
       ),
       'tests': {
         'suites': [testPath],
@@ -202,7 +202,7 @@ class Fixture {
       'source-tests',
       List<String>.from(source['execution']['command']),
       text,
-      timeout: 900,
+      timeout: 1500,
     );
   }
 

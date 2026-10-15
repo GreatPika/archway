@@ -395,7 +395,7 @@ final class SourceFixture {
     Directory logs, {
     required Duration timeout,
   }) async {
-    expect(timeout.inSeconds, name == 'source-tests' ? 900 : 600);
+    expect(timeout.inSeconds, name == 'source-tests' ? 1500 : 600);
     calls.add(name);
     snapshot = cwd;
     expect(

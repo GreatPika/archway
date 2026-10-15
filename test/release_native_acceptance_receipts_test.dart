@@ -45,7 +45,7 @@ void main() {
   final corruptions = <String, void Function(Evidence)>{
     'source-only budget on native suite': (e) {
       final receipt = (e.acceptance['suites'] as List).first as Map;
-      receipt['timeout_seconds'] = 900;
+      receipt['timeout_seconds'] = 1500;
       File(p.join(e.directory.path, '${receipt['suite']}.json'))
           .writeAsStringSync(jsonEncode(receipt));
     },

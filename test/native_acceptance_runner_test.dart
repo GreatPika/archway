@@ -370,7 +370,7 @@ void main() {
         execute: (name, cmd, cwd, env, logs, {required timeout}) async {
           if (!name.startsWith('source-'))
             return f.execute(name, cmd, cwd, env, logs, timeout: timeout);
-          expect(timeout.inSeconds, name == 'source-tests' ? 900 : 600);
+          expect(timeout.inSeconds, name == 'source-tests' ? 1500 : 600);
           f.calls.add(name);
           expect(
             cmd.first,

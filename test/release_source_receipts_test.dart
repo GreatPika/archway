@@ -238,11 +238,13 @@ void main() {
     'execution exit': (f) => f.source['execution']['exit_code'] = 1,
     'preparation timeout': (f) => f.source['preparation']['timed_out'] = true,
     'preparation source-only timeout budget': (f) =>
-        f.source['preparation']['timeout_seconds'] = 900,
+        f.source['preparation']['timeout_seconds'] = 1500,
     'execution obsolete process-suite timeout budget': (f) =>
         f.source['execution']['timeout_seconds'] = 600,
+    'execution obsolete source-suite timeout budget': (f) =>
+        f.source['execution']['timeout_seconds'] = 900,
     'execution fractional timeout budget': (f) =>
-        f.source['execution']['timeout_seconds'] = 900.0,
+        f.source['execution']['timeout_seconds'] = 1500.0,
     'summary pass count': (f) => f.source['tests']['passed'] = 2,
     'summary inventory': (f) => f.source['tests']['suites'] = [],
     'summary unknown field': (f) => f.source['tests']['extra'] = true,
