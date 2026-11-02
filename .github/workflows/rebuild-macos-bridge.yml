@@ -1,0 +1,77 @@
+name: Rebuild macOS bridge (maintainer artifact only)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'native/io.h'
+      - 'native/macos_io.c'
+      - 'tool/build_native_macos.sh'
+      - '.github/workflows/rebuild-macos-bridge.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Build owned source and record provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          sh tool/build_native_macos.sh build/macos-bridge
+          python3 - <<'PY'
+          import ctypes, hashlib, json, os, pathlib, shutil, subprocess
+          root = pathlib.Path.cwd()
+          output = root / 'build/macos-bridge'
+          asset = output / 'libarchway_io.dylib'
+          def command(*args):
+              return subprocess.check_output(args, text=True, stderr=subprocess.STDOUT).strip()
+          def sha(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+          original_sha = sha(asset)
+          bridge = ctypes.CDLL(str(asset))
+          bridge.archway_io_version.restype = ctypes.c_int32
+          assert bridge.archway_io_version() == 2, 'Wrong bridge ABI'
+          relocated = pathlib.Path(os.environ['RUNNER_TEMP']) / ('archway SDK relocation café ' + 'x' * 96) / asset.name
+          relocated.parent.mkdir(parents=True, exist_ok=False)
+          shutil.copy2(asset, relocated)
+          rewrite = subprocess.run(['xcrun', 'install_name_tool', '-id', str(relocated), '-change', '@rpath/libarchway_io.dylib', str(relocated), str(relocated)], text=True, capture_output=True, check=True, timeout=30)
+          names = command('xcrun', 'otool', '-D', str(relocated))
+          assert names.splitlines()[-1].strip() == str(relocated), names
+          assert sha(asset) == original_sha, 'Probe must not mutate uploaded asset'
+          (output / 'relocation.log').write_text(rewrite.stdout + rewrite.stderr + names + '\n')
+          receipt = {
+              'kind': 'maintainer_native_build_not_release',
+              'target': 'macos-arm64', 'abi_version': 2,
+              'source_commit': command('git', 'rev-parse', 'HEAD'),
+              'source_tree': command('git', 'rev-parse', 'HEAD^{tree}'),
+              'run_id': os.environ['GITHUB_RUN_ID'],
+              'run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+              'run_url': f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+              'os': command('sw_vers'),
+              'architecture': command('uname', '-m'),
+              'compiler': command('xcrun', '--sdk', 'macosx', 'clang', '--version'),
+              'sdk_version': command('xcrun', '--sdk', 'macosx', '--show-sdk-version'),
+              'source_sha256': {name: sha(root / name) for name in ['native/io.h', 'native/macos_io.c', 'tool/build_native_macos.sh']},
+              'asset': {'member': 'native/macos-arm64/libarchway_io.dylib', 'size': asset.stat().st_size, 'sha256': original_sha},
+              'relocation_probe': {'install_id': str(relocated), 'exit': rewrite.returncode, 'original_unchanged': True, 'scope': 'Copy-only install_name_tool probe; final SDK install remains a separate gate'},
+          }
+          assert receipt['source_commit'] == os.environ['GITHUB_SHA']
+          (output / 'provenance.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          print(json.dumps(receipt, indent=2))
+          PY
+      - name: Upload bridge and build evidence (no publication or self-push)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: macos-bridge-${{ github.sha }}-${{ github.run_attempt }}
+          path: build/macos-bridge/
+          if-no-files-found: error
+          retention-days: 14

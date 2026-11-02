@@ -1,0 +1,341 @@
+{
+  "kind": "design_expected_cases_not_runtime_results",
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "P01",
+      "input": "src\\a.ts",
+      "expected": "src/a.ts on all hosts; same owner as slash spelling"
+    },
+    {
+      "id": "P02",
+      "input": "./src//x/../a.ts",
+      "expected": "src/a.ts; no filesystem access by owner"
+    },
+    {
+      "id": "P03",
+      "input": "../repo/src/a.ts",
+      "expected": "reject immediate above-root traversal; positional64/policy2"
+    },
+    {
+      "id": "P04",
+      "input": "C:src/a.ts",
+      "expected": "reject drive-relative input on every host"
+    },
+    {
+      "id": "P05",
+      "input": "C:\\src\\a.ts",
+      "expected": "reject absolute policy path on every host"
+    },
+    {
+      "id": "P06",
+      "input": "\\\\server\\share\\a.ts",
+      "expected": "reject UNC policy path"
+    },
+    {
+      "id": "P07",
+      "input": "src/%2e%2e/a.ts",
+      "expected": "literal percent segment, no URL decode or traversal"
+    },
+    {
+      "id": "P08",
+      "input": "src/CON.ts",
+      "expected": "reject portable Windows device name even on Linux"
+    },
+    {
+      "id": "P09",
+      "input": "src/a.ts:secret",
+      "expected": "reject colon/alternate stream syntax"
+    },
+    {
+      "id": "P10",
+      "input": "src/",
+      "expected": "directory prefix; matches src/a.ts, not src2/a.ts"
+    },
+    {
+      "id": "P11",
+      "input": "src",
+      "expected": "exact path, not directory prefix"
+    },
+    {
+      "id": "P12",
+      "input": "a/..",
+      "expected": "canonical root prefix ./"
+    },
+    {
+      "id": "P13",
+      "input": "src/é.dart versus decomposed e+acute",
+      "expected": "same lexical NFC path; conflicting physical entries incomplete"
+    },
+    {
+      "id": "P14",
+      "input": "owns A:src/Foo.dart and B:src/foo.dart",
+      "expected": "lexically distinct; physical collapse/case mismatch incomplete on insensitive FS, separate real files on Linux allowed"
+    },
+    {
+      "id": "P15",
+      "input": "owns A:src/ B:src/a.ts before files exist",
+      "expected": "invalid policy overlap"
+    },
+    {
+      "id": "P16",
+      "input": "owns A:src/ A:src/a.ts",
+      "expected": "normalize redundant own paths; do not double count"
+    },
+    {
+      "id": "P17",
+      "input": "owner src/generated/a.ts; scope src/; exclude src/generated/",
+      "expected": "excluded even if owns src/ exists"
+    },
+    {
+      "id": "F01",
+      "input": "root itself symlink to repository",
+      "expected": "canonicalize root once; child paths relative to canonical root"
+    },
+    {
+      "id": "F02",
+      "input": "included src/link.dart symlink to owned ordinary file",
+      "expected": "incomplete; do not follow; policy-only owner still lexical"
+    },
+    {
+      "id": "F03",
+      "input": "included src/linked/ directory symlink or Windows junction",
+      "expected": "incomplete at directory; do not traverse and falsely report empty corpus"
+    },
+    {
+      "id": "F04",
+      "input": "excluded directory symlink, no import",
+      "expected": "skip subtree; does not itself make incomplete"
+    },
+    {
+      "id": "F05",
+      "input": "A prepared pub path/workspace package mapping resolves through an alias to packages/pkg, imported from lib/app/main.dart",
+      "expected": "Resolve the actual Dart package target and retain observed/canonical alias evidence; proven path/workspace provenance is local, with owner/public checks"
+    },
+    {
+      "id": "F06",
+      "input": "local workspace package -> outside canonical root",
+      "expected": "known local outside_scope violation; never external by specifier alone"
+    },
+    {
+      "id": "F07",
+      "input": "ordinary installed package in pub cache outside root with manifest/lock provenance",
+      "expected": "external; package symlink exception applies"
+    },
+    {
+      "id": "F08",
+      "input": "unknown outside-root alias without package origin",
+      "expected": "incomplete unresolved provenance"
+    },
+    {
+      "id": "F09",
+      "input": "canonical /repo2/a.dart with root /repo",
+      "expected": "outside root; segment containment prevents prefix confusion"
+    },
+    {
+      "id": "F10",
+      "input": "two included hard links of same file",
+      "expected": "distinct canonical path entries retain separate lexical owners; check each resolved import path; no inode equivalence or link-count claim"
+    },
+    {
+      "id": "F11",
+      "input": "case-insensitive disk stores src/foo.dart but resolver reports src/Foo.dart",
+      "expected": "incomplete case mismatch, do not reassign owner silently"
+    },
+    {
+      "id": "F12",
+      "input": "symlink target changes between resolution and verification",
+      "expected": "incomplete changed input; prior independent violations retained"
+    },
+    {
+      "id": "F13",
+      "input": "POSIX source filename contains literal backslash",
+      "expected": "incomplete unrepresentable portable path, not rewritten to a different file"
+    },
+    {
+      "id": "R01",
+      "input": "Prepared Dart project with external SDK absent",
+      "expected": "incomplete with DART_SDK_UNAVAILABLE; preserve independently known policy/corpus violations"
+    },
+    {
+      "id": "R02",
+      "input": "Installed owner/validate/init/export with no external SDK or Node on PATH",
+      "expected": "No analysis runtime preflight; installed bundle supplies required native asset"
+    },
+    {
+      "id": "R03",
+      "input": "Dart 3.13.4 selected for analysis",
+      "expected": "Outside exact analysis pin; affected project incomplete, no silent semver acceptance"
+    },
+    {
+      "id": "R04",
+      "input": "Project declares a different analyzer dependency",
+      "expected": "Use embedded analyzer 14.5.0; never execute project plugins or substitute analyzer"
+    },
+    {
+      "id": "R05",
+      "input": "NODE_OPTIONS or native loader preload variables set",
+      "expected": "Remove loader influence before Dart SDK preflight; no project code execution"
+    },
+    {
+      "id": "R06",
+      "input": "runtime found as executable within selected repo or via PATH dot",
+      "expected": "reject runtime candidate; incomplete, no wrapper execution"
+    },
+    {
+      "id": "R07",
+      "input": "Installed standard SDK bundle from unrelated cwd",
+      "expected": "Native asset ID loads bundled bridge without source checkout or cwd lookup"
+    },
+    {
+      "id": "R08",
+      "input": "Installed bundle copy with missing bridge",
+      "expected": "Affected native writes/alias reads fail closed; no unsafe fallback"
+    },
+    {
+      "id": "H01",
+      "input": "SDK preflight emits exactly 65536 combined output bytes and exits within 5 seconds",
+      "expected": "Size boundary allowed; version contents must still validate"
+    },
+    {
+      "id": "H02",
+      "input": "SDK preflight emits 65537 combined bytes",
+      "expected": "Terminate and reject preflight; no truncated success"
+    },
+    {
+      "id": "H03",
+      "input": "SDK preflight prints version but remains alive beyond 5 seconds",
+      "expected": "Deadline incomplete; text alone is not completion"
+    },
+    {
+      "id": "H04",
+      "input": "Dart SDK preflight pending spawn during cancellation",
+      "expected": "Bounded cleanup; late child handled and unconfirmed status reported"
+    },
+    {
+      "id": "H05",
+      "input": "SDK stderr causes combined output to exceed 64 KiB",
+      "expected": "Bounded preflight applies across both streams"
+    },
+    {
+      "id": "H06",
+      "input": "SDK timeout and termination unconfirmed after 2 seconds",
+      "expected": "Explicit cleanup error; block later runtime launches, no claim child eliminated"
+    },
+    {
+      "id": "H07",
+      "input": "One Dart project has valid violation, another loses discovery evidence",
+      "expected": "Incomplete retains independent verified violation"
+    },
+    {
+      "id": "C01",
+      "input": "stable Flutter SDK embeds Dart3.13.3; prepared package_config, complete SDK cache",
+      "expected": "design-supported Flutter Dart analysis; record Flutter revision and resolve dart:ui; requires runtime certification before release"
+    },
+    {
+      "id": "C02",
+      "input": "Flutter SDK embeds Dart3.13.2 or missing dart:ui summary/cache",
+      "expected": "affected Dart context incomplete; no flutter precache/pub get/download"
+    },
+    {
+      "id": "C03",
+      "input": "Policy declares adapter: typescript, with or without prepared tsconfig/output",
+      "expected": "Reject invalid policy at /projects/N/adapter before inspection; no TypeScript runtime or build is attempted",
+      "verification": "test/dart_only_test.dart: TypeScript policy declaration is rejected at its adapter pointer"
+    },
+    {
+      "id": "C04",
+      "input": "init --template typescript or init --template mixed",
+      "expected": "Usage exit 64 before writes; only default Dart or explicit --template dart is supported",
+      "verification": "test/dart_only_test.dart: init rejects unsupported template without writes (typescript and mixed cases)"
+    },
+    {
+      "id": "C05",
+      "input": "Directory scope src/ contains main.dart, build.js and tools.ts",
+      "expected": "Only main.dart enters the Dart corpus; incidental JS/TS files do not themselves make inspection incomplete",
+      "verification": "test/dart_only_test.dart: directory corpus includes Dart but ignores incidental JS and TS files"
+    },
+    {
+      "id": "C06",
+      "input": "Explicit file scope selects tools.ts rather than a directory",
+      "expected": "Report UNSUPPORTED_SCOPE_FILE warning and zero Dart corpus files for this entry; warning alone is not incomplete",
+      "verification": "test/dart_only_test.dart: explicit non-Dart file scope is surfaced as unsupported warning"
+    },
+    {
+      "id": "C07",
+      "input": "The same Dart corpus file belongs to two explicitly listed Dart project contexts",
+      "expected": "Ambiguous assignment and incomplete inspection; do not choose the first project or infer a tie-break from directory spelling",
+      "verification": "test/inspection_test.dart: two compiler memberships remain ambiguous rather than choosing the first project"
+    },
+    {
+      "id": "P18",
+      "input": "src/[a].dart or src/{a}.dart",
+      "expected": "reject policy/positional portable path; discovered actual source name gives incomplete unrepresentable path"
+    },
+    {
+      "id": "EP01",
+      "input": "A proven hosted pub package is mapped by package_config to an ordinary in-root cache target with agreeing pubspec/lock provenance",
+      "expected": "External; physical in-root location alone does not make a hosted dependency local or require an Archway public entry"
+    },
+    {
+      "id": "EP02",
+      "input": "A proven hosted pub package resolves through an alias to an ordinary package target, outside the selected source corpus",
+      "expected": "External when package_config, lock, target manifest and alias evidence agree; retain canonical identity"
+    },
+    {
+      "id": "EP03",
+      "input": "A package: URI resolves to an effective declared Dart workspace member inside the canonical root",
+      "expected": "Local; canonical workspace target owner and exact public entry checks apply; analyzer context membership alone is not external provenance"
+    },
+    {
+      "id": "EP04",
+      "input": "A package: URI has unknown or conflicting hosted/Git versus workspace/path provenance",
+      "expected": "Incomplete for the affected reference; do not infer external from URI spelling or local from containment alone"
+    },
+    {
+      "id": "EP05",
+      "input": "declared repository path dependency resolves outside canonical root",
+      "expected": "local outside_scope violation, never external merely because target is outside root"
+    },
+    {
+      "id": "EP06",
+      "input": "installed vendor code explicitly included by source scope minus exclude",
+      "expected": "authoritative source corpus remains unchanged; target classification does not silently remove selected source coverage"
+    },
+    {
+      "id": "D01",
+      "input": "Standard Dart Git install with Node and C compiler absent",
+      "expected": "Selection-only build hook bundles the matching asset and installed init writes correctly"
+    },
+    {
+      "id": "D02",
+      "input": "Repeat standard Git install at updated ref, reinstall, uninstall",
+      "expected": "New revision used, reinstall succeeds, uninstall removes installed command"
+    },
+    {
+      "id": "D03",
+      "input": "Installed command with decoy cwd assets and original package checkout unavailable",
+      "expected": "Asset-ID binding uses SDK bundle, no cwd/source fallback or project execution"
+    },
+    {
+      "id": "D04",
+      "input": "A source package checkout containing .dart files is included by broad scope; repeat with an explicit user exclusion. Separately, an AOT SDK bundle contains no Dart source files.",
+      "expected": "The source checkout obeys ordinary Dart corpus rules and explicit exclusions, without hidden self/vendor exclusions; the AOT executable and native libraries are not Dart corpus files"
+    },
+    {
+      "id": "D05",
+      "input": "Actual remote Git descriptor install after authorized branch publication",
+      "expected": "Record exact ref and installed commands; local Git proof alone is not remote availability"
+    },
+    {
+      "id": "D06",
+      "input": "Isolated installed bundle copy with missing or wrong-ABI bridge",
+      "expected": "Required operation fails closed without created output; no production override"
+    },
+    {
+      "id": "D07",
+      "input": "Actual installed CLI errors/streams/exits/termination on each target platform",
+      "expected": "Preserve command contracts; report measured OS behavior without claiming equivalence"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+.dart_tool/
+coverage/
+build/
+*.snapshot
+native/linux-x64/*
+!native/linux-x64/libarchway_io.so
+native/macos-arm64/*
+!native/macos-arm64/libarchway_io.dylib
+native/windows-x64/*
+!native/windows-x64/archway_io.dll
+__pycache__/
+*.pyc
+

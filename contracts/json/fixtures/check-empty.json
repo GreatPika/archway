@@ -1,0 +1,71 @@
+{
+  "command": "check",
+  "schema_version": 1,
+  "tool_versions": {
+    "archway": "1.0.0-design",
+    "dart_adapter": null,
+    "typescript_adapter": null,
+    "dart_sdk": null,
+    "node": null,
+    "typescript": null
+  },
+  "resolved_root": "/repo",
+  "policy_path": "architecture.yaml",
+  "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "status": "ok",
+  "exit_code": 0,
+  "diagnostics": [],
+  "payload": {
+    "policy_valid": true,
+    "analysis_complete": true,
+    "violations": [],
+    "unknowns": [],
+    "warnings": [
+      {
+        "code": "EMPTY_PLAN",
+        "severity": "warning",
+        "message": "empty plan",
+        "rule_pointer": null,
+        "source_range": null,
+        "project_id": null,
+        "path": null,
+        "recovery_hints": []
+      }
+    ],
+    "tool_errors": [],
+    "observed": {
+      "files": 0,
+      "analyzed_files": 0,
+      "edges": 0
+    },
+    "coverage": {
+      "projects": [],
+      "files": []
+    },
+    "facts": {
+      "edges": []
+    },
+    "input_identity": {
+      "algorithm": "sha256",
+      "atomic_snapshot": false,
+      "inputs": [
+        {
+          "kind": "policy",
+          "location": {
+            "kind": "repository",
+            "path": "architecture.yaml"
+          },
+          "presence": "present",
+          "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "rechecked": true,
+      "changed_inputs": [],
+      "aliases": []
+    },
+    "scope": [],
+    "exclude": [],
+    "projects": 0,
+    "nodes": 0
+  }
+}

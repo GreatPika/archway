@@ -1,0 +1,483 @@
+{
+  "status": "Acceptance specifications, not runtime results. Linked tests execute selected cases; inspect run evidence for results.",
+  "count": 12,
+  "cases": [
+    {
+      "id": "dart-barrel-private-origin",
+      "language": "dart",
+      "sources": {
+        "a/use.dart": "import '../b/api.dart'; Thing? x;",
+        "b/api.dart": "export 'private.dart';",
+        "b/private.dart": "class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "targets": {
+          "a/use.dart": [
+            "b/api.dart"
+          ],
+          "b/api.dart": [
+            "b/private.dart"
+          ]
+        },
+        "violations": []
+      }
+    },
+    {
+      "id": "dart-foreign-private-export",
+      "language": "dart",
+      "sources": {
+        "b/api.dart": "export '../c/private.dart' show Thing;",
+        "c/private.dart": "class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "violation": "b/api.dart -> c/private.dart: nonpublic target"
+      }
+    },
+    {
+      "id": "dart-combinators-deferred",
+      "language": "dart",
+      "sources": {
+        "a/use.dart": "import '../b/private.dart' deferred as b show Thing;",
+        "b/private.dart": "class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "target": "b/private.dart",
+        "violation": "nonpublic target; unused/deferred/show does not exempt"
+      }
+    },
+    {
+      "id": "dart-conditional-private-inactive",
+      "language": "dart",
+      "sources": {
+        "a/use.dart": "import '../b/api.dart' if (dart.library.io) '../b/private.dart';",
+        "b/api.dart": "class Thing {}",
+        "b/private.dart": "class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "targets": [
+          "b/api.dart",
+          "b/private.dart"
+        ],
+        "violation": "nonpublic b/private.dart even when inactive"
+      }
+    },
+    {
+      "id": "dart-conditional-unresolved",
+      "language": "dart",
+      "sources": {
+        "a/use.dart": "export '../b/private.dart' if (dart.library.io) '../b/missing.dart';",
+        "b/private.dart": "class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "analysis": "incomplete",
+        "retained_violation": "nonpublic b/private.dart",
+        "note": "Missing branch does not erase known violation."
+      }
+    },
+    {
+      "id": "dart-sameowner-private-part",
+      "language": "dart",
+      "sources": {
+        "b/api.dart": "part 'impl.dart';",
+        "b/impl.dart": "part of 'api.dart'; class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "violations": [],
+        "note": "Confirmed same-owner part/part_of edges need no public membership."
+      }
+    },
+    {
+      "id": "dart-crossowner-part-generic",
+      "language": "dart",
+      "sources": {
+        "a/api.dart": "part '../b/impl.dart';",
+        "b/impl.dart": "part of '../a/api.dart'; class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "note": "Each existing confirmed relationship edge uses generic directed policy. No added library-owner equality rule. A->B requires b/impl.dart public; B->A requires allows B->A and a/api.dart public if reverse edge is recorded."
+      }
+    },
+    {
+      "id": "dart-part-physical-origin",
+      "language": "dart",
+      "sources": {
+        "a/api.dart": "part '../b/impl.dart';",
+        "b/impl.dart": "part of '../a/api.dart'; class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "source_identity": "The part_of occurrence belongs to b/impl.dart owner B, not a/api.dart owner A. Containing-library semantic identity cannot overwrite physical origin."
+      }
+    },
+    {
+      "id": "dart-public-part-import",
+      "language": "dart",
+      "sources": {
+        "a/use.dart": "import '../b/impl.dart';",
+        "b/api.dart": "part 'impl.dart';",
+        "b/impl.dart": "part of 'api.dart'; class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "B": [
+            "b/impl.dart"
+          ]
+        }
+      },
+      "expected": {
+        "plan": "lexical public b/impl.dart is accepted",
+        "check": "invalid standalone part import cannot be claimed complete; compiler unknown/incomplete as relevant"
+      }
+    },
+    {
+      "id": "dart-named-part-of",
+      "language": "dart",
+      "sources": {
+        "b/api.dart": "library named_lib; part 'impl.dart';",
+        "b/impl.dart": "part of named_lib; class Thing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "target_for_part_of": "b/api.dart only when containing library is uniquely established",
+        "note": "Do not treat named_lib as path; multiple or missing containing library is incomplete."
+      }
+    },
+    {
+      "id": "dart-public-without-allows",
+      "language": "dart",
+      "sources": {
+        "a/use.dart": "import '../c/api.dart';",
+        "c/api.dart": "class PublicThing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "violation": "missing A -> C permission despite public target",
+        "violation_codes": [
+          "DEPENDENCY_NOT_ALLOWED"
+        ]
+      },
+      "verification": "test/dart_acceptance_examples_test.dart: dart-public-without-allows"
+    },
+    {
+      "id": "dart-private-sameowner",
+      "language": "dart",
+      "sources": {
+        "b/one.dart": "import 'private.dart';",
+        "b/private.dart": "class PrivateThing {}"
+      },
+      "setup": {
+        "owners": {
+          "a/": "A",
+          "b/": "B",
+          "c/": "C"
+        },
+        "allows": {
+          "A": [
+            "B"
+          ],
+          "B": [
+            "C"
+          ],
+          "C": []
+        },
+        "public": {
+          "A": [
+            "a/api.dart"
+          ],
+          "B": [
+            "b/api.dart"
+          ],
+          "C": [
+            "c/api.dart"
+          ]
+        }
+      },
+      "expected": {
+        "violations": [],
+        "note": "Same-owner entrypoint exemption preserves other root/scope/exclude validation."
+      },
+      "verification": "test/dart_acceptance_examples_test.dart: dart-private-sameowner"
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "abi_version": 2,
+  "provenance": "Per-asset origins are historical build/import receipts, preserved unchanged even when the earlier upstream releases or commits are no longer available. They are not current download locations or installation dependencies. The bundled files, sizes and hashes below identify the package bytes. source_sha256 pins the current maintained source/build inputs, not a claim that every asset was rebuilt at this revision. Hashes are not reproducible-build or platform-certification proof.",
+  "source_sha256": {
+    "native/io.h": "714ab36d92cf452c95cd8c8ddd0ca8020d9e48ad4c64af975e55cf90048fd5a1",
+    "native/linux_io.c": "2acc59da7c267d87cd7e2f2896b4a0bafdf97fdf8390db87d7822345c0429cda",
+    "native/macos_io.c": "d21646218cc896d51453ccbbf7b1f3ca514216e462d954c70fc0a633787cd045",
+    "native/windows_io.c": "dc43f9c5167eefd7f67cf923cce92b6ffab99d9b382b4d8725dfbc546dd1d242",
+    "tool/build_native.sh": "53e3ec4d6a96c671a214542afd0768b9ce47f0cbdb5dc9ca42f3a0e383a12bf5",
+    "tool/build_native_macos.sh": "5df9e0fbb0c169394e10305d51d046105e651835f0c8a372fe5d7e2332d811c3",
+    "tool/build_native_windows.ps1": "7b4b6985932fc93f80228427522817990a6e07540627ebd46252c8226f46cb41"
+  },
+  "assets": [
+    {
+      "member": "native/linux-x64/libarchway_io.so",
+      "size": 16456,
+      "sha256": "d34245d3770ece316328d06f087117f4d27238a62517e87e3ada1b3321394405",
+      "origin": {
+        "kind": "github_release",
+        "source_commit": "d33665352aa92d8ecc453c86d6fa9589f0a611f0",
+        "archive": "archway-0.2.0-linux-x64.tar.gz",
+        "archive_sha256": "be43c01152f16fcd011a00ed4b5660d23305dd7e0e63b4c799016f4cd1a1a8b6",
+        "source_sha256": {
+          "native/io.h": "714ab36d92cf452c95cd8c8ddd0ca8020d9e48ad4c64af975e55cf90048fd5a1",
+          "native/linux_io.c": "2acc59da7c267d87cd7e2f2896b4a0bafdf97fdf8390db87d7822345c0429cda",
+          "tool/build_native.sh": "53e3ec4d6a96c671a214542afd0768b9ce47f0cbdb5dc9ca42f3a0e383a12bf5"
+        }
+      }
+    },
+    {
+      "member": "native/macos-arm64/libarchway_io.dylib",
+      "size": 34480,
+      "sha256": "59094030dd84dec0c87c06e1c816e9aac2af387cd9a4b2a4f81aad93295517bc",
+      "origin": {
+        "kind": "maintainer_native_build_not_release",
+        "target": "macos-arm64",
+        "abi_version": 2,
+        "source_commit": "ab237d39b22ed6bd939d55c179cd59918844c142",
+        "source_tree": "69df9f8588564f8b3c3f710c1b284928e7f2090b",
+        "run_id": "41348507492",
+        "run_attempt": "1",
+        "run_url": "https://github.com/GreatPika/archway/actions/runs/41348507492",
+        "os": "ProductName:\t\tmacOS\nProductVersion:\t\t15.8.2\nBuildVersion:\t\t24H232",
+        "architecture": "arm64",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin",
+        "sdk_version": "15.5",
+        "source_sha256": {
+          "native/io.h": "714ab36d92cf452c95cd8c8ddd0ca8020d9e48ad4c64af975e55cf90048fd5a1",
+          "native/macos_io.c": "d21646218cc896d51453ccbbf7b1f3ca514216e462d954c70fc0a633787cd045",
+          "tool/build_native_macos.sh": "5df9e0fbb0c169394e10305d51d046105e651835f0c8a372fe5d7e2332d811c3"
+        },
+        "asset": {
+          "member": "native/macos-arm64/libarchway_io.dylib",
+          "size": 34480,
+          "sha256": "59094030dd84dec0c87c06e1c816e9aac2af387cd9a4b2a4f81aad93295517bc"
+        },
+        "relocation_probe": {
+          "install_id": "/Users/runner/work/_temp/archway SDK relocation caf\u00e9 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/libarchway_io.dylib",
+          "exit": 0,
+          "original_unchanged": true,
+          "scope": "Copy-only install_name_tool probe; final SDK install remains a separate gate"
+        },
+        "artifact_id": 13100471248,
+        "artifact_name": "macos-bridge-ab237d39b22ed6bd939d55c179cd59918844c142-1",
+        "archive_sha256": "75ef0fcd7d150a42ebd0444b2caaafc724b1f0fefa7dddf311ebdddca115c544"
+      }
+    },
+    {
+      "member": "native/windows-x64/archway_io.dll",
+      "size": 109056,
+      "sha256": "7fc53f32124d66e7415acede04aec611269b45ef80593ea97589d6ee0d33ddd0",
+      "origin": {
+        "kind": "github_release",
+        "source_commit": "d33665352aa92d8ecc453c86d6fa9589f0a611f0",
+        "archive": "archway-0.2.0-windows-x64.zip",
+        "archive_sha256": "b341bf8964cd76ee156466527b704e8f93ff0e2eb9bc0eb1e0b06276ccfa41f7",
+        "source_sha256": {
+          "native/io.h": "714ab36d92cf452c95cd8c8ddd0ca8020d9e48ad4c64af975e55cf90048fd5a1",
+          "native/windows_io.c": "dc43f9c5167eefd7f67cf923cce92b6ffab99d9b382b4d8725dfbc546dd1d242",
+          "tool/build_native_windows.ps1": "7b4b6985932fc93f80228427522817990a6e07540627ebd46252c8226f46cb41"
+        }
+      }
+    }
+  ]
+}

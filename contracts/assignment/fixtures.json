@@ -1,0 +1,364 @@
+[
+  {
+    "id": "A01",
+    "scenario": "Finite assignment predicate: one confirmed candidate",
+    "path": "src/a.ts",
+    "candidates": [
+      {
+        "project_id": "web",
+        "context_id": "context-main"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "A02",
+    "scenario": "Finite assignment predicate: candidate outside configuration directory",
+    "path": "shared/a.ts",
+    "candidates": [
+      {
+        "project_id": "web",
+        "context_id": "web/context-main"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "A03",
+    "scenario": "Finite assignment predicate: candidate independent of output layout",
+    "path": "shared/a.ts",
+    "candidates": [
+      {
+        "project_id": "web",
+        "context_id": "web/context-main"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "partial: compiler configuration diagnostic if relevant"
+  },
+  {
+    "id": "A04",
+    "scenario": "Finite assignment predicate: no candidate after discovery",
+    "path": "src/excluded.ts",
+    "candidates": [],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "missing",
+    "expected_analysis": "not_attempted"
+  },
+  {
+    "id": "A05",
+    "scenario": "Finite assignment predicate: confirmed transitive candidate",
+    "path": "src/excluded.ts",
+    "candidates": [
+      {
+        "project_id": "web",
+        "context_id": "context-main"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "A06",
+    "scenario": "Finite assignment predicate: candidate from inherited configuration",
+    "path": "shared/a.ts",
+    "candidates": [
+      {
+        "project_id": "web",
+        "context_id": "web/context-main"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "A07",
+    "scenario": "Finite assignment predicate: two candidate contexts",
+    "path": "src/a.ts",
+    "candidates": [
+      {
+        "project_id": "app",
+        "context_id": "context-main"
+      },
+      {
+        "project_id": "test",
+        "context_id": "context-test"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "ambiguous",
+    "expected_analysis": "not_complete"
+  },
+  {
+    "id": "A08",
+    "scenario": "Finite assignment predicate: overlapping context membership",
+    "path": "src/a.ts",
+    "candidates": [
+      {
+        "project_id": "app",
+        "context_id": "context-main"
+      },
+      {
+        "project_id": "test",
+        "context_id": "context-test"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "ambiguous",
+    "expected_analysis": "not_complete"
+  },
+  {
+    "id": "A09",
+    "scenario": "Finite assignment predicate: unlisted context not a candidate",
+    "path": "src/nested/a.ts",
+    "candidates": [
+      {
+        "project_id": "app",
+        "context_id": "context-main"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "A10",
+    "scenario": "Finite assignment predicate: unfinished discovery with positive candidate",
+    "path": "src/a.ts",
+    "candidates": [
+      {
+        "project_id": "app",
+        "context_id": "context-main"
+      }
+    ],
+    "discovery_complete": false,
+    "supported_source": true,
+    "expected_assignment": "failed",
+    "expected_analysis": "partial"
+  },
+  {
+    "id": "A11",
+    "scenario": "Finite assignment predicate: generated file with a confirmed candidate",
+    "path": "generated/a.d.ts",
+    "candidates": [
+      {
+        "project_id": "app",
+        "context_id": "context-main"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete; owner required"
+  },
+  {
+    "id": "A12",
+    "scenario": "Finite assignment predicate: generated file without a candidate",
+    "path": "generated/a.ts",
+    "candidates": [],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "missing",
+    "expected_analysis": "not_attempted"
+  },
+  {
+    "id": "A13",
+    "scenario": "Finite assignment predicate: container configuration without source membership",
+    "path": "lib/a.ts",
+    "candidates": [],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "missing",
+    "expected_analysis": "not_attempted"
+  },
+  {
+    "id": "A14",
+    "scenario": "Finite assignment predicate: source has one explicit candidate",
+    "path": "lib/a.ts",
+    "candidates": [
+      {
+        "project_id": "lib",
+        "context_id": "lib/context-main"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "A15",
+    "scenario": "Finite assignment predicate: resolved target has one candidate",
+    "path": "lib/dist/a.d.ts",
+    "candidates": [
+      {
+        "project_id": "app",
+        "context_id": "app/context-main"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete; target is declaration not source"
+  },
+  {
+    "id": "A16",
+    "scenario": "Finite assignment predicate: missing required input prevents trusted discovery",
+    "path": "app/a.ts",
+    "candidates": [
+      {
+        "project_id": "app",
+        "context_id": "app/context-main"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "partial; unresolved/output gap"
+  },
+  {
+    "id": "A17",
+    "scenario": "Finite assignment predicate: generic unsupported-source assignment",
+    "path": "src/a.js",
+    "candidates": [],
+    "discovery_complete": true,
+    "supported_source": false,
+    "expected_assignment": "unsupported",
+    "expected_analysis": "not_attempted"
+  },
+  {
+    "id": "A18",
+    "scenario": "Finite assignment predicate: generic unsupported-source assignment without candidates",
+    "path": "src/a.vue",
+    "candidates": [],
+    "discovery_complete": true,
+    "supported_source": false,
+    "expected_assignment": "unsupported",
+    "expected_analysis": "not_attempted"
+  },
+  {
+    "id": "D01",
+    "scenario": "ordinary pub package",
+    "path": "app/lib/a.dart",
+    "candidates": [
+      {
+        "project_id": "mobile",
+        "context_id": "ctx-app"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "D02",
+    "scenario": "nested package found by one project collection",
+    "path": "app/example/lib/a.dart",
+    "candidates": [
+      {
+        "project_id": "mobile",
+        "context_id": "ctx-example"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "D03",
+    "scenario": "same nested package eligible in two YAML projects",
+    "path": "app/example/lib/a.dart",
+    "candidates": [
+      {
+        "project_id": "mobile",
+        "context_id": "ctx-example"
+      },
+      {
+        "project_id": "example",
+        "context_id": "ctx-example"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "ambiguous",
+    "expected_analysis": "not_complete"
+  },
+  {
+    "id": "D04",
+    "scenario": "analyzer exclude does not remove corpus entry",
+    "path": "app/lib/a.g.dart",
+    "candidates": [],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "missing",
+    "expected_analysis": "not_attempted"
+  },
+  {
+    "id": "D05",
+    "scenario": "generated Dart part in supported context",
+    "path": "app/lib/a.g.dart",
+    "candidates": [
+      {
+        "project_id": "mobile",
+        "context_id": "ctx-app"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete; containing library single and known"
+  },
+  {
+    "id": "D06",
+    "scenario": "missing package_config blocks context trust",
+    "path": "app/lib/a.dart",
+    "candidates": [],
+    "discovery_complete": false,
+    "supported_source": true,
+    "expected_assignment": "failed",
+    "expected_analysis": "not_attempted"
+  },
+  {
+    "id": "D07",
+    "scenario": "pub workspace shared package_config",
+    "path": "packages/a/lib/a.dart",
+    "candidates": [
+      {
+        "project_id": "mobile",
+        "context_id": "ctx-workspace"
+      }
+    ],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "assigned",
+    "expected_analysis": "complete"
+  },
+  {
+    "id": "D08",
+    "scenario": "imported local file outside every package root",
+    "path": "shared/a.dart",
+    "candidates": [],
+    "discovery_complete": true,
+    "supported_source": true,
+    "expected_assignment": "missing",
+    "expected_analysis": "not_attempted; incoming local edge preserved"
+  }
+]

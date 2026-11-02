@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "projects": [
+    {
+      "id": "legacy",
+      "adapter": "typescript",
+      "tsconfig": "tsconfig.json"
+    }
+  ],
+  "scope": [],
+  "exclude": [],
+  "nodes": []
+}

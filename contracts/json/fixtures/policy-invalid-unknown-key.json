@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "projects": [
+    {
+      "id": "web",
+      "adapter": "dart",
+      "package_roots": [
+        "./"
+      ]
+    },
+    {
+      "id": "mobile",
+      "adapter": "dart",
+      "package_roots": [
+        "dart_app/"
+      ]
+    }
+  ],
+  "scope": [
+    "src/",
+    "dart_app/lib/"
+  ],
+  "exclude": [],
+  "nodes": [
+    {
+      "id": "app",
+      "responsibility": "Compose application",
+      "owns": [
+        "src/app/"
+      ],
+      "public": [],
+      "allows": []
+    }
+  ],
+  "extra": true
+}

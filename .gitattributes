@@ -1,0 +1,7 @@
+# Keep content-addressed sources and contracts identical on every checkout.
+* text=auto eol=lf
+
+# Bundled ABI assets are byte-exact binaries, never text conversions.
+/native/linux-x64/libarchway_io.so binary
+/native/macos-arm64/libarchway_io.dylib binary
+/native/windows-x64/archway_io.dll binary

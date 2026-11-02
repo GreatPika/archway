@@ -1,0 +1,149 @@
+name: Dart package
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dart-package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: linux-x64
+          - os: macos-15
+            target: macos-arm64
+          - os: windows-2025
+            target: windows-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      CI: 'true'
+      DASH__SUPPRESS_ANALYTICS: 'true'
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Record Windows checkout byte policy
+        if: runner.os == 'Windows'
+        run: |
+          $autocrlf = git config --get core.autocrlf
+          if ($LASTEXITCODE -eq 0) { Write-Output "core.autocrlf=$autocrlf" }
+          elseif ($LASTEXITCODE -eq 1) { Write-Output 'core.autocrlf=<unset>' }
+          else { throw 'Cannot inspect checkout line-ending setting.' }
+          $inventory = Get-Content native/assets.json -Raw | ConvertFrom-Json
+          foreach ($source in $inventory.source_sha256.PSObject.Properties) {
+            git ls-files --eol -- $source.Name
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect checkout byte policy.' }
+            git check-attr text eol -- $source.Name
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect checkout attributes.' }
+            $hash = (Get-FileHash -LiteralPath $source.Name -Algorithm SHA256).Hash.ToLowerInvariant()
+            Write-Output "$($source.Name) expected=$($source.Value) checkout=$hash"
+          }
+      - name: Prepare pinned official Dart 3.13.3
+        run: ./tool/ci/setup_dart.ps1 -Target '${{ matrix.target }}'
+      - name: Use a physically canonical owned temporary root
+        run: |
+          # Host defaults can be aliases (Windows RUNNER~1, macOS /var).
+          # Keep product guards; canonicalize fixture inputs with plain dart:io.
+          $temp = Join-Path $env:RUNNER_TEMP 'archway-process-temp'
+          New-Item -ItemType Directory -Path $temp | Out-Null
+          $probe = Join-Path $env:RUNNER_TEMP 'archway-temp-probe.dart'
+          @'
+          import 'dart:io';
+          void main(List<String> args) {
+            if (args.isNotEmpty) {
+              stdout.writeln(Directory(args.single).resolveSymbolicLinksSync());
+              return;
+            }
+            final observed = Directory.systemTemp.absolute;
+            final canonical = Directory(observed.resolveSymbolicLinksSync());
+            if (observed.uri != canonical.uri ||
+                FileSystemEntity.typeSync(canonical.path, followLinks: false) !=
+                    FileSystemEntityType.directory) {
+              throw StateError('Temporary root is aliased: ${observed.path} -> ${canonical.path}');
+            }
+            stdout.writeln('Verified ordinary fixture temp: ${canonical.path}');
+          }
+          '@ | Set-Content -LiteralPath $probe -Encoding utf8
+          $resolved = @(& dart --disable-dart-dev $probe $temp)
+          if ($LASTEXITCODE -ne 0 -or $resolved.Count -ne 1 -or !$resolved[0]) {
+            throw 'Cannot canonicalize fixture root.'
+          }
+          $canonical = $resolved[0]
+          $env:TEMP = $canonical
+          $env:TMP = $canonical
+          $env:TMPDIR = $canonical
+          & dart --disable-dart-dev $probe
+          if ($LASTEXITCODE -ne 0) { throw 'Fixture root physical identity differs.' }
+          Remove-Item -LiteralPath $probe
+          foreach ($name in @('TEMP', 'TMP', 'TMPDIR')) {
+            "$name=$canonical" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          }
+      - name: Prepare locked dependencies
+        run: |
+          dart --suppress-analytics pub get --enforce-lockfile
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency preparation failed.' }
+          git diff --exit-code -- pubspec.lock
+          if ($LASTEXITCODE -ne 0) { throw 'Lock changed during preparation.' }
+      - name: Verify packaged bridge provenance and inventory
+        run: |
+          dart run tool/verify_native_assets.dart
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged bridge verification failed.' }
+      - name: Prepare owned Windows process fixtures
+        if: runner.os == 'Windows'
+        run: |
+          dart run tool/ci/prepare_windows_process_support.dart
+          if ($LASTEXITCODE -ne 0) { throw 'Windows process fixture preparation failed.' }
+      - name: Analyze package
+        run: |
+          dart --suppress-analytics analyze
+          if ($LASTEXITCODE -ne 0) { throw 'Analysis failed.' }
+      - name: Prepare genuine pinned Git package fixture
+        run: |
+          $fixture = Join-Path $env:RUNNER_TEMP 'archway-git-fixture'
+          $dart = Join-Path $env:DART_SDK $(if ($IsWindows) { 'bin/dart.exe' } else { 'bin/dart' })
+          dart run test/prepare_package_process_pub.dart --git $fixture $dart
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned Git fixture preparation failed.' }
+          "ARCHWAY_PUB_GIT_FIXTURE=$fixture" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Run full source suite
+        run: |
+          dart --suppress-analytics test --concurrency=2 -r expanded
+          if ($LASTEXITCODE -ne 0) { throw 'Source tests failed.' }
+      - name: Verify aggregate contracts
+        run: |
+          dart contracts/run_tests.dart
+          if ($LASTEXITCODE -ne 0) { throw 'Contract verification failed.' }
+      - name: Build owned native source separately from packaged assets
+        run: |
+          if ($IsWindows) {
+            ./tool/build_native_windows.ps1 -OutputDirectory build/maintainer-bridge
+          } elseif ($IsMacOS) {
+            sh tool/build_native_macos.sh build/maintainer-bridge
+            if ($LASTEXITCODE -ne 0) { throw 'macOS bridge build failed.' }
+          } else {
+            sh tool/build_native.sh build/maintainer-bridge
+            if ($LASTEXITCODE -ne 0) { throw 'Linux bridge build failed.' }
+          }
+      - name: Install this Git revision and check the real installed command
+        run: |
+          dart run tool/installed_package_smoke.dart --install-git . --ref $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'Installed package checks failed.' }
+      - name: Verify SDK update and reinstall with source unavailable
+        run: |
+          dart run tool/installation_lifecycle.dart
+          if ($LASTEXITCODE -ne 0) { throw 'Installed lifecycle checks failed.' }
