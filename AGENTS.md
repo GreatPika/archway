@@ -32,3 +32,13 @@ Close work only after its acceptance criteria pass and the changes are integrate
 
 After preparation, run `dart --suppress-analytics analyze` and
 `dart --suppress-analytics test`. Fixture prerequisites are in the inspection guides.
+
+For Dart changes, also run `dart run tool/dcm_metrics/check_metrics.dart` locally.
+Pass only after a full repository scan with no metric violations; `dcm analyze`
+does not replace this check.
+
+Fix design issues at their owner. For cohesive code, suppress only the reported
+metric on the affected declaration with a nearby rationale. `ignore_for_file`
+is allowed only for `number-of-imports` and `number-of-external-imports`, with a
+rationale. Keep all thresholds and DCM configuration in `analysis_options.yaml`;
+avoid broad suppressions and local threshold overrides.

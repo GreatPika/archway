@@ -1,0 +1,37 @@
+dcm:
+  exclude:
+    metrics:
+      - docs/**
+      - .dart_tool/**
+      - build/**
+      - "**/*.g.dart"
+      - "**/*.freezed.dart"
+      - "**/*.mocks.dart"
+
+  metrics:
+    cyclomatic-complexity:
+      threshold: 10
+    halstead-volume:
+      threshold: 1000
+    maintainability-index:
+      threshold: 0.5
+    maximum-nesting-level:
+      threshold: 4
+    number-of-parameters:
+      threshold: 4
+    source-lines-of-code:
+      threshold: 40
+    number-of-methods:
+      threshold: 10
+    number-of-imports:
+      threshold: 10
+    number-of-external-imports:
+      threshold: 5
+    weighted-methods-per-class:
+      threshold: 35
+    coupling-between-object-classes:
+      threshold: 12
+    response-for-class:
+      threshold: 40
+    depth-of-inheritance-tree:
+      threshold: 4
