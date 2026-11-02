@@ -10,7 +10,7 @@ import '../test/support/native_process_support.dart';
 import '../test/support/windows_command.dart';
 import '../test/support/windows_process.dart' show windowsCommandLine;
 
-// Pinned SDK 3.13.3 fixture contract, not a product launcher or general parser.
+// Pinned SDK 3.13.5 fixture contract, not a product launcher or general parser.
 String sdkWindowsBundleTarget(String script) {
   final match = RegExp(
     r'^@ECHO OFF\r?\nREM target_file_path_marker\r?\n"([^"\r\n]+)" %\*\r?\nEXIT /B %ERRORLEVEL%\r?\n$',
@@ -271,7 +271,7 @@ nodes:
     file('lib/build.js')
         .writeAsStringSync('throw new Error("Never execute");\n');
     file('pubspec.yaml').writeAsStringSync(
-      'name: fixture\nenvironment:\n  sdk: ">=3.13.3 <4.0.0"\n',
+      'name: fixture\nenvironment:\n  sdk: ">=3.13.5 <4.0.0"\n',
     );
     // Preparation is separate from inspection, using the actual package manager.
     final prep = await Process.run(Platform.resolvedExecutable, [

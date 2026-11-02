@@ -3,14 +3,14 @@ param([Parameter(Mandatory=$true)][string]$Target)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $pins = @{
-  'linux-x64' = '549c182cffbdc6864df7509c16fec646c73fe6cb8a18c2cb572db1292f300cd7'
-  'macos-arm64' = 'c703bcbb25ca0cc5df9109fb8272d52786ac14782437bd9e365a01985273c1cc'
-  'windows-x64' = '30c789415dcd14d3d28f8ab85a92bbd0bc6c8782f4c235d12dbd2d17f9b5d46e'
+  'linux-x64' = 'ea864bc64df30a6b8bdf30b2e32550f7717d9a890de8f40293aeabb924fe232b'
+  'macos-arm64' = '9dfe7d6f2558816c2a978aff6c80e8a4509c6cb726c0702a616c64d286f60e88'
+  'windows-x64' = 'aed8e4a8932ce8fa18ea32f990e43b4a1c9390a4c73777ab6fdf77fc9f4524d1'
 }
 if (!$pins.ContainsKey($Target)) { throw "Unsupported SDK target: $Target" }
 $archive = Join-Path $env:RUNNER_TEMP "dartsdk-$Target.zip"
 $destination = Join-Path $env:RUNNER_TEMP 'archway-dart'
-Invoke-WebRequest "https://storage.googleapis.com/dart-archive/channels/stable/release/3.13.3/sdk/dartsdk-$Target-release.zip" -OutFile $archive
+Invoke-WebRequest "https://storage.googleapis.com/dart-archive/channels/stable/release/3.13.5/sdk/dartsdk-$Target-release.zip" -OutFile $archive
 if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $pins[$Target]) {
   throw 'Official SDK bytes differ from the reviewed SHA-256 pin.'
 }

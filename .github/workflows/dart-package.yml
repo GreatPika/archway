@@ -54,7 +54,7 @@ jobs:
             $hash = (Get-FileHash -LiteralPath $source.Name -Algorithm SHA256).Hash.ToLowerInvariant()
             Write-Output "$($source.Name) expected=$($source.Value) checkout=$hash"
           }
-      - name: Prepare pinned official Dart 3.13.3
+      - name: Prepare pinned official Dart 3.13.5
         run: ./tool/ci/setup_dart.ps1 -Target '${{ matrix.target }}'
       - name: Use a physically canonical owned temporary root
         run: |

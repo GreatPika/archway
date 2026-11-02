@@ -219,7 +219,7 @@ nodes:
       'Dart edge mismatch',
     );
     check(
-      value['tool_versions']['dart_sdk'] == '3.13.3',
+      value['tool_versions']['dart_sdk'] == '3.13.5',
       'Dart version mismatch',
     );
     check(

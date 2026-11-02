@@ -49,11 +49,11 @@ void main() {
       ],
       'package_config_path': '.dart_tool/package_config.json',
       'root': './',
-      'sdk_version': '3.13.3',
+      'sdk_version': '3.13.5',
     });
     expect(
       contexts.single['context_id'],
-      'dart:app:1e80fd25b9385084e24b63b389f074f0b45534f6d945ff496618e0f2db15410f',
+      'dart:app:ed2f2763b296de4a59bbb7165883fc759c55d56a37dba1368d0eeb96b93906b5',
     );
   });
   test(

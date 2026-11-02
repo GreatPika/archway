@@ -48,6 +48,7 @@ void main() {
     final headings = RegExp(r'^## (.+)$', multiLine: true)
         .allMatches(File('CHANGELOG.md').readAsStringSync())
         .map((m) => m[1])
+        .where((heading) => heading != 'Unreleased')
         .toList();
     expect(headings, ['$version']);
   });

@@ -47,7 +47,7 @@ void main() {
         await file.writeAsString(entry.value as String);
       }
       await File('${root.path}/pubspec.yaml').writeAsString(
-        'name: acceptance_fixture\nenvironment:\n  sdk: ">=3.13.3 <4.0.0"\n',
+        'name: acceptance_fixture\nenvironment:\n  sdk: ">=3.13.5 <4.0.0"\n',
       );
       final prep = await Process.run(Platform.resolvedExecutable, [
         'pub',

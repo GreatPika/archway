@@ -5,7 +5,7 @@ Dart package on Ubuntu 24.04 x64, macOS 15 arm64, and Windows Server 2025 x64.
 A runner result establishes only its actual host: Windows Server is not Windows
 11 certification. Unrun platform jobs are not successful acceptance.
 
-The workflow uses the reviewed official Dart 3.13.3 archive and SHA-256 pins,
+The workflow uses the reviewed official Dart 3.13.5 archive and SHA-256 pins,
 lock-enforced package preparation, packaged-asset inventory verification,
 `dart analyze`, the full `dart test` suite, and `dart contracts/run_tests.dart`.
 Windows developer process fixtures are built before tests. A separate maintainer
@@ -21,7 +21,7 @@ platform matrix has passed.
 ## Optional genuine Dart and Flutter fixtures
 
 Fixture preparation is separate from inspection. `prepare_native_acceptance.dart`
-retains the pinned official Flutter 3.47.4 / Dart 3.13.3 preparation and genuine
+retains the pinned official Flutter 3.47.7 / Dart 3.13.5 preparation and genuine
 hosted, path, workspace and pinned Git fixtures. It downloads no Node runtime.
 It requires a clean tracked source checkout, installed Git and platform extraction
 tools, and a fresh output directory:

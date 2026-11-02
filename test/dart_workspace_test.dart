@@ -77,7 +77,7 @@ void main() {
     expect(contexts, hasLength(1));
     expect(
       contexts.single['context_id'],
-      'dart:workspace:8852675619d5013923329f21f95857a24ffff10d47f45666729972a451a382c8',
+      'dart:workspace:c66cc087463e0a150fbb0d0989cb59e9b7f1a485976e25c4fe5b67b62d617ea4',
     );
     expect(contexts.single['descriptor'], {
       'excluded_paths': [],
@@ -85,7 +85,7 @@ void main() {
       'options_paths': [],
       'package_config_path': '.dart_tool/package_config.json',
       'root': './',
-      'sdk_version': '3.13.3',
+      'sdk_version': '3.13.5',
     });
   });
   test(

@@ -10,6 +10,8 @@ import 'input_observation.dart';
 import 'physical_paths.dart';
 
 class DartRuntime {
+  static const requiredSdkVersion = '3.13.5';
+
   final RuntimeProcesses _runtime;
   DartRuntime(this._runtime);
   String? _sdkVersion;
@@ -100,8 +102,10 @@ class DartRuntime {
         .getFile(p.join(sdkPath!, 'version'))
         .readAsStringSync()
         .trim();
-    if (version != '3.13.3')
-      throw FormatException('Dart SDK 3.13.3 required; found $version.');
+    if (version != requiredSdkVersion)
+      throw FormatException(
+        'Dart SDK $requiredSdkVersion required; found $version.',
+      );
     final output = utf8.decode(
       await _runtime.run(
         executable,
@@ -114,7 +118,7 @@ class DartRuntime {
         totalLimit: 65536,
       ),
     );
-    if (!output.startsWith('Dart SDK version: 3.13.3 '))
+    if (!output.startsWith('Dart SDK version: $requiredSdkVersion '))
       throw const FormatException('Dart SDK executable and metadata disagree.');
     resources
         .getFile(p.join(sdkPath!, 'lib', 'libraries.json'))
@@ -122,7 +126,7 @@ class DartRuntime {
     resources
         .getFile(p.join(sdkPath!, 'lib', 'core', 'core.dart'))
         .readAsStringSync();
-    _flutterSdk = FlutterSdk.selected(sdkPath!, resources);
+    _flutterSdk = FlutterSdk.selected(sdkPath!, resources, version);
     _sdkVersion = version;
   }
 }

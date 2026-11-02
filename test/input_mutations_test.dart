@@ -340,7 +340,7 @@ void main() {
           'diagnostics',
           'payload',
         });
-        expect(report['tool_versions']['dart_sdk'], '3.13.3');
+        expect(report['tool_versions']['dart_sdk'], '3.13.5');
         final payload = report['payload'];
         expect(payload['analysis_complete'], false);
         expect(payload['tool_errors'], isEmpty);
@@ -445,7 +445,7 @@ Future<Directory> projectsFixture({
           },
         ],
         'generator': 'pub',
-        'generatorVersion': '3.13.3',
+        'generatorVersion': '3.13.5',
       }),
     );
     await File(

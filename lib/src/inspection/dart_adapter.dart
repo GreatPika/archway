@@ -70,7 +70,12 @@ class DartAdapter {
       );
       for (final context
           in collection.contexts.cast<DriverBasedAnalysisContext>()) {
-        final descriptor = describeDartContext(context, request, resources);
+        final descriptor = describeDartContext(
+          context,
+          request,
+          resources,
+          _dartRuntime.sdkVersion!,
+        );
         final contextId =
             'dart:${request.project.id}:${sha256.convert(utf8.encode(jsonEncode(descriptor)))}';
         contexts.add({'context_id': contextId, 'descriptor': descriptor});

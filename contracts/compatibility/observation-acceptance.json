@@ -156,9 +156,9 @@
     },
     {
       "id": "VC02",
-      "scenario": "External Dart SDK metadata and bounded --version output both identify pinned Dart 3.13.3",
-      "actual_version": "3.13.3",
-      "expected_version": "3.13.3",
+      "scenario": "External Dart SDK metadata and bounded --version output both identify pinned Dart 3.13.5",
+      "actual_version": "3.13.5",
+      "expected_version": "3.13.5",
       "expected": {
         "sdk_preflight_passes": true,
         "does_not_prove_complete_analysis": true

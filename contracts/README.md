@@ -24,9 +24,10 @@ Schemas define structure; normative text defines semantic constraints, ordering,
 identity, arithmetic and ownership. Finite fixtures are not proof of real analyzer,
 CLI, filesystem or installed-platform acceptance. Some neutral policy/path/edge
 fixtures use `.ts` names or generic historical fact kinds: they protect portable
-semantics, not support for TypeScript analysis. Dart-only context fixtures describe
-the current implementation. Read [acceptance](../docs/spec/acceptance.md) for the
-additional measured gates. Missing/unknown results must never be reported as zero
+semantics, not support for TypeScript analysis. Dart context fixtures exercise
+descriptor/hash semantics and may retain historical `sdk_version` values; they
+do not establish current runtime support. Read [acceptance](../docs/spec/acceptance.md)
+for the additional measured gates. Missing/unknown results must never be reported as zero
 failures or passed platform coverage.
 
 The aggregate runner hashes the acceptance-scenario JSON files; it does not execute

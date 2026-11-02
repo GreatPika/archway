@@ -15,7 +15,11 @@ class FlutterSdk {
   final String _root;
   FlutterSdk._(this._root);
 
-  static FlutterSdk? selected(String dartSdk, DartResources resources) {
+  static FlutterSdk? selected(
+    String dartSdk,
+    DartResources resources,
+    String dartVersion,
+  ) {
     if (p.basename(dartSdk) != 'dart-sdk' ||
         p.basename(p.dirname(dartSdk)) != 'cache' ||
         p.basename(p.dirname(p.dirname(dartSdk))) != 'bin')
@@ -28,15 +32,15 @@ class FlutterSdk {
     );
     if (metadata is! Map ||
         metadata['channel'] != 'stable' ||
-        metadata['dartSdkVersion'] != '3.13.3' ||
+        metadata['dartSdkVersion'] != dartVersion ||
         metadata['frameworkVersion'] is! String ||
         !RegExp(r'^\d+\.\d+\.\d+$')
             .hasMatch(metadata['frameworkVersion'] as String) ||
         metadata['frameworkRevision'] is! String ||
         !RegExp(r'^[a-f0-9]{40}$')
             .hasMatch(metadata['frameworkRevision'] as String)) {
-      throw const FormatException(
-        'A stable Flutter SDK embedding Dart 3.13.3 is required.',
+      throw FormatException(
+        'A stable Flutter SDK embedding Dart $dartVersion is required.',
       );
     }
     final engine = resources

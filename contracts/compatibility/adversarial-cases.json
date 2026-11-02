@@ -229,7 +229,7 @@
     },
     {
       "id": "C01",
-      "input": "stable Flutter SDK embeds Dart3.13.3; prepared package_config, complete SDK cache",
+      "input": "stable Flutter SDK embeds Dart3.13.5; prepared package_config, complete SDK cache",
       "expected": "design-supported Flutter Dart analysis; record Flutter revision and resolve dart:ui; requires runtime certification before release"
     },
     {

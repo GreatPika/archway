@@ -33,7 +33,7 @@ void main() {
         {'kind': 'builtin', 'identity': 'package:flutter/foundation.dart'},
         {'kind': 'builtin', 'identity': 'dart:ui'},
       ]);
-      expect(report['tool_versions']['dart_sdk'], '3.13.3');
+      expect(report['tool_versions']['dart_sdk'], '3.13.5');
       expect(report['payload']['input_identity']['rechecked'], true);
       expect(err.toString(), '');
       expect(out.toString().split('\n'), hasLength(2));

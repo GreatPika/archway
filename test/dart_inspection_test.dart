@@ -52,7 +52,7 @@ void main() {
       expect(report['payload']['unknowns'], isEmpty);
       expect(report['payload']['tool_errors'], isEmpty);
       expect(report['payload']['input_identity']['rechecked'], true);
-      expect(report['tool_versions']['dart_sdk'], '3.13.3');
+      expect(report['tool_versions']['dart_sdk'], '3.13.5');
     },
   );
   test('every conditional export branch keeps known violations beside missing targets', () async {
@@ -123,16 +123,19 @@ void main() {
     final contexts = (coverage['projects'] as List).single['contexts'] as List;
     expect(contexts, hasLength(2));
     expect(contexts.map((c) => c['context_id']), [
-      'dart:app:33d15223d4196ae70ee9462ad92aac70a1607aa5d24b1c517e89831b9988dc76',
-      'dart:app:93d520db69f9009ed9fcc2367237f932da64bce9d5519b499287a56c42c18ed4',
+      'dart:app:097fd88056746ce564d7951d3632cc6f90d7204cd6dde7d5b2556a7b2b4e7917',
+      'dart:app:3e02321158d656989bac995581edc31a5a6cdf92c18f4c62ade92e9303b6b811',
     ]);
-    expect(contexts.first['descriptor'], {
+    final appContext = contexts.singleWhere(
+      (context) => context['descriptor']['root'] == 'lib/app',
+    );
+    expect(appContext['descriptor'], {
       'excluded_paths': [],
       'included_paths': ['lib/app'],
       'options_paths': ['lib/app/analysis_options.yaml', 'shared.yaml'],
       'package_config_path': 'lib/app/.dart_tool/package_config.json',
       'root': 'lib/app',
-      'sdk_version': '3.13.3',
+      'sdk_version': '3.13.5',
     });
     final rows = coverage['files'] as List;
     expect(rows.every((f) => f['assignment'] == 'assigned'), true);
@@ -340,7 +343,7 @@ Future<Directory> dartFixture({String? main, String? policy}) async {
         },
       ],
       'generator': 'pub',
-      'generatorVersion': '3.13.3',
+      'generatorVersion': '3.13.5',
     }),
   );
   await File('${root.path}/lib/app/main.dart')

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Require Dart SDK 3.13.5.
+
 ## 0.1.0
 
 Initial Dart-only preview release.

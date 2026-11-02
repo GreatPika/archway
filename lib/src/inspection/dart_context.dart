@@ -16,6 +16,7 @@ Map<String, Object?> describeDartContext(
   DriverBasedAnalysisContext context,
   ProjectRequest request,
   DartResources resources,
+  String sdkVersion,
 ) {
   String normalize(String path) {
     symlinkHops(path);
@@ -148,6 +149,6 @@ Map<String, Object?> describeDartContext(
     'options_paths': paths(options),
     'package_config_path': normalize(packages.path),
     'root': normalize(context.contextRoot.root.path),
-    'sdk_version': '3.13.3',
+    'sdk_version': sdkVersion,
   };
 }

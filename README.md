@@ -7,7 +7,8 @@ projects; export the declared graph as Mermaid.
 
 ## Install
 
-Install Dart SDK **3.13.3** and Git, then install the tagged Dart CLI package:
+Current source requires Dart SDK **3.13.5**; this update is unreleased.
+The published **v0.1.0** still requires Dart SDK **3.13.3** and Git:
 
 ```sh
 dart install 'archway@{git: {url: https://github.com/GreatPika/archway.git, ref: v0.1.0}}'
@@ -81,13 +82,17 @@ archway check
 archway export --format mermaid --out architecture.mmd
 ```
 
+If init fails, it reports residual paths for manual inspection without
+automatically deleting files. Review each path before removing or recovering it;
+retry only after both startup names are free.
+
 Use `--root /path/to/project` from another directory. There is no upward policy
 search. Commands return complete JSON and meaningful exit codes (0 success,
 1 negative, 2 invalid/incomplete/error, 64 usage); Mermaid export is text.
 
 Before `check`, prepare the project's dependencies yourself with its normal
 workflow. Archway never runs `pub get`, build scripts, project code or analyzer
-plugins. Dart analysis currently pins SDK 3.13.3 and analyzer 14.5.0. Existing
+plugins. Dart analysis currently pins SDK 3.13.5 and analyzer 14.5.0. Existing
 prepared Flutter projects can use their matching embedded Dart SDK and package
 mappings; Flutter is not an Archway dependency or a newly certified integration.
 

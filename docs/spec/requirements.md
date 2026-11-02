@@ -43,7 +43,7 @@ Exact grammar, envelopes and command-specific status/exit combinations are in [t
 
 ## Safe initialization and export
 
-Init defaults to Dart and accepts optional --template dart; other templates are usage errors. It creates exactly `architecture.yaml` and `ARCHITECTURE.md`. The policy has valid empty arrays; the Dart template changes comments only. Dry-run reports complete contents without writes but still reports conflicts. Both targets are checked; exclusive creation and identity-safe rollback remove only this invocation's files. Partial outcomes report residual files. Crash-atomic two-file writes are not promised. Existing policy/guide recovery requires an explicit user decision; no force, merge or overwrite behavior exists. Init conservatively refuses ASCII-case variants of either fixed output name on every OS before any write, including files, directories and dangling links. This narrow init rule does not change general policy/corpus case identity. Dry-run remains bridge-free. A legacy ARCHITECTURE_AGENT.md is left untouched; it is not migrated or treated as an output alias. The schema_version 1 init filename enum contains architecture.yaml and ARCHITECTURE.md.
+Init defaults to Dart and accepts optional --template dart; other templates are usage errors. It creates exactly `architecture.yaml` and `ARCHITECTURE.md`. The policy has valid empty arrays; the Dart template changes comments only. Dry-run reports complete contents without writes but still reports conflicts. Both targets are checked and created exclusively. Init never deletes files after a failure; partial outcomes report occupied or unverified created path names for manual inspection. Two-file creation is not transactional. Existing policy/guide recovery requires an explicit user decision; no force, merge or overwrite behavior exists. Init conservatively refuses ASCII-case variants of either fixed output name on every OS before any write, including files, directories and dangling links. This narrow init rule does not change general policy/corpus case identity. Dry-run remains bridge-free. A legacy ARCHITECTURE_AGENT.md is left untouched; it is not migrated or treated as an output alias. The schema_version 1 init filename enum contains architecture.yaml and ARCHITECTURE.md.
 
 The guide covers selecting/recovering the root/policy, agreeing a plan before code, querying exact context, checking each proposed file dependency, running full check and application tests, and separately approving policy changes. It never weakens policy automatically. The quickstart offers a manual AGENTS.md pointer; init does not change AGENTS.md, CI or editor settings.
 
@@ -53,7 +53,7 @@ Mermaid export renders every declared flat module and only direct declared permi
 
 The root package is installed with the standard Dart SDK Git descriptor command
 in [package delivery](../../contracts/compatibility/delivery.md). SDK analysis pin
-is 3.13.3 and embedded analyzer is 14.5.0. Prepared Flutter compatibility is retained
+is 3.13.5 and embedded analyzer is 14.5.0. Prepared Flutter compatibility is retained
 without a Flutter dependency or new certification claim.
 
 Bundled ABI-2 native filesystem assets target Linux x64/glibc, macOS arm64 and

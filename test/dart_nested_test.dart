@@ -62,11 +62,11 @@ void main() {
     );
     expect(
       outer['context_id'],
-      'dart:app:8e73418303168fa39619cd7a19a3c8cb5feb7445f7202f5b538085bf7c977658',
+      'dart:app:f99108d04fd0551960b0028c1e850a740467e1381d64f9369d441d5eee699913',
     );
     expect(
       inner['context_id'],
-      'dart:app:8f138ea7bd95d61923c919ad61d26b0d9309e6dc078e6afc1fa4579bf5957113',
+      'dart:app:5d4663814b076f3564e964d1060c1c45ebb2b8b9e162e2ac4a0fc6ebe48168b0',
     );
     expect(outer['descriptor'], {
       'excluded_paths': ['lib/core/nested'],
@@ -74,7 +74,7 @@ void main() {
       'options_paths': ['analysis_options.yaml', 'shared.yaml'],
       'package_config_path': '.dart_tool/package_config.json',
       'root': './',
-      'sdk_version': '3.13.3',
+      'sdk_version': '3.13.5',
     });
     expect(inner['descriptor'], {
       'excluded_paths': [],
@@ -82,7 +82,7 @@ void main() {
       'options_paths': ['lib/core/nested/analysis_options.yaml', 'shared.yaml'],
       'package_config_path': 'lib/core/nested/.dart_tool/package_config.json',
       'root': 'lib/core/nested',
-      'sdk_version': '3.13.3',
+      'sdk_version': '3.13.5',
     });
   });
 }

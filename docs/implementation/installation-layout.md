@@ -1,6 +1,6 @@
 # Standard Dart installation and native assets
 
-The root pubspec declares the `archway` executable. Dart SDK 3.13.3 owns Git
+The root pubspec declares the `archway` executable. Dart SDK 3.13.5 owns Git
 package resolution, build hooks, AOT bundling, install/update and uninstall. Use
 the single command in the [delivery contract](../../contracts/compatibility/delivery.md).
 There is no Archway-specific installer, wrapper, download cache or startup repair.

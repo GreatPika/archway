@@ -252,7 +252,7 @@ void main() {
       final recovered = await inspection.check(RepositorySelection(root.path));
       expect(launches, 2);
       expect(recovered.status, 'negative');
-      expect(recovered.toolVersions['dart_sdk'], '3.13.3');
+      expect(recovered.toolVersions['dart_sdk'], '3.13.5');
       expect((recovered.payload['facts'] as Map)['edges'], hasLength(1));
     },
   );

@@ -184,7 +184,8 @@ const _guide = '''# Architecture agent workflow
 
 You may manually add a pointer to this guide in AGENTS.md after review.
 Init does not edit AGENTS.md, CI, or editor settings. Two-file creation is not
-crash-atomic; inspect reported residual paths after an unsuccessful rollback.
+transactional; init never deletes files after a failure. Inspect reported residual
+paths before deciding whether to remove or recover them.
 ''';
 
 class InitDiagnostic {

@@ -7,7 +7,8 @@ behavior. The package is not published to pub.dev (`publish_to: none`).
 
 ## One installation route
 
-With Dart SDK 3.13.3, install the root package through the SDK:
+Current unreleased source requires Dart SDK 3.13.5. The published v0.1.0 tag
+retains its Dart SDK 3.13.3 requirement and installation command:
 
 ```sh
 dart install 'archway@{git: {url: https://github.com/GreatPika/archway.git, ref: v0.1.0}}'

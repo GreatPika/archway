@@ -17,9 +17,9 @@ void main() {
       for (final target in fixtureFlutterPins.keys) {
         final pin = fixtureFlutterPins[target]!;
         final record = <String, Object>{
-          'version': '3.47.4',
+          'version': '3.47.7',
           'channel': 'stable',
-          'dart_sdk_version': '3.13.3',
+          'dart_sdk_version': '3.13.5',
           'dart_sdk_arch': target.split('-')[1],
           'archive': pin.archive,
           'sha256': pin.sha256,
@@ -196,7 +196,7 @@ void main() {
           output.parent.createSync(recursive: true);
           output.writeAsStringSync(
             file.endsWith('.json')
-                ? jsonEncode({'configVersion': 2, 'generatorVersion': '3.13.3'})
+                ? jsonEncode({'configVersion': 2, 'generatorVersion': '3.13.5'})
                 : 'prepared',
           );
         }
@@ -205,7 +205,7 @@ void main() {
       const preparedSha =
           'b0f4b2e7996a5f4f315bdbc6233973376144870ecd6524e417c05c36dde88745';
       const configSha =
-          'ec057def78c49f89b6244c0b7532f9f5fa4a0774619ee29c978cf32386443014';
+          '67f7618d4a83866dd39511640f3e3766291d3c65fa59d055bbb556576b097f01';
       expect(evidence, {
         for (final name in [
           'pub/hosted',
@@ -302,7 +302,7 @@ void main() {
           File(p.join(path, '.dart_tool/package_config.json'))
               .readAsStringSync(),
         );
-        expect(config['generatorVersion'], '3.13.3');
+        expect(config['generatorVersion'], '3.13.5');
         final names = (config['packages'] as List).map((e) => e['name']);
         expect(
           names,

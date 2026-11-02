@@ -7,7 +7,7 @@ resolution, generators, plugins, builds and Git execution belong to preparation.
 
 ## Compiler and ownership
 
-The baseline is Dart 3.13.3, analyzer 14.5.0, package_config 2.2.0 and
+The baseline is Dart 3.13.5, analyzer 14.5.0, package_config 2.2.0 and
 pub_semver 2.2.1. Check selects an external SDK once, verifies metadata and the
 executable version, and reads SDK libraries. Project-local runtimes and aliases
 to them are rejected. Each declared project owns one analyzer collection; actual
@@ -78,7 +78,7 @@ lint options with an empty mapping without changing library bytes.
 Select Flutter's embedded Dart SDK bin on external PATH; this route is supported
 on Windows too. The ordinary Flutter bin route is unsupported on Windows. On
 Linux it also selects that binary directly; check runs neither launcher nor
-Flutter CLI. Runtime must report Dart 3.13.3 with stable Flutter metadata,
+Flutter CLI. Runtime must report Dart 3.13.5 with stable Flutter metadata,
 valid framework version/revision and engine stamp. Observed flutter.version.json
 bytes/hash bind private parsed metadata; public input_identity exposes manifest
 identities/hashes. This proves installation consistency, not byte authenticity.
@@ -89,9 +89,9 @@ Independent SDK evidence can suffice without a lock. dart:ui also needs the
 selected sky_engine embedder mapping; ordinary dart: targets use the selected
 FolderBasedDartSdk mapping. Other packages inherit no builtin origin.
 
-The prepared Flutter fixture uses Flutter stable 3.47.4 with embedded Dart 3.13.3,
-framework revision `9584c6713b324636289d067944a46fd6b49df14b`, SHA-256
-`5b45f0ceda99b9bebdc873e7e69f6450aeb4c30f454b505e2e62fc9255a907d3`.
+The prepared Flutter fixture uses Flutter stable 3.47.7 with embedded Dart 3.13.5,
+framework revision `abaf9c523780a608bd46686fd5e53740a07077f8`, SHA-256
+`af7455f540df951184c7953fbe3cf884766e7541dacf8571f9f582db03dd6230`.
 [Official archive index](https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json).
 The fixture pubspec names flutter_fixture, requires >=3.13.0 <4.0.0, depends on
 flutter from the SDK and dev-depends on flutter_test from the SDK. Prepare with
